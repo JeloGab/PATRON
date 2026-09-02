@@ -5,7 +5,7 @@ export async function withActor({ parishId = null, userId = null}, fn) {
   try {
     await client.query('BEGIN')
     await client.query(
-      'select sert_config($1, $2, true), set_config($3, $4, true)',
+      'select set_config($1, $2, true), set_config($3, $4, true)',
       ['app.parish_id', parishId ?? '', 'app.user_id', userId ?? '']
     )
     const result = await fn(client)
