@@ -66,3 +66,30 @@ export async function findSelf({ userId, parishId }) {
     }
   })
 }
+
+export async function findParishionerBySupabaseId(supabaseUserId) {
+  const { rows } = await pool.query(
+    'select * from public.auth_lookup_parishioner($1)',
+    [supabaseUserId]
+  )
+  if (rows.length === 0) return null
+
+  const row = rows[0]
+  return {
+    userId: row.user_id,
+    fullName: row.full_name,
+    role: row.role,
+    status: row.status,
+    email: row.email,
+  }
+}
+
+export async function insertParishioner({ fullName, email, supabaseUserId }) {
+  return withActor({}, async (client) => {
+    await client.query(
+      `insert into public.app_user (full_name, email, supabase_user_id, role)
+       values ($1, $2, $3, 'parishioner')`,
+      [fullName, email, supabaseUserId]
+    )
+  })
+}
