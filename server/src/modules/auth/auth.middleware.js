@@ -1,18 +1,41 @@
 import { verifyToken } from './auth.token.js'
+import { checkSession } from './auth.queries.js'
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const [scheme, token] = (req.get('authorization') || '').split(' ')
 
   if (scheme !== 'Bearer' || !token) {
     return res.status(401).json({ ok: false, code: 'NO_TOKEN' })
   }
 
+  let claims
   try {
-    req.user = verifyToken(token)
-    next()
+    claims = verifyToken(token)
   } catch {
-    res.status(401).json({ ok: false, code: 'INVALID_TOKEN' })
+    return res.status(401).json({ ok: false, code: 'INVALID_TOKEN' })
   }
+
+  const session = await checkSession(claims.userId)
+
+  if (!session || session.status !== 'active') {
+    return res.status(401).json({ ok: false, code: 'SESSION_REVOKED' })
+  }
+
+  if (
+    session.passwordChangedAt &&
+    claims.issuedAt < Math.floor(session.passwordChangedAt.getTime() / 1000)
+  ) {
+    return res.status(401).json({ ok: false, code: 'SESSION_REVOKED' })
+  }
+
+  req.user = {
+    userId: claims.userId,
+    role: session.role,
+    parishId: session.parishId,
+    mustChangePassword: session.mustChangePassword,
+  }
+
+  next()
 }
 
 export function requirePasswordChanged(req, res, next) {
@@ -30,3 +53,5 @@ export function requireRole(...roles) {
     next()
   }
 }
+
+

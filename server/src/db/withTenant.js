@@ -1,12 +1,12 @@
 import { pool } from './pool.js'
 
-export async function withActor({ parishId = null, userId = null}, fn) {
+export async function withActor({ parishId = null, userId = null, role = null}, fn) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     await client.query(
-      'select set_config($1, $2, true), set_config($3, $4, true)',
-      ['app.parish_id', parishId ?? '', 'app.user_id', userId ?? '']
+      'select set_config($1, $2, true), set_config($3, $4, true), set_config($5, $6, true)',
+      ['app.parish_id', parishId ?? '', 'app.user_id', userId ?? '', 'app.user_role', role ?? '',]
     )
     const result = await fn(client)
     await client.query('commit')

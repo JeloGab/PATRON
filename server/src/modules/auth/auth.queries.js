@@ -20,36 +20,38 @@ export async function findStaffByUsername(username) {
   }
 }
 
-export async function findOwnPasswordHash({ userId, parishId }) {
-  return withActor({ parishId, userId }, async (client) => {
+export async function findOwnPasswordHash(actor) {
+  return withActor(actor, async (client) => {
     const { rows } = await client.query(
       'select password_hash from public.app_user where user_id = $1',
-      [userId]
+      [actor.userId]
     )
     return rows[0]?.password_hash ?? null
   })
 }
-export async function setPassword({ userId, parishId }, passwordHash) {
-  return withActor({ parishId, userId }, async (client) => {
+
+export async function setPassword(actor, passwordHash) {
+  return withActor(actor, async (client) => {
     const { rowCount } = await client.query(
       `update public.app_user
           set password_hash = $1,
-              must_change_password = false
+              must_change_password = false,
+              password_changed_at = now()
         where user_id = $2`,
-      [passwordHash, userId]
+      [passwordHash, actor.userId]
     )
     return rowCount
   })
 }
 
-export async function findSelf({ userId, parishId }) {
-  return withActor({ parishId, userId }, async (client) => {
+export async function findSelf(actor) {
+  return withActor(actor, async (client) => {
     const { rows } = await client.query(
       `select user_id, full_name, username, email, role, status,
               parish_id, must_change_password
          from public.app_user
         where user_id = $1`,
-      [userId]
+      [actor.userId]
     )
     if (rows.length === 0) return null
 
@@ -92,4 +94,21 @@ export async function insertParishioner({ fullName, email, supabaseUserId }) {
       [fullName, email, supabaseUserId]
     )
   })
+}
+
+export async function checkSession(userId) {
+  const { rows } = await pool.query(
+    'select * from public.auth_session_check($1)',
+    [userId]
+  )
+  if (rows.length === 0) return null
+
+  const row = rows[0]
+  return {
+    status: row.status,
+    role: row.role,
+    parishId: row.parish_id,
+    mustChangePassword: row.must_change_password,
+    passwordChangedAt: row.password_changed_at,
+  }
 }

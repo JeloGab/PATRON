@@ -24,5 +24,6 @@ export function verifyToken(token){
         role: payload.role,
         parishId: payload.parishId ?? null,
         mustChangePassword: payload.mustChangePassword === true,
+        issuedAt: payload.iat,
     }
 }

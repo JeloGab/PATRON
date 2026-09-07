@@ -44,6 +44,15 @@ export async function changePassword(actor, currentPassword, newPassword) {
   const next = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
   const rowCount = await setPassword(actor, next)
   if (rowCount === 0) throw new AppError('UPDATE_BLOCKED', 403)
+
+  return {
+    token: signToken({
+      userId: actor.userId,
+      role: actor.role,
+      parishId: actor.parishId,
+      mustChangePassword: false,
+    }),
+  }
 }
 
 export async function getSelf(actor) {

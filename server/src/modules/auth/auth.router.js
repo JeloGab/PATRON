@@ -34,8 +34,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.post('/change-password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body ?? {}
-  await changePassword(req.user, currentPassword, newPassword)
-  res.json({ ok: true })
+  res.json({ ok: true, ...(await changePassword(req.user, currentPassword, newPassword)) })
 })
 
 router.post('/register', emailLimiter, async (req, res) => {
