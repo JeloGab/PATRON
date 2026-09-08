@@ -4,6 +4,8 @@ import cors from 'cors'
 import helmet from 'helmet'
 import health from './routes/health.js'
 import auth from './modules/auth/auth.router.js'
+import admin from './modules/admin/admin.router.js'
+import users from './modules/users/users.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
 const app = express()
@@ -14,6 +16,8 @@ app.use(express.json())
 
 app.use('/api/health', health)
 app.use('/api/auth',auth)
+app.use('/api/admin', admin)
+app.use('/api/users', users)
 
 
 app.use(notFound)
