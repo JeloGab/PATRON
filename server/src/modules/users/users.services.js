@@ -1,25 +1,12 @@
 import { AppError } from '../../lib/appError.js'
-import {
-  suggestUsername,
-  isValidUsername,
-  isUuid,
-  createTempCredential,
-  resolveUsername,
-} from '../../lib/credentials.js'
-import {
-  insertManager,
-  listManagers,
-  setManagerStatus,
-  setManagerPassword,
-} from './users.queries.js'
+import { suggestUsername, isValidUsername, isUuid, createTempCredential, resolveUsername} from '../../lib/credentials.js'
+import { insertManager, listManagers, setManagerStatus, setManagerPassword } from './users.queries.js'
+import { clean, requireFullName } from '../../lib/validators.js'
 
-const clean = (value) => String(value ?? '').trim()
 
 export async function provisionManager(actor, { fullName, username }) {
-  const name = clean(fullName)
-
   if (!actor.parishId) throw new AppError('FORBIDDEN', 403)
-  if (name.length < 2) throw new AppError('INVALID_NAME', 400)
+  const name = requireFullName(fullName)
 
   const requested = clean(username).toLowerCase()
   if (requested && !isValidUsername(requested)) throw new AppError('INVALID_USERNAME', 400)

@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs'
 import { AppError } from '../../lib/appError.js'
 import { signToken } from './auth.token.js'
 import { findStaffByUsername, findOwnPasswordHash, setPassword, findSelf } from './auth.queries.js'
-import {signUp,signInWithPassword,requestRecovery, updatePassword} from '../../integrations/supabaseAuth.js'
-import {  findParishionerBySupabaseId, insertParishioner,} from './auth.queries.js'
+import { signUp,signInWithPassword,requestRecovery, updatePassword} from '../../integrations/supabaseAuth.js'
+import { findParishionerBySupabaseId, insertParishioner,} from './auth.queries.js'
+import { requireFullName, requireEmail } from '../../lib/validators.js'
 
 const BCRYPT_ROUNDS = 12
 const DUMMY_HASH = bcrypt.hashSync('no-such-user', BCRYPT_ROUNDS)
@@ -68,17 +69,16 @@ function providerMessage(payload) {
 }
 
 export async function registerParishioner({ fullName, email, password }) {
-  const name = String(fullName ?? '').trim()
+  const name = requireFullName(fullName)
+  const emailAddress = requireEmail(email)
 
-  if (name.length < 2) throw new AppError('INVALID_NAME', 400)
-  if (!normaliseEmail(email).includes('@')) throw new AppError('INVALID_EMAIL', 400)
   if (typeof password !== 'string' || password.length < 8) {
     throw new AppError('PASSWORD_TOO_SHORT', 400)
   }
   if (Buffer.byteLength(password) > 72) throw new AppError('PASSWORD_TOO_LONG', 400)
 
-  const { ok, payload } = await signUp({
-    email: normaliseEmail(email),
+   const { ok, payload } = await signUp({
+    email: emailAddress,
     password,
     fullName: name,
   })

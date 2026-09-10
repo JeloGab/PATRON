@@ -1,28 +1,18 @@
 import { AppError } from '../../lib/appError.js'
 import { suggestUsername, isValidUsername, isUuid, createTempCredential, resolveUsername } from '../../lib/credentials.js'
+import { clean, requireFullName, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
 import { insertParish, listParishes, findParishById, insertStaff, listStaffByRole, setUserStatus, setStaffPassword } from './admin.queries.js'
 
 
-const clean = (value) => String(value ?? '').trim()
+
 
 export async function createParish({ name, address, contactNo, email, facebookPageId }) {
-  const parishName = clean(name)
-  const parishAddress = clean(address)
-  const parishContact = clean(contactNo)
-  const parishEmail = clean(email).toLowerCase()
-  const parishFacebook = clean(facebookPageId)
-
-  if (parishName.length < 3) throw new AppError('INVALID_PARISH_NAME', 400)
-  if (parishAddress.length < 5) throw new AppError('INVALID_ADDRESS', 400)
-  if (parishContact.length < 7) throw new AppError('INVALID_CONTACT', 400)
-  if (parishEmail && !parishEmail.includes('@')) throw new AppError('INVALID_EMAIL', 400)
-
   return insertParish({
-    name: parishName,
-    address: parishAddress,
-    contactNo: parishContact,
-    email: parishEmail || null,
-    facebookPageId: parishFacebook || null,
+    name: requireParishName(name),
+    address: requireAddress(address),
+    contactNo: requireMobile(contactNo),
+    email: optionalEmail(email),
+    facebookPageId: clean(facebookPageId) || null,
   })
 }
 
@@ -32,10 +22,9 @@ export async function getParishes() {
 
 
 export async function provisionPriest({ fullName, parishId, username }) {
-  const name = clean(fullName)
+  const name = requireFullName(fullName)
   const parish = clean(parishId)
 
-  if (name.length < 2) throw new AppError('INVALID_NAME', 400)
   if (!isUuid(parish)) throw new AppError('INVALID_PARISH_ID', 400)
 
   const target = await findParishById(parish)
