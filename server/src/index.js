@@ -6,8 +6,11 @@ import health from './routes/health.js'
 import auth from './modules/auth/auth.router.js'
 import admin from './modules/admin/admin.router.js'
 import users from './modules/users/users.router.js'
+import parish from './modules/parish/parish.router.js'
+import parishPublic from './modules/parish/parish.public.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
+
 const app = express()
 
 app.use(helmet())
@@ -18,6 +21,8 @@ app.use('/api/health', health)
 app.use('/api/auth',auth)
 app.use('/api/admin', admin)
 app.use('/api/users', users)
+app.use('/api/parish', parish)
+app.use('/api/parishes', parishPublic)
 
 
 app.use(notFound)
