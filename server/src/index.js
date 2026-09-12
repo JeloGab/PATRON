@@ -8,6 +8,7 @@ import admin from './modules/admin/admin.router.js'
 import users from './modules/users/users.router.js'
 import parish from './modules/parish/parish.router.js'
 import parishPublic from './modules/parish/parish.public.router.js'
+import records from './modules/records/records.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -23,6 +24,7 @@ app.use('/api/admin', admin)
 app.use('/api/users', users)
 app.use('/api/parish', parish)
 app.use('/api/parishes', parishPublic)
+app.use('/api/records', records)
 
 
 app.use(notFound)
