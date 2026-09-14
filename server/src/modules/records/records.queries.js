@@ -4,6 +4,9 @@ import { AppError } from '../../lib/appError.js'
 const SUBJECT_COLUMNS = `recordsubject_id, role, full_name, date_of_birth, place_of_birth,
                          gender, father_name, mother_name, sponsor_names`
 
+const ATTACHMENT_COLUMNS = `attachment_id, file_name, content_type, byte_size,
+                            uploaded_by, uploaded_at`
+
 const RECORD_EDITABLE = [
   ['bookNo', 'book_no'],
   ['pageNo', 'page_no'],
@@ -38,7 +41,7 @@ function mapSubject(row) {
   }
 }
 
-function mapRecord(row, subjectRows) {
+function mapRecord(row, subjectRows, attachmentRows) {
   return {
     recordId: row.record_id,
     recordType: row.record_type,
@@ -55,6 +58,7 @@ function mapRecord(row, subjectRows) {
     updatedByName: row.updated_by_name,
     updatedAt: row.updated_at,
     subjects: subjectRows.map(mapSubject),
+    attachments: attachmentRows.map(mapAttachment),
   }
 }
 
@@ -85,6 +89,17 @@ function mapWriteError(err) {
   }
   if (err.code === '42501') return new AppError('FORBIDDEN', 403)
   return err
+}
+
+function mapAttachment(row) {
+  return {
+    attachmentId: row.attachment_id,
+    fileName: row.file_name,
+    contentType: row.content_type,
+    byteSize: row.byte_size,
+    uploadedBy: row.uploaded_by,
+    uploadedAt: row.uploaded_at,
+  }
 }
 
 function buildSet(editable, patch) {
@@ -118,7 +133,14 @@ async function selectRecord(client, recordId) {
       order by full_name`,
     [recordId]
   )
-  return mapRecord(rows[0], subjects)
+  const { rows: attachments } = await client.query(
+    `select ${ATTACHMENT_COLUMNS}
+       from public.record_attachment
+      where record_id = $1
+      order by uploaded_at`,
+    [recordId]
+  )
+  return mapRecord(rows[0], subjects, attachments)
 }
 
 export async function findRecord(actor, recordId) {
@@ -240,5 +262,50 @@ export async function searchSubjects(actor, { words, recordType, limit, offset }
       values
     )
     return rows.map(mapSearchRow)
+  })
+}
+
+export async function insertAttachment(actor, { recordId, fileName, contentType, content }) {
+  return withActor(actor, async (client) => {
+    try {
+      await client.query(
+        `insert into public.record_attachment
+           (record_id, parish_id, file_name, content_type, byte_size, content, uploaded_by)
+         values ($1, $2, $3, $4, $5, $6, $7)`,
+        [recordId, actor.parishId, fileName, contentType, content.length, content, actor.userId]
+      )
+      return selectRecord(client, recordId)
+    } catch (err) {
+      throw mapWriteError(err)
+    }
+  })
+}
+
+export async function findAttachment(actor, { recordId, attachmentId }) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select file_name, content_type, content
+         from public.record_attachment
+        where attachment_id = $1 and record_id = $2`,
+      [attachmentId, recordId]
+    )
+    if (rows.length === 0) return null
+    return {
+      fileName: rows[0].file_name,
+      contentType: rows[0].content_type,
+      content: rows[0].content,
+    }
+  })
+}
+
+export async function deleteAttachment(actor, { recordId, attachmentId }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `delete from public.record_attachment
+        where attachment_id = $1 and record_id = $2`,
+      [attachmentId, recordId]
+    )
+    if (rowCount === 0) return null
+    return selectRecord(client, recordId)
   })
 }

@@ -1,12 +1,15 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireRecordType, requireRegistryPart, requireOfficiant, requirePastDate, optionalPastDate, requireSubjectName, optionalSubjectName, requireGender, optionalPlaceOfBirth, optionalSponsorNames } from '../../lib/validators.js'
-import { findRecord, insertRecord, updateRecord, updateSubject, searchSubjects, } from './records.queries.js'
+import { findRecord, insertRecord, updateRecord, updateSubject, searchSubjects, insertAttachment, findAttachment, deleteAttachment } from './records.queries.js'
+import {sniffContentType, sanitizeFileName, ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES} from '../../lib/fileType.js'
+
 
 const PAGE_SIZE = 50
 const MAX_SEARCH_WORDS = 5
 const NEEDS_BIRTH_DATE = ['baptism', 'confirmation']
 const SUBJECT_COUNT = { marriage: 2 }
+const MAX_ATTACHMENTS = 10
 
 function requireId(value, code) {
   const id = clean(value).toLowerCase()
@@ -155,5 +158,47 @@ export async function editSubject(actor, { recordId, subjectId }, body) {
 
   const record = await updateSubject(actor, { recordId: rid, subjectId: sid, patch })
   if (!record) throw new AppError('SUBJECT_NOT_FOUND', 404)
+  return record
+}
+
+export async function attachPhoto(actor, recordId, { fileName, buffer, typeAccepted = true }) {
+  const id = requireId(recordId, 'INVALID_RECORD_ID')
+
+  if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)
+  if (buffer.length > MAX_ATTACHMENT_BYTES) throw new AppError('FILE_TOO_LARGE', 413)
+
+  const contentType = sniffContentType(buffer)
+  if (!contentType) throw new AppError('INVALID_FILE_TYPE', 400)
+
+  const record = await findRecord(actor, id)
+  if (!record) throw new AppError('RECORD_NOT_FOUND', 404)
+  if (record.attachments.length >= MAX_ATTACHMENTS) {
+    throw new AppError('ATTACHMENT_LIMIT_REACHED', 409)
+  }
+
+  return insertAttachment(actor, {
+    recordId: id,
+    fileName: sanitizeFileName(fileName, contentType),
+    contentType,
+    content: buffer,
+  })
+}
+
+export async function getAttachment(actor, { recordId, attachmentId }) {
+  const file = await findAttachment(actor, {
+    recordId: requireId(recordId, 'INVALID_RECORD_ID'),
+    attachmentId: requireId(attachmentId, 'INVALID_ATTACHMENT_ID'),
+  })
+  if (!file) throw new AppError('ATTACHMENT_NOT_FOUND', 404)
+  return file
+}
+
+export async function removeAttachment(actor, { recordId, attachmentId }) {
+  const record = await deleteAttachment(actor, {
+    recordId: requireId(recordId, 'INVALID_RECORD_ID'),
+    attachmentId: requireId(attachmentId, 'INVALID_ATTACHMENT_ID'),
+  })
+  if (!record) throw new AppError('ATTACHMENT_NOT_FOUND', 404)
   return record
 }
