@@ -1,7 +1,7 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
-import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry } from './parish.queries.js'
+import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests } from './parish.queries.js'
 
 
 
@@ -41,4 +41,8 @@ export async function getPublicParish(parishId) {
   if (!parish) throw new AppError('PARISH_NOT_FOUND', 404)
 
   return parish
+}
+
+export async function getActivePriests(actor) {
+  return listActivePriests(actor)
 }

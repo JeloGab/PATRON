@@ -37,6 +37,13 @@ function mapDirectoryEntry(row) {
   }
 }
 
+function mapPriest(row) {
+  return {
+    userId: row.user_id,
+    fullName: row.full_name,
+  }
+}
+
 export async function findOwnParish(actor) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(`select ${COLUMNS} from public.parish`)
@@ -82,4 +89,16 @@ export async function findDirectoryEntry(parishId) {
   )
   if (rows.length === 0) return null
   return mapDirectoryEntry(rows[0])
+}
+
+export async function listActivePriests(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select user_id, full_name
+         from public.app_user
+        where role = 'priest' and status = 'active'
+        order by full_name`
+    )
+    return rows.map(mapPriest)
+  })
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { getOwnParish, editOwnParish } from './parish.services.js'
+import { getOwnParish, editOwnParish, getActivePriests } from './parish.services.js'
 
 const router = Router()
 
@@ -12,6 +12,10 @@ router.get('/', async (req, res) => {
 
 router.patch('/', async (req, res) => {
   res.json({ ok: true, parish: await editOwnParish(req.user, req.body ?? {}) })
+})
+
+router.get('/priests', async (req, res) => {
+  res.json({ ok: true, priests: await getActivePriests(req.user) })
 })
 
 export default router
