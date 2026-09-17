@@ -11,6 +11,7 @@ export const LIMITS = {
   registryPart: { min: 1, max: 20 },
   placeOfBirth: { max: 100 },
   sponsorNames: { max: 200 },
+   reason: { max: 200 },
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -20,6 +21,8 @@ const PARISH_TIMEZONE = 'Asia/Manila'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_NOISE = /[\s()\-.]/g
 const PH_MOBILE = /^(?:\+?63|0)9(\d{9})$/
+const BLOCK_TYPES = ['parish', 'priest']
+const ISO_TIME = /^([01]\d|2[0-3]):([0-5]\d)$/
 
 export const clean = (value) => String(value ?? '').trim()
 export const squeeze = (value) => clean(value).replace(/\s+/g, ' ')
@@ -119,11 +122,11 @@ export function optionalSponsorNames(value) {
   return names
 }
 
-function todayInParish() {
+export function todayInParish() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: PARISH_TIMEZONE }).format(new Date())
 }
 
-export function requirePastDate(value, code) {
+export function requireIsoDate(value, code) {
   const text = clean(value)
   const match = ISO_DATE.exec(text)
   if (!match) throw new AppError(code, 400)
@@ -136,11 +139,42 @@ export function requirePastDate(value, code) {
     date.getUTCDate() === day
   if (!real) throw new AppError(code, 400)
 
+  return text
+}
+
+export function requirePastDate(value, code) {
+  const text = requireIsoDate(value, code)
   if (text > todayInParish()) throw new AppError(code, 400)
+  return text
+}
+
+export function requireUpcomingDate(value, code) {
+  const text = requireIsoDate(value, code)
+  if (text < todayInParish()) throw new AppError(code, 400)
   return text
 }
 
 export function optionalPastDate(value, code) {
   if (!clean(value)) return null
   return requirePastDate(value, code)
+}
+
+export function requireBlockType(value) {
+  const type = clean(value).toLowerCase()
+  if (!BLOCK_TYPES.includes(type)) throw new AppError('INVALID_BLOCK_TYPE', 400)
+  return type
+}
+
+export function optionalTime(value, code) {
+  const text = clean(value)
+  if (!text) return null
+  if (!ISO_TIME.test(text)) throw new AppError(code, 400)
+  return `${text}:00`
+}
+
+export function optionalReason(value) {
+  const reason = squeeze(value)
+  if (!reason) return null
+  if (reason.length > LIMITS.reason.max) throw new AppError('INVALID_REASON', 400)
+  return reason
 }
