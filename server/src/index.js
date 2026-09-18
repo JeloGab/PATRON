@@ -10,6 +10,7 @@ import parish from './modules/parish/parish.router.js'
 import parishPublic from './modules/parish/parish.public.router.js'
 import records from './modules/records/records.router.js'
 import blocks from './modules/blocks/blocks.router.js'
+import events from './modules/events/events.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -27,6 +28,7 @@ app.use('/api/parish', parish)
 app.use('/api/parishes', parishPublic)
 app.use('/api/records', records)
 app.use('/api/blocked-dates', blocks)
+app.use('/api/events', events)
 
 
 app.use(notFound)

@@ -11,7 +11,9 @@ export const LIMITS = {
   registryPart: { min: 1, max: 20 },
   placeOfBirth: { max: 100 },
   sponsorNames: { max: 200 },
-   reason: { max: 200 },
+  reason: { max: 200 },
+  title: { min: 3, max: 100 },
+  description: { max: 500 },
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -23,6 +25,8 @@ const PHONE_NOISE = /[\s()\-.]/g
 const PH_MOBILE = /^(?:\+?63|0)9(\d{9})$/
 const BLOCK_TYPES = ['parish', 'priest']
 const ISO_TIME = /^([01]\d|2[0-3]):([0-5]\d)$/
+const EVENT_TYPES = ['sacramental', 'general', 'seminar']
+const SACRAMENT_TYPES = ['baptism', 'confirmation', 'marriage', 'funeral']
 
 export const clean = (value) => String(value ?? '').trim()
 export const squeeze = (value) => clean(value).replace(/\s+/g, ' ')
@@ -177,4 +181,36 @@ export function optionalReason(value) {
   if (!reason) return null
   if (reason.length > LIMITS.reason.max) throw new AppError('INVALID_REASON', 400)
   return reason
+}
+
+export function requireEventType(value) {
+  const type = clean(value).toLowerCase()
+  if (!EVENT_TYPES.includes(type)) throw new AppError('INVALID_EVENT_TYPE', 400)
+  return type
+}
+
+export function requireSacramentType(value) {
+  const type = clean(value).toLowerCase()
+  if (!SACRAMENT_TYPES.includes(type)) throw new AppError('INVALID_SACRAMENT_TYPE', 400)
+  return type
+}
+
+export function requireTitle(value) {
+  const title = squeeze(value)
+  if (title.length < LIMITS.title.min) throw new AppError('INVALID_TITLE', 400)
+  if (title.length > LIMITS.title.max) throw new AppError('INVALID_TITLE', 400)
+  return title
+}
+
+export function optionalDescription(value) {
+  const text = squeeze(value)
+  if (!text) return null
+  if (text.length > LIMITS.description.max) throw new AppError('INVALID_DESCRIPTION', 400)
+  return text
+}
+
+export function requireTime(value, code) {
+  const time = optionalTime(value, code)
+  if (!time) throw new AppError(code, 400)
+  return time
 }

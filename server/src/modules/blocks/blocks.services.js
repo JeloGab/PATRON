@@ -1,7 +1,9 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireBlockType, requireIsoDate, requireUpcomingDate, optionalTime, optionalReason } from '../../lib/validators.js'
-import { findActivePriest, insertBlocks, findBlocks, deleteBlock } from './blocks.queries.js'
+import { insertBlocks, findBlocks, deleteBlock } from './blocks.queries.js'
+import { findActivePriest } from '../parish/parish.queries.js'
+import { findEventsOnDates } from '../events/events.queries.js'
 
 const MAX_RANGE_DAYS = 31
 const MAX_WINDOW_DAYS = 92
@@ -62,10 +64,8 @@ export async function createBlocks(actor, body) {
     endTime,
     reason: optionalReason(body.reason),
   })
-
-  // Warn-don't-touch: the events these blocks land on. Always empty until
-  // parish_event exists — the field ships now so the client contract is final.
-  return { blocks, warnings: [] }
+  const warnings = await findEventsOnDates(actor, { dates, priestId })
+  return { blocks, warnings }
 }
 
 export async function listBlocks(actor, query) {
