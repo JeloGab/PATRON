@@ -14,6 +14,8 @@ export const LIMITS = {
   reason: { max: 200 },
   title: { min: 3, max: 100 },
   description: { max: 500 },
+  purpose: { min: 3, max: 200 },
+  requestorContact: { max: 60 },
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -27,6 +29,8 @@ const BLOCK_TYPES = ['parish', 'priest']
 const ISO_TIME = /^([01]\d|2[0-3]):([0-5]\d)$/
 const EVENT_TYPES = ['sacramental', 'general', 'seminar']
 const SACRAMENT_TYPES = ['baptism', 'confirmation', 'marriage', 'funeral']
+const RELATIONSHIPS = ['self', 'parent', 'child', 'spouse', 'sibling', 'other']
+const EARLIEST_SACRAMENT_YEAR = 1800
 
 export const clean = (value) => String(value ?? '').trim()
 export const squeeze = (value) => clean(value).replace(/\s+/g, ' ')
@@ -213,4 +217,34 @@ export function requireTime(value, code) {
   const time = optionalTime(value, code)
   if (!time) throw new AppError(code, 400)
   return time
+}
+
+export function requireRelationship(value) {
+  const relationship = clean(value).toLowerCase()
+  if (!RELATIONSHIPS.includes(relationship)) throw new AppError('INVALID_RELATIONSHIP', 400)
+  return relationship
+}
+
+export function requirePurpose(value) {
+  const purpose = squeeze(value)
+  if (purpose.length < LIMITS.purpose.min) throw new AppError('INVALID_PURPOSE', 400)
+  if (purpose.length > LIMITS.purpose.max) throw new AppError('INVALID_PURPOSE', 400)
+  return purpose
+}
+
+export function optionalSacramentYear(value) {
+  const year = clean(value)
+  if (!year) return null
+  if (!/^\d{4}$/.test(year)) throw new AppError('INVALID_SACRAMENT_YEAR', 400)
+  const number = Number(year)
+  if (number < EARLIEST_SACRAMENT_YEAR) throw new AppError('INVALID_SACRAMENT_YEAR', 400)
+  if (number > Number(todayInParish().slice(0, 4))) throw new AppError('INVALID_SACRAMENT_YEAR', 400)
+  return number
+}
+
+export function optionalContact(value) {
+  const contact = squeeze(value)
+  if (!contact) return null
+  if (contact.length > LIMITS.requestorContact.max) throw new AppError('INVALID_CONTACT', 400)
+  return contact
 }
