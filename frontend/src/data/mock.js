@@ -1,0 +1,173 @@
+export const churches = [
+  {
+    id: 'sto-nino',
+    name: 'Basilica Minore del Santo Niño',
+    diocese: 'Archdiocese of Cebu',
+    city: 'Cebu City',
+    address: 'Osmeña Boulevard, Cebu City',
+    priest: 'Rev. Fr. Cristo Rey Garcia, OSA',
+    phone: '(032) 255 6090',
+    email: 'office@santoninodecebu.org',
+    founded: '1565',
+    patron: 'Santo Niño de Cebu',
+    summary:
+      'The oldest Roman Catholic church in the Philippines, home of the Santo Niño de Cebu and a major pilgrimage site.',
+    sacraments: ['Baptism', 'Confirmation', 'Marriage', 'Confession', 'Anointing of the Sick'],
+    masses: [
+      { day: 'Sunday', times: '5:00 AM · 6:30 AM · 8:00 AM · 10:00 AM · 4:00 PM · 6:00 PM' },
+      { day: 'Weekdays', times: '6:00 AM · 12:15 PM · 5:30 PM' },
+      { day: 'Saturday', times: '6:00 AM · 5:30 PM (anticipated)' },
+    ],
+    accent: '#7a1f2b',
+    image:
+      'https://images.unsplash.com/photo-1548625149-fc4a29cb52b2?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    id: 'manila-cathedral',
+    name: 'Manila Cathedral',
+    diocese: 'Archdiocese of Manila',
+    city: 'Intramuros, Manila',
+    address: 'Cabildo Street, Intramuros, Manila',
+    priest: 'Rev. Fr. Reginald Malicdem',
+    phone: '(02) 8527 1796',
+    email: 'info@manilacathedral.com.ph',
+    founded: '1571',
+    patron: 'Immaculate Conception',
+    summary:
+      'The minor basilica and metropolitan cathedral of the Archdiocese of Manila, seat of the Archbishop of Manila.',
+    sacraments: ['Baptism', 'Confirmation', 'Marriage', 'Confession'],
+    masses: [
+      { day: 'Sunday', times: '6:00 AM · 8:00 AM · 10:00 AM · 12:00 NN · 6:00 PM' },
+      { day: 'Weekdays', times: '7:30 AM · 12:10 PM' },
+      { day: 'Saturday', times: '7:30 AM · 6:00 PM (anticipated)' },
+    ],
+    accent: '#2c3d5a',
+    image:
+      'https://images.unsplash.com/photo-1529070538774-184cdc99ac63?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    id: 'quiapo',
+    name: 'Minor Basilica of the Black Nazarene',
+    diocese: 'Archdiocese of Manila',
+    city: 'Quiapo, Manila',
+    address: 'Quezon Boulevard, Quiapo, Manila',
+    priest: 'Rev. Fr. Rufino Sescon, Jr.',
+    phone: '(02) 8733 4434',
+    email: 'quiapochurch@gmail.com',
+    founded: '1586',
+    patron: 'Black Nazarene',
+    summary:
+      'National shrine of the Black Nazarene, known for the Traslación and a constant stream of devotees.',
+    sacraments: ['Baptism', 'Marriage', 'Confession', 'Anointing of the Sick'],
+    masses: [
+      {
+        day: 'Sunday',
+        times: '5:00 AM · 6:00 AM · 7:00 AM · 8:00 AM · 9:00 AM · 10:00 AM · 4:00 PM · 6:00 PM',
+      },
+      { day: 'Weekdays', times: '5:00 AM · 6:00 AM · 12:00 NN · 5:00 PM · 6:00 PM' },
+      { day: 'Friday', times: 'Hourly from 5:00 AM to 7:00 PM' },
+    ],
+    accent: '#4a1c14',
+    image:
+      'https://images.unsplash.com/photo-1519491050282-cf00c82424b4?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    id: 'antipolo',
+    name: 'Antipolo Cathedral',
+    diocese: 'Diocese of Antipolo',
+    city: 'Antipolo City',
+    address: 'Masinag–Antipolo Road, Antipolo City',
+    priest: 'Rev. Fr. Jose Cielo',
+    phone: '(02) 8697 1106',
+    email: 'antipolocathedral@dioceseofantipolo.org',
+    founded: '1578',
+    patron: 'Our Lady of Peace and Good Voyage',
+    summary:
+      'International shrine of Our Lady of Peace and Good Voyage, a historic pilgrimage church east of Manila.',
+    sacraments: ['Baptism', 'Confirmation', 'Marriage', 'Confession'],
+    masses: [
+      { day: 'Sunday', times: '6:00 AM · 7:30 AM · 9:00 AM · 10:30 AM · 4:00 PM · 6:00 PM' },
+      { day: 'Weekdays', times: '6:00 AM · 7:00 AM · 12:00 NN · 6:00 PM' },
+      { day: 'Saturday', times: '6:00 AM · 6:00 PM (anticipated)' },
+    ],
+    accent: '#3d5a3a',
+    image:
+      'https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    id: 'san-sebastian',
+    name: 'San Sebastian Basilica',
+    diocese: 'Archdiocese of Manila',
+    city: 'Quiapo, Manila',
+    address: 'Plaza del Carmen, Quiapo, Manila',
+    priest: 'Rev. Fr. Antonio Zabala, OAR',
+    phone: '(02) 8734 8901',
+    email: 'sansebastian@recoletos.ph',
+    founded: '1891',
+    patron: 'St. Sebastian',
+    summary:
+      'The only all-steel basilica in Asia, a National Historical Landmark with distinctive Gothic Revival architecture.',
+    sacraments: ['Baptism', 'Marriage', 'Confession'],
+    masses: [
+      { day: 'Sunday', times: '6:00 AM · 8:00 AM · 10:00 AM · 6:00 PM' },
+      { day: 'Weekdays', times: '6:00 AM · 12:00 NN' },
+      { day: 'Saturday', times: '6:00 AM · 6:00 PM (anticipated)' },
+    ],
+    accent: '#3b2a55',
+    image:
+      'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=1400&q=80',
+  },
+  {
+    id: 'baclaran',
+    name: 'National Shrine of Our Mother of Perpetual Help',
+    diocese: 'Archdiocese of Manila',
+    city: 'Baclaran, Parañaque',
+    address: 'Redemptorist Road, Baclaran, Parañaque City',
+    priest: 'Rev. Fr. Teodulo Hayuhay, CSsR',
+    phone: '(02) 8832 1149',
+    email: 'baclaranshrine@cssr.ph',
+    founded: '1932',
+    patron: 'Our Mother of Perpetual Help',
+    summary:
+      'The Baclaran shrine, famous for Wednesday novenas and one of the most visited churches in the country.',
+    sacraments: ['Baptism', 'Confirmation', 'Marriage', 'Confession', 'Anointing of the Sick'],
+    masses: [
+      { day: 'Sunday', times: '5:00 AM · 6:30 AM · 8:00 AM · 10:00 AM · 4:00 PM · 6:00 PM · 7:30 PM' },
+      { day: 'Wednesday', times: 'Hourly from 5:00 AM to 8:00 PM (Novena)' },
+      { day: 'Weekdays', times: '6:00 AM · 12:15 PM · 6:00 PM' },
+    ],
+    accent: '#1e4d6b',
+    image:
+      'https://images.unsplash.com/photo-1473177104440-ffee2f376098?auto=format&fit=crop&w=1400&q=80',
+  },
+]
+
+export const sampleDocuments = {
+  'PTRN-CEB-2024-10482': {
+    valid: true,
+    type: 'Certificate of Baptism',
+    holder: 'Maria Elena Cruz',
+    parish: 'Basilica Minore del Santo Niño',
+    issued: '14 March 2024',
+    registry: 'Book XII, Page 48, Entry 12',
+    hash: '7f3a9c1e2b84d0a6',
+  },
+  'PTRN-MNL-2023-07721': {
+    valid: true,
+    type: 'Certificate of Marriage',
+    holder: 'Jose Miguel Santos & Ana Isabel Reyes',
+    parish: 'Manila Cathedral',
+    issued: '22 June 2023',
+    registry: 'Book VII, Page 19, Entry 4',
+    hash: 'b21e44c90a17f5d8',
+  },
+  'PTRN-QPO-2022-00319': {
+    valid: false,
+    type: 'Certificate of Confirmation',
+    holder: '—',
+    parish: 'Minor Basilica of the Black Nazarene',
+    issued: '—',
+    registry: '—',
+    reason: 'Record revoked by issuing parish. Do not accept this copy.',
+  },
+}
