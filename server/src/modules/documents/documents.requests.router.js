@@ -13,9 +13,6 @@ const submissionLimiter = rateLimit({
 
 const router = Router()
 
-// A separate router from the staff one on purpose. One router cannot carry both
-// guards without loosening requireRole, and a route added later would then inherit
-// the loose guard — the lesson from /api/users and the priest list.
 router.use(requireAuth, requirePasswordChanged, requireRole('parishioner'))
 
 router.post('/', submissionLimiter, async (req, res) => {
@@ -32,6 +29,10 @@ router.get('/:applicationId', async (req, res) => {
 
 router.post('/:applicationId/cancel', async (req, res) => {
   res.json({ ok: true, request: await cancelRequest(req.user, req.params.applicationId, req.body ?? {}) })
+})
+
+router.get('/:applicationId/certificate', async (req, res) => {
+  res.json({ ok: true, certificate: await getCertificate(req.user, req.params.applicationId) })
 })
 
 export default router

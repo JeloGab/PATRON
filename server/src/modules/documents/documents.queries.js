@@ -2,39 +2,42 @@ import { pool } from '../../db/pool.js'
 import { withActor } from '../../db/withTenant.js'
 import { AppError } from '../../lib/appError.js'
 
-const COLUMNS = `a.application_id, a.parish_id, a.document_type_id, a.record_id, a.applicant_id,
+const COLUMNS = `a.application_id, a.parish_id, a.record_id, a.applicant_id,
                  a.requestor_name, a.requestor_contact, a.relationship, a.purpose,
                  a.subject_name, a.subject_birth_date, a.father_name, a.mother_name,
-                 a.sacrament_year, a.notes, a.status, a.status_reason,
-                 a.is_paid, a.paid_at, a.created_by, a.submitted_at,
-                 a.verified_by, a.verified_at, a.approved_by, a.approved_at,
-                 a.rejected_by, a.rejected_at, a.cancelled_by, a.cancelled_at,
+                 a.sacrament_year, a.notes, a.status, a.status_reason, a.is_paid,
+                 a.submitted_at, a.verified_at, a.approved_at,
+                 coalesce(a.rejected_at, a.cancelled_at) as closed_at,
                  t.name as document_name, t.record_type,
                  p.name as parish_name,
                  creator.full_name as created_by_name,
                  verifier.full_name as verified_by_name,
                  approver.full_name as approved_by_name,
+                 closer.full_name as closed_by_name,
                  r.book_no, r.page_no, r.entry_no, r.record_date`
 
-// parish_directory, not parish: a parishioner has no parish, so `parish` answers
-// them zero rows and an INNER join here would delete their own requests from the
-// result. The directory view is security_invoker = off, so it reads for anyone.
-// Every other join is LEFT for the same reason — a parishioner cannot see staff
-// rows or the register, and those columns simply arrive null for them.
+
 const SOURCE = `from public.document_application a
                 join public.document_type t on t.type_id = a.document_type_id
                 left join public.parish_directory p on p.parish_id = a.parish_id
                 left join public.app_user creator on creator.user_id = a.created_by
                 left join public.app_user verifier on verifier.user_id = a.verified_by
                 left join public.app_user approver on approver.user_id = a.approved_by
+                left join public.app_user closer
+                       on closer.user_id = coalesce(a.rejected_by, a.cancelled_by)
                 left join public.sacramental_record r on r.record_id = a.record_id`
+
+const CERT_COLUMNS = `f.file_id, f.application_id, f.release_type, f.verification_code,
+                      f.snapshot, f.issued_at, t.name as document_name`
+
+const CERT_SOURCE = `from public.document_file f
+                     join public.document_type t on t.type_id = f.document_type_id`
 
 function mapApplication(row) {
   return {
     applicationId: row.application_id,
     parishId: row.parish_id,
     parishName: row.parish_name,
-    documentTypeId: row.document_type_id,
     documentName: row.document_name,
     recordType: row.record_type,
     recordId: row.record_id,
@@ -42,7 +45,7 @@ function mapApplication(row) {
     pageNo: row.page_no,
     entryNo: row.entry_no,
     recordDate: row.record_date,
-    applicantId: row.applicant_id,
+    isWalkIn: row.applicant_id === null,
     requestorName: row.requestor_name,
     requestorContact: row.requestor_contact,
     relationship: row.relationship,
@@ -56,25 +59,36 @@ function mapApplication(row) {
     status: row.status,
     statusReason: row.status_reason,
     isPaid: row.is_paid,
-    paidAt: row.paid_at,
-    createdBy: row.created_by,
     createdByName: row.created_by_name,
     submittedAt: row.submitted_at,
-    verifiedBy: row.verified_by,
     verifiedByName: row.verified_by_name,
     verifiedAt: row.verified_at,
-    approvedBy: row.approved_by,
     approvedByName: row.approved_by_name,
     approvedAt: row.approved_at,
-    rejectedAt: row.rejected_at,
-    cancelledAt: row.cancelled_at,
+    closedByName: row.closed_by_name,
+    closedAt: row.closed_at,
   }
 }
 
 function mapWriteError(err) {
+   if (err.code === '23505' && err.constraint === 'document_file_verification_code_key') {
+    return new AppError('VERIFICATION_CODE_TAKEN', 409)
+  }
   if (err.code === '42501') return new AppError('FORBIDDEN', 403)
   if (err.code === '23503') return new AppError('NOT_FOUND', 404)
   return err
+}
+
+function mapCertificate(row) {
+  return {
+    certificateId: row.file_id,
+    applicationId: row.application_id,
+    documentName: row.document_name,
+    releaseType: row.release_type,
+    verificationCode: row.verification_code,
+    snapshot: row.snapshot,
+    issuedAt: row.issued_at,
+  }
 }
 
 /* ── document types: global, non-tenant, read-only ─────────────────────── */
@@ -89,8 +103,6 @@ function mapType(row) {
   }
 }
 
-// pool.query, not withActor: document_type is not tenant-scoped, and its policy is
-// `using (true)`. The same exception the login lookups and public views use.
 export async function findDocumentTypes() {
   const { rows } = await pool.query(
     `select type_id, name, description, record_type, availability
@@ -111,9 +123,6 @@ export async function findDocumentType(typeId) {
   return rows.length === 0 ? null : mapType(rows[0])
 }
 
-// The public directory view again: a parishioner filing a request must be able to
-// name a parish they are not a member of. Absent here means missing OR deactivated —
-// the view filters to active — so the caller reports one code for both.
 export async function findActiveParish(parishId) {
   const { rows } = await pool.query(
     `select parish_id, name from public.parish_directory where parish_id = $1`,
@@ -154,10 +163,6 @@ export async function findApplications(actor, { status, page, pageSize }) {
 export async function insertApplication(actor, application) {
   return withActor(actor, async (client) => {
     try {
-      // RETURNING applies SELECT policies to the new row. It works here because both
-      // filers can see what they just wrote — a parishioner through the applicant
-      // policy, a manager through the parish policy. That is NOT true everywhere:
-      // parishioner signup has no session and must read back through a lookup.
       const { rows } = await client.query(
         `insert into public.document_application
            (parish_id, document_type_id, applicant_id, requestor_name, requestor_contact,
@@ -189,8 +194,6 @@ export async function insertApplication(actor, application) {
   })
 }
 
-// Every update below returns rowCount, and the service treats 0 as 404/409 — a
-// failing RLS `using` clause changes zero rows and raises nothing at all.
 export async function attachRecord(actor, applicationId, recordId, verifierId) {
   return withActor(actor, async (client) => {
     try {
@@ -251,8 +254,6 @@ export async function cancelApplication(actor, applicationId, reason) {
   })
 }
 
-// Which register a record belongs to. RLS scopes it to the caller's parish, so a
-// record from another parish reads as "not found" rather than as a mismatch.
 export async function findRecordType(actor, recordId) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
@@ -260,5 +261,85 @@ export async function findRecordType(actor, recordId) {
       [recordId]
     )
     return rows.length === 0 ? null : rows[0].record_type
+  })
+}
+
+export async function findCertificate(actor, applicationId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select ${CERT_COLUMNS} ${CERT_SOURCE} where f.application_id = $1`,
+      [applicationId]
+    )
+    return rows.length === 0 ? null : mapCertificate(rows[0])
+  })
+}
+
+// Approval and issuance in ONE transaction. If the insert fails — a code collision,
+// a policy refusal — the approval rolls back with it, so a request can never sit
+// approved with no certificate behind it.
+//
+// buildSnapshot is passed in by the service: the SQL stays here, the shape of a
+// certificate stays there, and neither file grows the other's job.
+export async function issueCertificate(actor, { applicationId, verificationCode, buildSnapshot }) {
+  return withActor(actor, async (client) => {
+    try {
+      const approved = await client.query(
+        `update public.document_application
+            set status = 'approved', approved_by = $2, approved_at = now()
+          where application_id = $1
+            and status = 'verified'
+          returning record_id, document_type_id, purpose`,
+        [applicationId, actor.userId]
+      )
+      // Zero rows means the policy refused or the status moved under us — never success.
+      if (approved.rowCount === 0) return null
+
+      const { record_id: recordId, document_type_id: documentTypeId, purpose } = approved.rows[0]
+
+      const { rows: recordRows } = await client.query(
+        `select r.record_type, r.book_no, r.page_no, r.entry_no, r.record_date,
+                r.date_of_death, r.officiant_name,
+                p.name as parish_name, p.address as parish_address, p.contact_no as parish_contact,
+                t.name as document_name,
+                me.full_name as signatory_name
+           from public.sacramental_record r
+           join public.parish p on p.parish_id = r.parish_id
+           join public.document_type t on t.type_id = $2
+           join public.app_user me on me.user_id = public.current_user_id()
+          where r.record_id = $1`,
+        [recordId, documentTypeId]
+      )
+      if (recordRows.length === 0) throw new AppError('RECORD_NOT_FOUND', 404)
+
+      const { rows: subjectRows } = await client.query(
+        `select role, full_name, date_of_birth, place_of_birth, gender,
+                father_name, mother_name, sponsor_names
+           from public.record_subject
+          where record_id = $1`,
+        [recordId]
+      )
+
+      const snapshot = buildSnapshot({ record: recordRows[0], subjects: subjectRows, purpose })
+
+      const { rows } = await client.query(
+        `insert into public.document_file
+           (parish_id, document_type_id, record_id, application_id, release_type,
+            verification_code, snapshot, signatory_id, issued_by)
+         values ($1, $2, $3, $4, 'request', $5, $6, $7, $7)
+         returning file_id`,
+        [
+          actor.parishId,
+          documentTypeId,
+          recordId,
+          applicationId,
+          verificationCode,
+          JSON.stringify(snapshot),
+          actor.userId,
+        ]
+      )
+      return rows[0].file_id
+    } catch (err) {
+      throw mapWriteError(err)
+    }
   })
 }

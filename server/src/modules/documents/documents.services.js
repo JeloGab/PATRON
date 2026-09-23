@@ -1,36 +1,13 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import {
-  clean,
-  optionalContact,
-  optionalDescription,
-  optionalPastDate,
-  optionalReason,
-  optionalSacramentYear,
-  optionalSubjectName,
-  requireFullName,
-  requirePurpose,
-  requireRelationship,
-  requireSubjectName,
-} from '../../lib/validators.js'
-import {
-  attachRecord as attachRecordRow,
-  cancelApplication,
-  findActiveParish,
-  findApplication,
-  findApplications,
-  findDocumentType,
-  findDocumentTypes,
-  findRecordType,
-  insertApplication,
-  markPaid as markPaidRow,
-  rejectApplication as rejectApplicationRow,
-} from './documents.queries.js'
+import {clean, optionalContact, optionalDescription, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
+import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate } from './documents.queries.js'
+import {mintVerificationCode} from '../../lib/verificationCode.js'
 
 const PAGE_SIZE = 50
 const STATUSES = ['pending', 'verified', 'approved', 'rejected', 'cancelled']
-// pending and verified are the working statuses: everything a manager may still do
-// happens in one of them. approved, rejected and cancelled are final.
+const MAX_CODE_ATTEMPTS = 5
+const SUBJECT_ORDER = { groom: 0, primary: 0, bride: 1, spouse: 1 }
 const OPEN_STATUSES = ['pending', 'verified']
 
 function requireId(value, code) {
@@ -39,8 +16,6 @@ function requireId(value, code) {
   return id
 }
 
-// The identifying fields, identical for both ways of filing. A parishioner never
-// searches records, so these are what a manager searches the ledger with.
 function requestFields(body) {
   return {
     relationship: requireRelationship(body.relationship),
@@ -51,6 +26,39 @@ function requestFields(body) {
     motherName: optionalSubjectName(body.motherName),
     sacramentYear: optionalSacramentYear(body.sacramentYear),
     notes: optionalDescription(body.notes),
+  }
+}
+
+function buildSnapshot({ record, subjects, purpose }) {
+  const people = subjects
+    .map((subject) => ({
+      role: subject.role,
+      fullName: subject.full_name,
+      dateOfBirth: subject.date_of_birth,
+      placeOfBirth: subject.place_of_birth,
+      fatherName: subject.father_name,
+      motherName: subject.mother_name,
+      sponsorNames: subject.sponsor_names,
+    }))
+    .sort((a, b) => (SUBJECT_ORDER[a.role] ?? 9) - (SUBJECT_ORDER[b.role] ?? 9))
+
+  return {
+    recordType: record.record_type,
+    documentName: record.document_name,
+    subjectName: people.map((person) => person.fullName).join(' & '),
+    subjects: people,
+    recordDate: record.record_date,
+    dateOfDeath: record.date_of_death,
+    bookNo: record.book_no,
+    pageNo: record.page_no,
+    entryNo: record.entry_no,
+    officiantName: record.officiant_name,
+    parishName: record.parish_name,
+    parishAddress: record.parish_address,
+    parishContact: record.parish_contact,
+    signatoryName: record.signatory_name,
+    purpose,
+    releaseType: 'request',
   }
 }
 
@@ -75,9 +83,6 @@ export async function listDocumentTypes() {
 
 export async function fileRequest(actor, body) {
   const parishId = requireId(body.parishId, 'INVALID_PARISH_ID')
-  // The directory holds active parishes only, so a deactivated one is indistinguishable
-  // from a missing one here — one code for both, by design (a parishioner has no
-  // business learning that a parish exists but is closed).
   if (!(await findActiveParish(parishId))) throw new AppError('PARISH_NOT_FOUND', 404)
   const type = await requireDocumentType(body.documentTypeId)
 
@@ -149,8 +154,6 @@ export async function attachRecord(actor, applicationId, body) {
   const recordId = requireId(body.recordId, 'INVALID_RECORD_ID')
   const recordType = await findRecordType(actor, recordId)
   if (!recordType) throw new AppError('RECORD_NOT_FOUND', 404)
-  // A baptismal certificate can only be drawn from the baptismal register. The
-  // register comes from document_type, which is why that column exists on it.
   if (recordType !== application.recordType) throw new AppError('RECORD_TYPE_MISMATCH', 409)
 
   const changed = await attachRecordRow(actor, application.applicationId, recordId, actor.userId)
@@ -163,15 +166,11 @@ export async function markPaid(actor, applicationId) {
   if (!OPEN_STATUSES.includes(application.status)) throw new AppError('APPLICATION_NOT_EDITABLE', 409)
 
   await markPaidRow(actor, application.applicationId)
-  // Deliberately not an error when it was already paid: pressing the button twice
-  // should not fail, and the row is already in the state the caller wanted.
   return findApplication(actor, application.applicationId)
 }
 
 export async function rejectApplication(actor, applicationId, body) {
   const application = await requireApplication(actor, applicationId)
-  // A manager refuses while pending or verified; a priest only at approval time,
-  // which is what "verified" means. The policies enforce the same split.
   const allowed = actor.role === 'manager' ? OPEN_STATUSES : ['verified']
   if (!allowed.includes(application.status)) throw new AppError('APPLICATION_NOT_EDITABLE', 409)
 
@@ -183,4 +182,35 @@ export async function rejectApplication(actor, applicationId, body) {
   )
   if (changed === 0) throw new AppError('APPLICATION_NOT_EDITABLE', 409)
   return findApplication(actor, application.applicationId)
+}
+
+export async function approveApplication(actor, applicationId) {
+  const application = await requireApplication(actor, applicationId)
+  if (application.status !== 'verified') throw new AppError('APPLICATION_NOT_VERIFIED', 409)
+
+  for (let attempt = 1; attempt <= MAX_CODE_ATTEMPTS; attempt += 1) {
+    try {
+      const issued = await issueCertificate(actor, {
+        applicationId: application.applicationId,
+        verificationCode: mintVerificationCode(),
+        buildSnapshot,
+      })
+      if (!issued) throw new AppError('APPLICATION_NOT_VERIFIED', 409)
+
+      return {
+        request: await findApplication(actor, application.applicationId),
+        certificate: await findCertificate(actor, application.applicationId),
+      }
+    } catch (err) {
+      const collision = err instanceof AppError && err.code === 'VERIFICATION_CODE_TAKEN'
+      if (!collision || attempt === MAX_CODE_ATTEMPTS) throw err
+    }
+  }
+}
+
+export async function getCertificate(actor, applicationId) {
+  const application = await requireApplication(actor, applicationId)
+  const certificate = await findCertificate(actor, application.applicationId)
+  if (!certificate) throw new AppError('CERTIFICATE_NOT_FOUND', 404)
+  return certificate
 }
