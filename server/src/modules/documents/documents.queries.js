@@ -339,3 +339,18 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
   })
 }
 
+export async function countRecordDocuments(actor, recordId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select
+         (select count(*) from public.document_application where record_id = $1) as request_count,
+         (select count(*) from public.document_file where record_id = $1) as issued_count`,
+      [recordId]
+    )
+    return {
+      requestCount: Number(rows[0].request_count),
+      issuedCount: Number(rows[0].issued_count),
+    }
+  })
+}
+

@@ -3,7 +3,7 @@ import { isUuid } from '../../lib/credentials.js'
 import { clean, requireRecordType, requireRegistryPart, requireOfficiant, requirePastDate, optionalPastDate, requireSubjectName, optionalSubjectName, requireGender, optionalPlaceOfBirth, optionalSponsorNames } from '../../lib/validators.js'
 import { findRecord, insertRecord, updateRecord, updateSubject, searchSubjects, insertAttachment, findAttachment, deleteAttachment } from './records.queries.js'
 import {sniffContentType, sanitizeFileName, ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES} from '../../lib/fileType.js'
-
+import { countRecordDocuments } from '../documents/documents.queries.js'
 
 const PAGE_SIZE = 50
 const MAX_SEARCH_WORDS = 5
@@ -83,7 +83,8 @@ export async function createRecord(actor, body) {
 export async function getRecord(actor, recordId) {
   const record = await findRecord(actor, requireId(recordId, 'INVALID_RECORD_ID'))
   if (!record) throw new AppError('RECORD_NOT_FOUND', 404)
-  return record
+  const counts = await countRecordDocuments(actor, record.recordId)
+  return { ...record, ...counts }
 }
 
 export async function searchRecords(actor, { q, type, page } = {}) {
