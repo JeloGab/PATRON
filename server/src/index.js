@@ -14,13 +14,14 @@ import events from './modules/events/events.router.js'
 import documents from './modules/documents/documents.router.js'
 import documentRequests from './modules/documents/documents.requests.router.js'
 import documentTypes from './modules/documents/documents.public.router.js'
+import verification from './modules/verification/verification.public.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 const app = express()
+app.use(cors({ origin: process.env.CLIENT_ORIGIN, credentials: true }))
 
 app.use(helmet())
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
 app.use(express.json())
 
 app.use('/api/health', health)
@@ -35,6 +36,7 @@ app.use('/api/events', events)
 app.use('/api/documents', documents)
 app.use('/api/requests', documentRequests)
 app.use('/api/document-types', documentTypes)
+app.use('/api/verify', verification)
 
 
 app.use(notFound)

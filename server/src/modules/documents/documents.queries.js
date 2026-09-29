@@ -274,12 +274,7 @@ export async function findCertificate(actor, applicationId) {
   })
 }
 
-// Approval and issuance in ONE transaction. If the insert fails — a code collision,
-// a policy refusal — the approval rolls back with it, so a request can never sit
-// approved with no certificate behind it.
-//
-// buildSnapshot is passed in by the service: the SQL stays here, the shape of a
-// certificate stays there, and neither file grows the other's job.
+
 export async function issueCertificate(actor, { applicationId, verificationCode, buildSnapshot }) {
   return withActor(actor, async (client) => {
     try {
@@ -291,7 +286,7 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
           returning record_id, document_type_id, purpose`,
         [applicationId, actor.userId]
       )
-      // Zero rows means the policy refused or the status moved under us — never success.
+      
       if (approved.rowCount === 0) return null
 
       const { record_id: recordId, document_type_id: documentTypeId, purpose } = approved.rows[0]
@@ -343,3 +338,4 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
     }
   })
 }
+

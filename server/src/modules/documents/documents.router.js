@@ -2,7 +2,7 @@ import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
 import { attachRecord, fileWalkIn, getApplication, listApplications, markPaid, rejectApplication, } from './documents.services.js'
-import {approveApplication, getCertificate} from './documents.services.js'
+import {approveApplication, getCertificate, getCertificatePdf} from './documents.services.js'
 
 const submissionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -49,6 +49,13 @@ router.post('/:applicationId/approve', priestOnly, async (req, res) => {
 
 router.get('/:applicationId/certificate', async (req, res) => {
   res.json({ ok: true, certificate: await getCertificate(req.user, req.params.applicationId) })
+})
+
+router.get('/:applicationId/certificate.pdf', async (req, res) => {
+  const file = await getCertificatePdf(req.user, req.params.applicationId)
+  res.type('application/pdf')
+  res.set('Content-Disposition', `inline; filename="${file.fileName}"`)
+  res.send(file.buffer)
 })
 
 export default router

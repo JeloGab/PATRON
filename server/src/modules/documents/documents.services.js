@@ -3,12 +3,19 @@ import { isUuid } from '../../lib/credentials.js'
 import {clean, optionalContact, optionalDescription, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
 import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate } from './documents.queries.js'
 import {mintVerificationCode} from '../../lib/verificationCode.js'
+import { buildCertificatePdf } from './documents.pdf.js'
+
 
 const PAGE_SIZE = 50
 const STATUSES = ['pending', 'verified', 'approved', 'rejected', 'cancelled']
 const MAX_CODE_ATTEMPTS = 5
 const SUBJECT_ORDER = { groom: 0, primary: 0, bride: 1, spouse: 1 }
 const OPEN_STATUSES = ['pending', 'verified']
+const VERIFY_PATH = '/#/verify'
+const clientOrigin = process.env.CLIENT_ORIGIN
+if (!clientOrigin) throw new Error('.env error')
+const VERIFY_BASE = `${clientOrigin.replace(/\/$/, '')}${VERIFY_PATH}`
+
 
 function requireId(value, code) {
   const id = clean(value).toLowerCase()
@@ -214,3 +221,19 @@ export async function getCertificate(actor, applicationId) {
   if (!certificate) throw new AppError('CERTIFICATE_NOT_FOUND', 404)
   return certificate
 }
+
+export async function getCertificatePdf(actor, applicationId) {
+  const certificate = await getCertificate(actor, applicationId)
+  const buffer = await buildCertificatePdf({
+    certificate,
+    verifyUrl: `${VERIFY_BASE}/${certificate.verificationCode}`,
+  })
+
+  const subject = (certificate.snapshot?.subjectName ?? 'certificate')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '-')
+    .slice(0, 40)
+  return { buffer, fileName: `${subject}-${certificate.verificationCode}.pdf` }
+}
+
