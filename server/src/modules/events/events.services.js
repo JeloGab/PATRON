@@ -3,6 +3,7 @@ import { isUuid } from '../../lib/credentials.js'
 import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish } from '../../lib/validators.js'
 import { findActivePriest } from '../parish/parish.queries.js'
 import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict } from './events.queries.js'
+import { findUnclearedParticipants } from '../participants/participants.queries.js'
 
 const MAX_WINDOW_DAYS = 92
 const EDITABLE_STATUSES = ['pending', 'approved']
@@ -26,7 +27,7 @@ async function requirePriest(actor, value) {
   return priestId
 }
 
-// Rule 1, in order, stopping at the first failure.
+
 async function runChecks(actor, slot) {
   const blocked = await findBlockConflict(actor, slot)
   if (blocked === 'parish') throw new AppError('DATE_BLOCKED', 409)
@@ -127,7 +128,6 @@ export async function editEvent(actor, eventId, body) {
     })
   }
 
-  // A priest approved one specific slot. Move it, and it needs approving again.
   const resetApproval = rescheduled && next.eventType === 'sacramental' && current.status === 'approved'
 
   const changed = await updateEvent(actor, current.eventId, { patch, resetApproval })
@@ -140,7 +140,6 @@ export async function approveEvent(actor, eventId) {
   const current = await getEvent(actor, eventId)
   if (current.status !== 'pending') throw new AppError('EVENT_NOT_PENDING', 409)
 
-  // Decision 14: the checks run again, because the calendar may have moved on.
   await runChecks(actor, {
     eventDate: current.eventDate,
     startTime: current.startTime,
@@ -186,6 +185,8 @@ export async function completeEvent(actor, eventId) {
   if (current.status !== 'approved') throw new AppError('EVENT_NOT_COMPLETABLE', 409)
   if (current.eventDate > todayInParish()) throw new AppError('EVENT_NOT_COMPLETABLE', 409)
 
+  const uncleared = await findUnclearedParticipants(actor, current.eventId)
+
   const closed = await closeEvent(actor, current.eventId, {
     status: 'completed',
     reason: null,
@@ -193,5 +194,10 @@ export async function completeEvent(actor, eventId) {
   })
   if (!closed) throw new AppError('EVENT_NOT_COMPLETABLE', 409)
 
-  return findEvent(actor, current.eventId)
+  return {
+    event: await findEvent(actor, current.eventId),
+    warnings: uncleared.map(
+      (p) => `${p.participantName}: ${p.pendingCount} requirement${p.pendingCount === 1 ? '' : 's'} still pending`,
+    ),
+  }
 }

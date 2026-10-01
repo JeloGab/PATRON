@@ -38,7 +38,8 @@ router.post('/:eventId/cancel', managerOnly, async (req, res) => {
 })
 
 router.post('/:eventId/complete', managerOnly, async (req, res) => {
-  res.json({ ok: true, event: await completeEvent(req.user, req.params.eventId) })
+  const { event, warnings } = await completeEvent(req.user, req.params.eventId)
+  res.json({ ok: true, event, warnings })
 })
 
 export default router
