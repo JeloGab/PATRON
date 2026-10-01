@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import ChurchMedia from '../components/ChurchMedia.jsx'
 import { churches } from '../data/mock.js'
 
 export default function ChurchDetail() {
@@ -23,13 +24,20 @@ export default function ChurchDetail() {
       </Link>
 
       <article className="detail">
-        <div className="detail__banner" style={{ '--accent': church.accent }}>
+        <ChurchMedia
+          id={church.id}
+          accent={church.accent}
+          className="detail__banner"
+          alt={church.name}
+        >
           <div className="detail__banner-shade">
             <p className="eyebrow eyebrow--light">{church.diocese}</p>
             <h1>{church.name}</h1>
-            <p>{church.city}</p>
+            <p>
+              {church.vicariate} · {church.city}
+            </p>
           </div>
-        </div>
+        </ChurchMedia>
 
         <div className="detail__grid">
           <section className="card">
@@ -45,25 +53,61 @@ export default function ChurchDetail() {
                 <dd>{church.founded}</dd>
               </div>
               <div>
-                <dt>Parish priest</dt>
-                <dd>{church.priest}</dd>
+                <dt>{church.priestTitle || 'Parish priest'}</dt>
+                <dd>
+                  {church.priest}
+                  {church.priestNote && <p className="muted fact-note">{church.priestNote}</p>}
+                </dd>
               </div>
               <div>
                 <dt>Address</dt>
                 <dd>{church.address}</dd>
               </div>
+              <div>
+                <dt>Vicariate / area</dt>
+                <dd>{church.vicariate}</dd>
+              </div>
             </dl>
           </section>
 
           <aside className="stack">
+            <section className="card cta-card">
+              <p className="eyebrow">Online issuance</p>
+              <h2 className="cta-card__title">Request a document</h2>
+              <p className="muted">
+                Apply for a baptismal, confirmation, marriage, or related parish certificate. Your
+                request starts as pending until the parish manager approves it.
+              </p>
+              <Link to={`/parish/${church.id}/request`} className="btn btn--gold btn--block">
+                Open application form
+              </Link>
+            </section>
+
             <section className="card">
               <p className="eyebrow">Office</p>
-              <p>
-                <a href={`tel:${church.phone.replace(/\s/g, '')}`}>{church.phone}</a>
-              </p>
-              <p>
-                <a href={`mailto:${church.email}`}>{church.email}</a>
-              </p>
+              {church.phone ? (
+                <p>
+                  <a href={`tel:${church.phone.replace(/[^\d+]/g, '')}`}>{church.phone}</a>
+                </p>
+              ) : (
+                <p className="muted">No phone listed</p>
+              )}
+              {church.mobile && (
+                <p>
+                  Mobile:{' '}
+                  <a href={`tel:${church.mobile.replace(/[^\d+]/g, '')}`}>{church.mobile}</a>
+                </p>
+              )}
+              {church.email ? (
+                <p>
+                  <a href={`mailto:${church.email}`}>{church.email}</a>
+                </p>
+              ) : (
+                <p className="muted">No email listed</p>
+              )}
+              {church.officeHours && (
+                <p className="muted">Hours: {church.officeHours}</p>
+              )}
             </section>
 
             <section className="card">
@@ -95,6 +139,7 @@ export default function ChurchDetail() {
               ))}
             </tbody>
           </table>
+          {church.scheduleNote && <p className="schedule-note muted">{church.scheduleNote}</p>}
         </section>
       </article>
     </div>

@@ -1,21 +1,23 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import ChurchMedia from '../components/ChurchMedia.jsx'
 import { churches } from '../data/mock.js'
 
 export default function Dashboard() {
   const [query, setQuery] = useState('')
-  const [city, setCity] = useState('all')
+  const [diocese, setDiocese] = useState('all')
 
-  const cities = useMemo(
-    () => ['all', ...Array.from(new Set(churches.map((c) => c.city)))],
+  const dioceses = useMemo(
+    () => ['all', ...Array.from(new Set(churches.map((c) => c.diocese)))],
     [],
   )
 
   const list = churches.filter((church) => {
-    const hay = `${church.name} ${church.city} ${church.diocese} ${church.patron}`.toLowerCase()
+    const hay =
+      `${church.name} ${church.city} ${church.diocese} ${church.vicariate} ${church.patron}`.toLowerCase()
     const matchesQuery = hay.includes(query.trim().toLowerCase())
-    const matchesCity = city === 'all' || church.city === city
-    return matchesQuery && matchesCity
+    const matchesDiocese = diocese === 'all' || church.diocese === diocese
+    return matchesQuery && matchesDiocese
   })
 
   return (
@@ -25,8 +27,8 @@ export default function Dashboard() {
           <p className="eyebrow">Directory</p>
           <h1>Find a parish</h1>
           <p className="lede">
-            Browse participating Catholic churches. Open a listing to see clergy, sacraments, and
-            Mass times.
+            Browse parishes under the Archdiocese of Caceres and the Diocese of Libmanan. Open a
+            listing for clergy, sacraments, and Mass times.
           </p>
         </div>
         <p className="stat">
@@ -41,15 +43,15 @@ export default function Dashboard() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, city, diocese, or patron…"
+            placeholder="Search by name, city, diocese, vicariate, or patron…"
           />
         </label>
         <label className="select">
-          <span className="sr-only">Filter by city</span>
-          <select value={city} onChange={(e) => setCity(e.target.value)}>
-            {cities.map((item) => (
+          <span className="sr-only">Filter by diocese</span>
+          <select value={diocese} onChange={(e) => setDiocese(e.target.value)}>
+            {dioceses.map((item) => (
               <option key={item} value={item}>
-                {item === 'all' ? 'All cities' : item}
+                {item === 'all' ? 'All dioceses' : item}
               </option>
             ))}
           </select>
@@ -61,21 +63,32 @@ export default function Dashboard() {
       ) : (
         <ul className="grid">
           {list.map((church) => (
-            <li key={church.id}>
-              <Link to={`/parish/${church.id}`} className="parish-card">
-                <div className="parish-card__media" style={{ '--accent': church.accent }}>
+            <li key={church.id} className="parish-card">
+              <Link to={`/parish/${church.id}`} className="parish-card__link">
+                <ChurchMedia
+                  id={church.id}
+                  accent={church.accent}
+                  className="parish-card__media"
+                  alt={church.name}
+                >
                   <span className="chip" style={{ background: church.accent }}>
-                    Est. {church.founded}
+                    Est. {String(church.founded).replace(/^.*(\d{4}).*$/, '$1') || church.founded}
                   </span>
-                </div>
+                </ChurchMedia>
                 <div className="parish-card__body">
                   <p className="parish-card__diocese">{church.diocese}</p>
                   <h2>{church.name}</h2>
-                  <p className="muted">{church.city}</p>
+                  <p className="muted">
+                    {church.vicariate} · {church.city}
+                  </p>
                   <p className="parish-card__summary">{church.summary}</p>
-                  <span className="linkish">View parish details</span>
                 </div>
               </Link>
+              <div className="parish-card__actions">
+                <Link to={`/parish/${church.id}/request`} className="btn btn--gold btn--block">
+                  Request document
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

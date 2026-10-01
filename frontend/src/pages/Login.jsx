@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 import { getSession, setSession } from '../lib/session.js'
 
@@ -73,6 +73,15 @@ export default function Login() {
           <button type="submit" className="btn btn--gold btn--block">
             Enter PATRON
           </button>
+
+          <div className="auth__divider">
+            <span>or</span>
+          </div>
+
+          <Link to="/verify" className="btn btn--ghost btn--block">
+            Verify a document
+          </Link>
+          <p className="auth__note muted">No account needed — public verification only.</p>
         </form>
       </section>
     </div>
