@@ -32,10 +32,10 @@ export default function Login() {
   return (
     <div className="login">
       <aside className="login__aside">
-        <Logo light tag="Parish system" />
+        <Logo light tag="" />
         <div className="login__aside-inner">
           <p className="eyebrow">PATRON</p>
-          <h1>One entrance for every role</h1>
+          <h1>Parish Management System</h1>
           <p className="lede">
             Sign in with your account. A system admin opens the diocesan registry, a parish priest
             opens the priest calendar, and a parish manager opens the parish office.

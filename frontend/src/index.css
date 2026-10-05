@@ -1178,7 +1178,7 @@ textarea:focus {
 }
 
 .login__aside h1 {
-  max-width: 10ch;
+  max-width: 9em;
   color: white;
   font-size: clamp(2.6rem, 4vw, 3.6rem);
 }
