@@ -1,4 +1,4 @@
-const KEY = 'patron.manager.session'
+const KEY = 'patron.session'
 
 export function getSession() {
   try {
@@ -15,4 +15,11 @@ export function setSession(session) {
 
 export function clearSession() {
   localStorage.removeItem(KEY)
+}
+
+export function homeForRole(role) {
+  if (role === 'system_admin') return '/admin'
+  if (role === 'priest') return '/priest'
+  if (role === 'manager') return '/manager'
+  return '/login'
 }

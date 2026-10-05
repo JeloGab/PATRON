@@ -68,12 +68,12 @@ export default function CreateEvent() {
     }
 
     const created = addEvent({ ...form, category: kind })
-    navigate('/', { state: { createdTitle: created.title } })
+    navigate('/manager', { state: { createdTitle: created.title } })
   }
 
   return (
     <div className="page">
-      <Link to="/" className="back">
+      <Link to="/manager" className="back">
         ← Back to dashboard
       </Link>
 
@@ -184,7 +184,7 @@ export default function CreateEvent() {
               Choose a different kind
             </button>
             <div className="panel__actions">
-              <Link to="/" className="btn btn--ghost">
+              <Link to="/manager" className="btn btn--ghost">
                 Cancel
               </Link>
               <button type="submit" className="btn btn--gold">

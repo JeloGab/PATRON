@@ -18,25 +18,25 @@ export default function Dashboard() {
       label: 'Events this week',
       value: weekCount,
       hint: `Sun–Sat · ${formatWeekRange()}`,
-      to: '/schedule',
+      to: '/manager/schedule',
     },
     {
       label: 'Requests to verify',
       value: countToVerify(applications),
       hint: 'Sacrament applications waiting on review',
-      to: '/applications?focus=verify',
+      to: '/manager/applications?focus=verify',
     },
     {
       label: 'Requirements pending',
       value: countRequirementsPending(applications),
       hint: 'Applications still missing papers',
-      to: '/applications?focus=requirements',
+      to: '/manager/applications?focus=requirements',
     },
     {
       label: 'Document requests',
       value: documents.length,
       hint: 'Certificates and recommendations',
-      to: '/documents',
+      to: '/manager/documents',
     },
   ]
 
@@ -78,10 +78,10 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="panel__actions">
-            <Link to="/schedule" className="btn btn--ghost">
+            <Link to="/manager/schedule" className="btn btn--ghost">
               Open calendar
             </Link>
-            <Link to="/events/new" className="btn btn--gold">
+            <Link to="/manager/events/new" className="btn btn--gold">
               Create event
             </Link>
           </div>

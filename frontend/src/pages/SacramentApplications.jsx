@@ -89,7 +89,7 @@ export default function SacramentApplications() {
 
       {filter && (
         <p className="notice">
-          Showing {filter.label}. <Link to="/applications">Show all applications</Link>
+          Showing {filter.label}. <Link to="/manager/applications">Show all applications</Link>
         </p>
       )}
 

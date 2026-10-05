@@ -1,4 +1,4 @@
-export default function Logo({ light = false, compact = false }) {
+export default function Logo({ light = false, compact = false, tag = 'Parish system' }) {
   return (
     <span className={`brand ${light ? 'brand--light' : ''} ${compact ? 'brand--compact' : ''}`}>
       <svg className="brand__mark" viewBox="0 0 40 40" aria-hidden="true">
@@ -14,7 +14,7 @@ export default function Logo({ light = false, compact = false }) {
       </svg>
       <span className="brand__text">
         <span className="brand__name">PATRON</span>
-        {!compact && <span className="brand__tag">Parish manager</span>}
+        {!compact && tag ? <span className="brand__tag">{tag}</span> : null}
       </span>
     </span>
   )

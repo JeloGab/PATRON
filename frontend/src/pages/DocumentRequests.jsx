@@ -279,7 +279,7 @@ export default function DocumentRequests() {
                   </button>
                   <Link
                     className="btn btn--ghost"
-                    to={`/records?search=${encodeURIComponent(selected.applicant)}`}
+                    to={`/manager/records?search=${encodeURIComponent(selected.applicant)}`}
                   >
                     Search other records
                   </Link>
@@ -291,7 +291,7 @@ export default function DocumentRequests() {
                 <div className="match-actions">
                   <Link
                     className="btn btn--ghost"
-                    to={`/records?search=${encodeURIComponent(selected.applicant)}`}
+                    to={`/manager/records?search=${encodeURIComponent(selected.applicant)}`}
                   >
                     Search other records
                   </Link>

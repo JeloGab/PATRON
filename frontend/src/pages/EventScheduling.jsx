@@ -94,10 +94,10 @@ export default function EventScheduling() {
           >
             Blocked dates
           </button>
-          <Link to="/events/block" className="btn btn--ghost">
+          <Link to="/manager/events/block" className="btn btn--ghost">
             Add blocked date
           </Link>
-          <Link to="/events/new" className="btn btn--gold">
+          <Link to="/manager/events/new" className="btn btn--gold">
             Create event
           </Link>
         </div>

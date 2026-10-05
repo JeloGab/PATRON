@@ -1,27 +1,30 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import Logo from './Logo.jsx'
+import { useParish } from '../context/ParishContext.jsx'
 import { clearSession, getSession } from '../lib/session.js'
+import Logo from './Logo.jsx'
 
-const LINKS = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/schedule', label: 'Event scheduling', also: ['/events'] },
-  { to: '/applications', label: 'Sacrament applications' },
-  { to: '/records', label: 'Sacramental records' },
-  { to: '/documents', label: 'Document requests' },
-  { to: '/announcements', label: 'Announcements' },
+const MANAGER_LINKS = [
+  { to: '/manager', label: 'Dashboard', end: true },
+  { to: '/manager/schedule', label: 'Event scheduling', also: ['/manager/events'] },
+  { to: '/manager/applications', label: 'Sacrament applications' },
+  { to: '/manager/records', label: 'Sacramental records' },
+  { to: '/manager/documents', label: 'Document requests' },
+  { to: '/manager/announcements', label: 'Announcements' },
+]
+
+const PRIEST_LINKS = [
+  { to: '/priest', label: 'My calendar', end: true },
+  { to: '/priest/approvals', label: 'Pending approvals' },
 ]
 
 function isCurrent(item, pathname) {
-  if (item.end) return pathname === '/'
+  if (item.end) return pathname === item.to
   if (pathname === item.to || pathname.startsWith(`${item.to}/`)) return true
   return item.also?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
-export default function TopNav() {
-  const { pathname } = useLocation()
+function SignOut() {
   const navigate = useNavigate()
-  const session = getSession()
-  const initial = (session?.email || 'P').slice(0, 1).toUpperCase()
 
   function signOut() {
     clearSession()
@@ -29,9 +32,21 @@ export default function TopNav() {
   }
 
   return (
+    <button type="button" className="btn btn--ghost" onClick={signOut}>
+      Sign out
+    </button>
+  )
+}
+
+function ManagerNav() {
+  const { pathname } = useLocation()
+  const session = getSession()
+  const initial = (session?.name || session?.email || 'P').slice(0, 1).toUpperCase()
+
+  return (
     <header className="topbar">
       <div className="topbar__inner">
-        <NavLink to="/" className="topbar__brand">
+        <NavLink to="/manager" className="topbar__brand">
           <Logo compact />
         </NavLink>
 
@@ -40,18 +55,16 @@ export default function TopNav() {
             {initial}
           </div>
           <div className="topbar__meta">
-            <p className="topbar__name">{session?.email || 'Parish office'}</p>
-            <p className="topbar__role">Admin</p>
+            <p className="topbar__name">{session?.name || session?.email || 'Parish office'}</p>
+            <p className="topbar__role">Parish manager</p>
           </div>
-          <button type="button" className="btn btn--ghost" onClick={signOut}>
-            Sign out
-          </button>
+          <SignOut />
         </div>
       </div>
 
       <div className="topbar__tabs">
         <nav className="tabs" aria-label="Parish manager">
-          {LINKS.map((item) => {
+          {MANAGER_LINKS.map((item) => {
             const current = isCurrent(item, pathname)
             return (
               <NavLink
@@ -69,4 +82,62 @@ export default function TopNav() {
       </div>
     </header>
   )
+}
+
+function PriestNav() {
+  const { pathname } = useLocation()
+  const session = getSession()
+  const { pendingCount } = useParish()
+  const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
+
+  return (
+    <header className="topbar">
+      <div className="topbar__inner">
+        <NavLink to="/priest" className="topbar__brand">
+          <Logo compact />
+        </NavLink>
+
+        <div className="topbar__user">
+          <div className="avatar" aria-hidden="true">
+            {initial}
+          </div>
+          <div className="topbar__meta">
+            <p className="topbar__name">{session?.name || 'Parish priest'}</p>
+            <p className="topbar__role">Parish priest</p>
+          </div>
+          <SignOut />
+        </div>
+      </div>
+
+      <div className="topbar__tabs">
+        <nav className="tabs" aria-label="Parish priest">
+          {PRIEST_LINKS.map((item) => {
+            const current = isCurrent(item, pathname)
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={`tabs__link ${current ? 'is-active' : ''}`}
+                aria-current={current ? 'page' : undefined}
+              >
+                {item.to === '/priest/approvals' && pendingCount > 0 && (
+                  <span className="notif" aria-label={`${pendingCount} pending`}>
+                    {pendingCount}
+                  </span>
+                )}
+                {item.label}
+              </NavLink>
+            )
+          })}
+        </nav>
+      </div>
+    </header>
+  )
+}
+
+export default function TopNav() {
+  const session = getSession()
+  if (session?.role === 'priest') return <PriestNav />
+  return <ManagerNav />
 }

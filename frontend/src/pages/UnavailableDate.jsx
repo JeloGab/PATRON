@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useEvents } from '../context/EventsContext.jsx'
+import { useParish } from '../context/ParishContext.jsx'
 
-export default function BlockDate() {
+export default function UnavailableDate() {
   const navigate = useNavigate()
-  const { addBlock } = useEvents()
+  const { addUnavailable } = useParish()
   const [form, setForm] = useState({ date: '', time: '', reason: '' })
   const [error, setError] = useState('')
 
@@ -18,22 +18,23 @@ export default function BlockDate() {
       setError('Enter the date, time, and reason.')
       return
     }
-    addBlock(form)
-    navigate('/manager/schedule', { state: { showBlocked: true } })
+    addUnavailable(form)
+    navigate('/priest', { state: { showUnavailable: true } })
   }
 
   return (
     <div className="page">
-      <Link to="/manager/schedule" className="back">
-        ← Back to calendar
+      <Link to="/priest" className="back">
+        ← Back to my calendar
       </Link>
 
       <header className="page__hero">
         <div>
-          <p className="eyebrow">Event scheduling</p>
-          <h1>Add blocked date</h1>
+          <p className="eyebrow">My calendar</p>
+          <h1>Add unavailable date</h1>
           <p className="lede">
-            Mark a date and time the parish cannot schedule. It appears in red on the calendar.
+            Mark a date and time you cannot take an assignment. It appears on your calendar beside
+            the dates the church has blocked.
           </p>
         </div>
       </header>
@@ -54,19 +55,19 @@ export default function BlockDate() {
             <input
               value={form.reason}
               onChange={update('reason')}
-              placeholder="Parish recollection"
+              placeholder="Retreat, travel, or another commitment"
               required
             />
           </label>
         </div>
         <div className="form-actions">
-          <p className="form-hint muted">Blocked dates stay on this browser.</p>
+          <p className="form-hint muted">Unavailable dates stay on this browser.</p>
           <div className="panel__actions">
-            <Link to="/manager/schedule" className="btn btn--ghost">
+            <Link to="/priest" className="btn btn--ghost">
               Cancel
             </Link>
             <button type="submit" className="btn btn--gold">
-              Add blocked date
+              Add unavailable date
             </button>
           </div>
         </div>
