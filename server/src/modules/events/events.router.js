@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { createEvent, listEvents, getEvent, editEvent, approveEvent, rejectEvent, cancelEvent, completeEvent } from './events.services.js'
+import { createEvent, listEvents, getEvent, editEvent, approveEvent, rejectEvent, cancelEvent, completeEvent, listEventCertificates, getEventCertificatePdf } from './events.services.js'
 
 const router = Router()
 
@@ -37,9 +37,24 @@ router.post('/:eventId/cancel', managerOnly, async (req, res) => {
   res.json({ ok: true, event: await cancelEvent(req.user, req.params.eventId, req.body ?? {}) })
 })
 
+
 router.post('/:eventId/complete', managerOnly, async (req, res) => {
-  const { event, warnings } = await completeEvent(req.user, req.params.eventId)
-  res.json({ ok: true, event, warnings })
+  const { event, generated, warnings } = await completeEvent(req.user, req.params.eventId, req.body ?? {})
+  res.json({ ok: true, event, generated, warnings })
+})
+
+router.get('/:eventId/certificates', async (req, res) => {
+  res.json({ ok: true, certificates: await listEventCertificates(req.user, req.params.eventId) })
+})
+
+router.get('/:eventId/certificates/:certificateId/pdf', async (req, res) => {
+  const file = await getEventCertificatePdf(req.user, {
+    eventId: req.params.eventId,
+    certificateId: req.params.certificateId,
+  })
+  res.type('application/pdf')
+  res.set('Content-Disposition', `inline; filename="${file.fileName}"`)
+  res.send(file.buffer)
 })
 
 export default router

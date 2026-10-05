@@ -36,7 +36,7 @@ function requestFields(body) {
   }
 }
 
-function buildSnapshot({ record, subjects, purpose }) {
+export function buildSnapshot({ record, subjects, purpose = null, releaseType = 'request' }) {
   const people = subjects
     .map((subject) => ({
       role: subject.role,
@@ -65,7 +65,7 @@ function buildSnapshot({ record, subjects, purpose }) {
     parishContact: record.parish_contact,
     signatoryName: record.signatory_name,
     purpose,
-    releaseType: 'request',
+    releaseType: 'request'
   }
 }
 
@@ -222,8 +222,7 @@ export async function getCertificate(actor, applicationId) {
   return certificate
 }
 
-export async function getCertificatePdf(actor, applicationId) {
-  const certificate = await getCertificate(actor, applicationId)
+export async function renderCertificatePdf(certificate) {
   const buffer = await buildCertificatePdf({
     certificate,
     verifyUrl: `${VERIFY_BASE}/${certificate.verificationCode}`,
@@ -235,5 +234,9 @@ export async function getCertificatePdf(actor, applicationId) {
     .replace(/[^A-Za-z0-9]+/g, '-')
     .slice(0, 40)
   return { buffer, fileName: `${subject}-${certificate.verificationCode}.pdf` }
+}
+
+export async function getCertificatePdf(actor, applicationId) {
+  return renderCertificatePdf(await getCertificate(actor, applicationId))
 }
 

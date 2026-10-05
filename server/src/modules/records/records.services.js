@@ -17,7 +17,7 @@ function requireId(value, code) {
   return id
 }
 
-function roleFor(recordType, gender) {
+export function roleFor(recordType, gender) {
   if (recordType !== 'marriage') return 'primary'
   return gender === 'male' ? 'groom' : 'bride'
 }
@@ -35,7 +35,7 @@ function cleanNewSubject(input) {
   }
 }
 
-function checkDates(recordType, { recordDate, dateOfDeath }, subjects) {
+export function checkDates(recordType, { recordDate, dateOfDeath }, subjects) {
   if (dateOfDeath && recordType !== 'death') throw new AppError('INVALID_DEATH_DATE', 400)
   if (dateOfDeath && dateOfDeath > recordDate) throw new AppError('INVALID_DEATH_DATE', 400)
 

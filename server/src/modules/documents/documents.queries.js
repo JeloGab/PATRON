@@ -354,3 +354,27 @@ export async function countRecordDocuments(actor, recordId) {
   })
 }
 
+export async function findEventCertificates(actor, eventId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select ${CERT_COLUMNS} ${CERT_SOURCE}
+        where f.source_event_id = $1
+        order by f.issued_at`,
+      [eventId]
+    )
+    return rows.map(mapCertificate)
+  })
+}
+
+export async function findEventCertificate(actor, { eventId, certificateId }) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select ${CERT_COLUMNS} ${CERT_SOURCE}
+        where f.file_id = $1
+          and f.source_event_id = $2`,
+      [certificateId, eventId]
+    )
+    return rows.length === 0 ? null : mapCertificate(rows[0])
+  })
+}
+

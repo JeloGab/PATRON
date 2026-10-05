@@ -1,13 +1,20 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish } from '../../lib/validators.js'
+import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish, requireRegistryPart, optionalSubjectName, optionalPlaceOfBirth, optionalPastDate } from '../../lib/validators.js'
 import { findActivePriest } from '../parish/parish.queries.js'
+import { mintVerificationCode } from '../../lib/verificationCode.js'
+import { buildSnapshot, renderCertificatePdf } from '../documents/documents.services.js'
+import { findEventCertificates, findEventCertificate } from '../documents/documents.queries.js'
+import { roleFor, checkDates } from '../records/records.services.js'
 import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict } from './events.queries.js'
 import { findUnclearedParticipants } from '../participants/participants.queries.js'
-
+import {completeEventAndIssue} from './events.issuance.js'
 const MAX_WINDOW_DAYS = 92
 const EDITABLE_STATUSES = ['pending', 'approved']
 const RESCHEDULE_FIELDS = ['eventDate', 'startTime', 'endTime', 'assignedPriestId']
+const MAX_ISSUE_ATTEMPTS = 5
+const MARRIAGE_ROSTER = 2
+const NO_DETAIL = { fatherName: null, motherName: null, placeOfBirth: null, dateOfDeath: null }
 
 function requireId(value, code) {
   const id = clean(value).toLowerCase()
@@ -27,6 +34,114 @@ async function requirePriest(actor, value) {
   return priestId
 }
 
+function requireDetails(input) {
+  if (input === undefined || input === null) return new Map()
+  if (!Array.isArray(input)) throw new AppError('INVALID_PARTICIPANT_DETAILS', 400)
+
+  const details = new Map()
+  for (const raw of input) {
+    const entry = raw ?? {}
+    details.set(requireId(entry.participantId, 'INVALID_PARTICIPANT_ID'), {
+      fatherName: optionalSubjectName(entry.fatherName),
+      motherName: optionalSubjectName(entry.motherName),
+      placeOfBirth: optionalPlaceOfBirth(entry.placeOfBirth),
+      dateOfDeath: optionalPastDate(entry.dateOfDeath, 'INVALID_DEATH_DATE'),
+    })
+  }
+  return details
+}
+
+function subjectFor(participant, detail, recordType) {
+  return {
+    role: roleFor(recordType, participant.gender),
+    fullName: participant.participantName,
+    dateOfBirth: participant.dateOfBirth,
+    placeOfBirth: detail.placeOfBirth,
+    gender: participant.gender,
+    fatherName: detail.fatherName,
+    motherName: detail.motherName,
+    sponsorNames: participant.sponsorName,
+  }
+}
+
+function rejection(who, err) {
+  if (!(err instanceof AppError)) throw err
+  return `${who}: ${err.code} — no record was generated`
+}
+
+function skipped(person) {
+  const detail =
+    person.pendingCount > 0
+      ? `${person.pendingCount} requirement${person.pendingCount === 1 ? '' : 's'} still pending`
+      : 'requirements not cleared'
+  return `${person.participantName}: ${detail} — no record or certificate was generated`
+}
+
+function planRecords({ recordType, eventDate, officiantName, registry, details, roster }) {
+  const drafts = []
+  const warnings = []
+
+  if (roster.length === 0) {
+    warnings.push('The roster is empty — no record was generated')
+    return { drafts, warnings }
+  }
+
+  const cleared = []
+  for (const person of roster) {
+    if (person.status === 'cleared') cleared.push(person)
+    else warnings.push(skipped(person))
+  }
+  if (cleared.length === 0) return { drafts, warnings }
+
+  const base = {
+    bookNo: registry.bookNo,
+    pageNo: registry.pageNo,
+    recordDate: eventDate,
+    dateOfDeath: null,
+    officiantName,
+  }
+
+  if (recordType === 'marriage') {
+    if (cleared.length !== MARRIAGE_ROSTER) {
+      warnings.push(
+        `A marriage register entry is one record with two subjects, so exactly two cleared participants are needed — this roster has ${cleared.length} — no record was generated`
+      )
+      return { drafts, warnings }
+    }
+
+    const subjects = cleared.map((p) =>
+      subjectFor(p, details.get(p.participantId) ?? NO_DETAIL, recordType)
+    )
+    if (subjects[0].role === subjects[1].role) {
+      warnings.push('A marriage needs one male and one female participant — no record was generated')
+      return { drafts, warnings }
+    }
+
+    try {
+      checkDates(recordType, base, subjects)
+      drafts.push({ record: base, subjects })
+    } catch (err) {
+      warnings.push(rejection(cleared.map((p) => p.participantName).join(' & '), err))
+    }
+    return { drafts, warnings }
+  }
+
+  for (const participant of cleared) {
+    const detail = details.get(participant.participantId) ?? NO_DETAIL
+    const record = { ...base, dateOfDeath: recordType === 'death' ? detail.dateOfDeath : null }
+    const subjects = [subjectFor(participant, detail, recordType)]
+
+    try {
+      checkDates(recordType, record, subjects)
+      drafts.push({ record, subjects })
+    } catch (err) {
+      warnings.push(rejection(participant.participantName, err))
+    }
+  }
+
+  return { drafts, warnings }
+
+}
 
 async function runChecks(actor, slot) {
   const blocked = await findBlockConflict(actor, slot)
@@ -180,24 +295,53 @@ export async function cancelEvent(actor, eventId, body) {
   return findEvent(actor, current.eventId)
 }
 
-export async function completeEvent(actor, eventId) {
+export async function completeEvent(actor, eventId, body = {}) {
   const current = await getEvent(actor, eventId)
   if (current.status !== 'approved') throw new AppError('EVENT_NOT_COMPLETABLE', 409)
   if (current.eventDate > todayInParish()) throw new AppError('EVENT_NOT_COMPLETABLE', 409)
 
-  const uncleared = await findUnclearedParticipants(actor, current.eventId)
+  const sacramental = current.eventType === 'sacramental'
+  const registry = sacramental
+    ? { bookNo: requireRegistryPart(body.bookNo), pageNo: requireRegistryPart(body.pageNo) }
+    : null
+  const details = sacramental ? requireDetails(body.participants) : new Map()
 
-  const closed = await closeEvent(actor, current.eventId, {
-    status: 'completed',
-    reason: null,
-    fromStatuses: ['approved'],
-  })
-  if (!closed) throw new AppError('EVENT_NOT_COMPLETABLE', 409)
+  for (let attempt = 1; attempt <= MAX_ISSUE_ATTEMPTS; attempt += 1) {
+    try {
+      const issued = await completeEventAndIssue(actor, {
+        eventId: current.eventId,
+        registry,
+        details,
+        planRecords,
+        buildSnapshot,
+        mintCode: mintVerificationCode,
+      })
+      if (!issued) throw new AppError('EVENT_NOT_COMPLETABLE', 409)
 
-  return {
-    event: await findEvent(actor, current.eventId),
-    warnings: uncleared.map(
-      (p) => `${p.participantName}: ${p.pendingCount} requirement${p.pendingCount === 1 ? '' : 's'} still pending`,
-    ),
+      return {
+        event: await findEvent(actor, current.eventId),
+        generated: { records: issued.records, certificates: issued.certificates },
+        warnings: issued.warnings,
+      }
+    } catch (err) {
+      const collision =
+        err instanceof AppError &&
+        (err.code === 'VERIFICATION_CODE_TAKEN' || err.code === 'REGISTRY_ENTRY_TAKEN')
+      if (!collision || attempt === MAX_ISSUE_ATTEMPTS) throw err
+    }
   }
+}
+
+export async function listEventCertificates(actor, eventId) {
+  const event = await getEvent(actor, eventId)
+  return findEventCertificates(actor, event.eventId)
+}
+
+export async function getEventCertificatePdf(actor, { eventId, certificateId }) {
+  const certificate = await findEventCertificate(actor, {
+    eventId: requireId(eventId, 'INVALID_EVENT_ID'),
+    certificateId: requireId(certificateId, 'INVALID_CERTIFICATE_ID'),
+  })
+  if (!certificate) throw new AppError('CERTIFICATE_NOT_FOUND', 404)
+  return renderCertificatePdf(certificate)
 }
