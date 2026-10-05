@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { EventsProvider } from './context/EventsContext.jsx'
 import { OfficeProvider } from './context/OfficeContext.jsx'
 import { ParishProvider } from './context/ParishContext.jsx'
+import AdminLayout from './layouts/AdminLayout.jsx'
 import ManagerLayout from './layouts/ManagerLayout.jsx'
 import PriestLayout from './layouts/PriestLayout.jsx'
 import { getSession, homeForRole } from './lib/session.js'
@@ -14,6 +15,7 @@ import EventScheduling from './pages/EventScheduling.jsx'
 import Login from './pages/Login.jsx'
 import MyCalendar from './pages/MyCalendar.jsx'
 import PendingApprovals from './pages/PendingApprovals.jsx'
+import RegisteredParishes from './pages/RegisteredParishes.jsx'
 import SacramentApplications from './pages/SacramentApplications.jsx'
 import SacramentalRecords from './pages/SacramentalRecords.jsx'
 import UnavailableDate from './pages/UnavailableDate.jsx'
@@ -35,6 +37,17 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+
+      <Route
+        path="/admin"
+        element={
+          <RequireRole role="system_admin">
+            <AdminLayout />
+          </RequireRole>
+        }
+      >
+        <Route index element={<RegisteredParishes />} />
+      </Route>
 
       <Route
         path="/priest"

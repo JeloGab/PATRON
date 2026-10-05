@@ -1,5 +1,12 @@
 export const ACCOUNTS = [
   {
+    email: 'admin@patron.ph',
+    password: 'patron',
+    name: 'Diocesan Administrator',
+    role: 'system_admin',
+    label: 'System admin',
+  },
+  {
     email: 'priest@parish.org',
     password: 'parish',
     name: 'Rev. Fr. Domingo R. Florida',

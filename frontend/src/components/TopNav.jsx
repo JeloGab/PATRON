@@ -136,8 +136,37 @@ function PriestNav() {
   )
 }
 
+function AdminNav() {
+  const session = getSession()
+  const initial = (session?.name || 'A').slice(0, 1).toUpperCase()
+
+  return (
+    <header className="topbar">
+      <div className="topbar__inner">
+        <div className="topbar__brand">
+          <Logo compact />
+        </div>
+
+        <p className="topbar__section">Registered parishes</p>
+
+        <div className="topbar__user">
+          <div className="avatar" aria-hidden="true">
+            {initial}
+          </div>
+          <div className="topbar__meta">
+            <p className="topbar__name">{session?.name || 'System admin'}</p>
+            <p className="topbar__role">System admin</p>
+          </div>
+          <SignOut />
+        </div>
+      </div>
+    </header>
+  )
+}
+
 export default function TopNav() {
   const session = getSession()
   if (session?.role === 'priest') return <PriestNav />
+  if (session?.role === 'system_admin') return <AdminNav />
   return <ManagerNav />
 }
