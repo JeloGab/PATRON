@@ -1,10 +1,20 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ChurchMedia from '../components/ChurchMedia.jsx'
+import ParishCalendar from '../components/ParishCalendar.jsx'
 import { churches } from '../data/mock.js'
 
 export default function ChurchDetail() {
   const { id } = useParams()
   const church = churches.find((item) => item.id === id)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const calendarRef = useRef(null)
+
+  useEffect(() => {
+    if (calendarOpen) {
+      calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [calendarOpen])
 
   if (!church) {
     return (
@@ -38,6 +48,29 @@ export default function ChurchDetail() {
             </p>
           </div>
         </ChurchMedia>
+
+        <div className="detail__actions">
+          <button
+            type="button"
+            className="btn"
+            aria-expanded={calendarOpen}
+            onClick={() => setCalendarOpen((open) => !open)}
+          >
+            {calendarOpen ? 'Hide calendar' : 'View calendar'}
+          </button>
+        </div>
+
+        {calendarOpen && (
+          <section className="card calendar-card" ref={calendarRef}>
+            <p className="eyebrow">Parish calendar</p>
+            <h2>Available and unavailable dates</h2>
+            <p className="muted">
+              Green days are open for appointments at {church.name}. Marked days are closed, reserved,
+              or already fully booked.
+            </p>
+            <ParishCalendar churchId={church.id} />
+          </section>
+        )}
 
         <div className="detail__grid">
           <section className="card">
