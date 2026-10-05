@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ChurchMedia from '../components/ChurchMedia.jsx'
 import ParishCalendar from '../components/ParishCalendar.jsx'
-import { churches } from '../data/mock.js'
+import { churches } from '../data/directory.js'
 
 export default function ChurchDetail() {
   const { id } = useParams()
@@ -20,7 +20,7 @@ export default function ChurchDetail() {
     return (
       <div className="page">
         <p className="empty">This parish is not in the directory.</p>
-        <Link to="/" className="btn btn--gold">
+        <Link to="/user" className="btn btn--gold">
           Back to parishes
         </Link>
       </div>
@@ -29,7 +29,7 @@ export default function ChurchDetail() {
 
   return (
     <div className="page">
-      <Link to="/" className="back">
+      <Link to="/user" className="back">
         ← All parishes
       </Link>
 
@@ -111,7 +111,7 @@ export default function ChurchDetail() {
                 Apply for a baptismal, confirmation, marriage, or related parish certificate. Your
                 request starts as pending until the parish manager approves it.
               </p>
-              <Link to={`/parish/${church.id}/request`} className="btn btn--gold btn--block">
+              <Link to={`/user/parish/${church.id}/request`} className="btn btn--gold btn--block">
                 Open application form
               </Link>
             </section>

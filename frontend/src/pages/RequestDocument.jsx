@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { churches } from '../data/mock.js'
+import { churches } from '../data/directory.js'
 import { getSession } from '../lib/session.js'
 import { createRequest, DOCUMENT_TYPES } from '../lib/requests.js'
 
@@ -28,7 +28,7 @@ export default function RequestDocument() {
     return (
       <div className="page">
         <p className="empty">This parish is not in the directory.</p>
-        <Link to="/" className="btn btn--gold">
+        <Link to="/user" className="btn btn--gold">
           Back to parishes
         </Link>
       </div>
@@ -66,12 +66,12 @@ export default function RequestDocument() {
       notes: form.notes.trim(),
     })
 
-    navigate(`/requests?submitted=${request.id}`, { replace: true })
+    navigate(`/user/requests?submitted=${request.id}`, { replace: true })
   }
 
   return (
     <div className="page">
-      <Link to={`/parish/${church.id}`} className="back">
+      <Link to={`/user/parish/${church.id}`} className="back">
         ← Back to parish
       </Link>
 

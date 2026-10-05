@@ -1,89 +1,105 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
-import { getSession, setSession } from '../lib/session.js'
+import { ACCOUNTS, findAccount } from '../lib/accounts.js'
+import { getSession, homeForRole, setSession } from '../lib/session.js'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('parishioner@patron.ph')
-  const [password, setPassword] = useState('patron')
+  const session = getSession()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  if (getSession()) return <Navigate to="/" replace />
+  if (session?.role) return <Navigate to={homeForRole(session.role)} replace />
 
   function submit(event) {
     event.preventDefault()
-    if (!email.trim() || !password.trim()) {
-      setError('Enter your email and password to continue.')
+    const account = findAccount(email, password)
+    if (!account) {
+      setError('That email or password is not recognized.')
       return
     }
+
     setSession({
-      name: 'Elena Cruz',
-      email: email.trim(),
-      role: 'user',
+      email: account.email,
+      name: account.name,
+      role: account.role,
     })
-    navigate('/', { replace: true })
+    navigate(homeForRole(account.role), { replace: true })
   }
 
   return (
-    <div className="auth">
-      <aside className="auth__panel">
-        <Logo light />
-        <p className="auth__kicker">Catholic parish management</p>
-        <h1 className="auth__title">Records that the Church can stand behind.</h1>
-        <p className="auth__lead">
-          PATRON helps parishioners find their church, review parish details, and confirm that an
-          issued certificate is authentic — without handling paper ledgers.
-        </p>
-        <ul className="auth__points">
-          <li>Directory of participating parishes</li>
-          <li>Mass schedules and sacrament offices</li>
-          <li>Public verification of issued documents</li>
-        </ul>
+    <div className="login">
+      <aside className="login__aside">
+        <Logo light tag="" />
+        <div className="login__aside-inner">
+          <p className="eyebrow">PATRON</p>
+          <h1>Parish Management System</h1>
+          <p className="lede">
+            Sign in with your account. A system admin opens the diocesan registry, a parish priest
+            opens the priest calendar, a parish manager opens the parish office, and a parishioner
+            opens the parish directory.
+          </p>
+          <ul className="login__points">
+            <li>System admin registry</li>
+            <li>Priest calendar and approvals</li>
+            <li>Parish manager office</li>
+            <li>Parishioner directory and document requests</li>
+          </ul>
+        </div>
       </aside>
 
-      <section className="auth__form-wrap">
-        <form className="card auth__form" onSubmit={submit}>
-          <p className="eyebrow">User view</p>
-          <h2>Sign in</h2>
-          <p className="muted">Use any email and password. This layout is frontend-only.</p>
+      <main className="login__main">
+        <form className="card login__card" onSubmit={submit}>
+          <p className="eyebrow">Account</p>
+          <h1>Sign in</h1>
 
           {error && <p className="alert">{error}</p>}
 
-          <label className="field">
-            <span>Email</span>
-            <input
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-
-          <label className="field">
-            <span>Password</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-
-          <button type="submit" className="btn btn--gold btn--block">
-            Enter PATRON
-          </button>
-
-          <div className="auth__divider">
-            <span>or</span>
+          <div className="form-grid">
+            <label className="field field--full">
+              <span>Email</span>
+              <input
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@parish.org"
+                required
+              />
+            </label>
+            <label className="field field--full">
+              <span>Password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter your password"
+                required
+              />
+            </label>
           </div>
 
-          <Link to="/verify" className="btn btn--ghost btn--block">
-            Verify a document
-          </Link>
-          <p className="auth__note muted">No account needed — public verification only.</p>
+          <button type="submit" className="btn btn--gold login__submit">
+            Sign in
+          </button>
+
+          <ul className="login__accounts">
+            {ACCOUNTS.map((account) => (
+              <li key={account.email}>
+                {account.label}
+                <span>
+                  {account.email}
+                  <br />
+                  {account.password}
+                </span>
+              </li>
+            ))}
+          </ul>
         </form>
-      </section>
+      </main>
     </div>
   )
 }

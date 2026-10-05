@@ -57,7 +57,7 @@ export default function MyRequests() {
       {requests.length === 0 ? (
         <div className="card empty-card">
           <p className="empty">You have not requested any documents yet.</p>
-          <Link to="/" className="btn btn--gold">
+          <Link to="/user" className="btn btn--gold">
             Browse parishes
           </Link>
         </div>

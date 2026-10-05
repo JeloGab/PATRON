@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import TopNav from '../components/TopNav.jsx'
-import { sampleDocuments } from '../data/mock.js'
+import { sampleDocuments } from '../data/directory.js'
 
 export default function Verify() {
   const [code, setCode] = useState('')
