@@ -16,6 +16,7 @@ export const LIMITS = {
   description: { max: 500 },
   purpose: { min: 3, max: 200 },
   requestorContact: { max: 60 },
+   content: { min: 5, max: 5000 }
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -204,6 +205,13 @@ export function requireTitle(value) {
   if (title.length < LIMITS.title.min) throw new AppError('INVALID_TITLE', 400)
   if (title.length > LIMITS.title.max) throw new AppError('INVALID_TITLE', 400)
   return title
+}
+
+export function requireContent(value) {
+  const content = clean(value)
+  if (content.length < LIMITS.content.min) throw new AppError('INVALID_CONTENT', 400)
+  if (content.length > LIMITS.content.max) throw new AppError('INVALID_CONTENT', 400)
+  return content
 }
 
 export function optionalDescription(value) {

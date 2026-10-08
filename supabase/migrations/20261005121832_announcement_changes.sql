@@ -1,0 +1,1 @@
+alter table public.announcement rename column rejection_reason to status_reason;

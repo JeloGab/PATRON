@@ -16,6 +16,8 @@ import documentRequests from './modules/documents/documents.requests.router.js'
 import documentTypes from './modules/documents/documents.public.router.js'
 import participants from './modules/participants/participants.router.js'
 import verification from './modules/verification/verification.public.router.js'
+import announcements from './modules/announcements/announcements.router.js'
+import feed from './modules/announcements/announcements.public.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -39,6 +41,8 @@ app.use('/api/requests', documentRequests)
 app.use('/api/document-types', documentTypes)
 app.use('/api/verify', verification)
 app.use('/api/participants', participants)
+app.use('/api/announcements', announcements)
+app.use('/api/feed', feed)
 
 
 app.use(notFound)
