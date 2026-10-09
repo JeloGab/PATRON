@@ -219,7 +219,7 @@ function UserNav() {
 export default function TopNav() {
   const session = getSession()
   if (session?.role === 'priest') return <PriestNav />
-  if (session?.role === 'system_admin') return <AdminNav />
+  if (session?.role === 'sysadmin') return <AdminNav />
   if (session?.role === 'manager') return <ManagerNav />
   return <UserNav />
 }

@@ -742,6 +742,11 @@ textarea:focus {
 
 .seg {
   display: flex;
+  /* Hug the options instead of filling the parent. Inside a flex parent
+     (.panel__head) a .seg already sized to its content; in a plain block, such as
+     .login__card, it stretched the full width. Kept block-level rather than
+     inline-flex so it does not sit on a text baseline. */
+  width: fit-content;
   gap: 0.25rem;
   padding: 0.2rem;
   border-radius: 999px;

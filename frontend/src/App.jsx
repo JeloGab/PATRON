@@ -48,7 +48,7 @@ export default function App() {
       <Route
         path="/admin"
         element={
-          <RequireRole role="system_admin">
+          <RequireRole role="sysadmin">
             <AdminLayout />
           </RequireRole>
         }
@@ -96,7 +96,7 @@ export default function App() {
       <Route
         path="/user"
         element={
-          <RequireRole role="user">
+          <RequireRole role="parishioner">
             <UserLayout />
           </RequireRole>
         }
