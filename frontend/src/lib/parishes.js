@@ -1,24 +1,21 @@
-import { initialParishes } from '../data/initialParishes.js'
+// Parish helpers.
+//
+// `loadParishes` / `saveParishes` lived here and seeded `localStorage` from
+// `data/initialParishes.js`. They are gone: parishes now come from
+// `GET /api/admin/parishes`, and keeping a browser-side copy of them would give every
+// sysadmin a private, divergent registry. `createParishId` is gone too — Postgres
+// mints the uuid via `gen_random_uuid()`.
+//
+// What survives is the two functions that compute rather than store.
 
-const KEY = 'patron.system-admin.parishes'
-
-export function loadParishes() {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    /* use seed */
-  }
-  localStorage.setItem(KEY, JSON.stringify(initialParishes))
-  return [...initialParishes]
-}
-
-export function saveParishes(parishes) {
-  localStorage.setItem(KEY, JSON.stringify(parishes))
-}
-
+// The parish table has no `municipality` column, so the card derives one from the
+// address. Last comma-separated part first, since a PH address ends
+// "…, Libmanan, Camarines Sur".
 export function municipalityFromAddress(address) {
-  const parts = address.split(',').map((part) => part.trim()).filter(Boolean)
+  const parts = String(address ?? '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
   if (parts.length === 0) return '—'
   const last = parts[parts.length - 1]
   const match = last.match(/\b([A-Za-z .'-]+(?: City|Municipality)?)\b/i)
@@ -27,17 +24,27 @@ export function municipalityFromAddress(address) {
 }
 
 export function formatRegisteredDate(iso) {
-  return new Date(iso).toLocaleDateString('en-PH', {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-PH', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
 }
 
-export function createParishId(name) {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-  return `${slug}-${Date.now().toString(36)}`
+// `ChurchMedia` colours its placeholder from an `accent`, which the mock parishes
+// carried and real ones do not. Derived from the uuid so a parish keeps the same
+// colour across reloads and machines, rather than flickering on every render.
+const ACCENTS = ['#5c1824', '#4a1c14', '#3d5a3a', '#2c3d5a', '#1e4d6b', '#3b2a55']
+
+export function accentFor(id) {
+  const key = String(id ?? '')
+  let hash = 2166136261
+  for (let i = 0; i < key.length; i += 1) {
+    hash ^= key.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return ACCENTS[(hash >>> 0) % ACCENTS.length]
 }

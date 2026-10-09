@@ -1,3 +1,5 @@
+// design to be changed for template
+
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 

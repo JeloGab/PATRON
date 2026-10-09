@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 import { call } from '../lib/api.js'
-import { getSession, homeForRole, setSession } from '../lib/session.js'
+import { getSession, landingFor, setSession } from '../lib/session.js'
 
 // Two sign-in routes, because there are two credential systems.
 //
@@ -61,10 +61,9 @@ export default function Login() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
 
-  if (session?.role) return <Navigate to={homeForRole(session.role)} replace />
+  if (session?.role) return <Navigate to={landingFor(session)} replace />
 
   const config = MODES[mode]
 
@@ -74,13 +73,11 @@ export default function Login() {
     setIdentifier('')
     setPassword('')
     setError('')
-    setNotice('')
   }
 
   async function submit(event) {
     event.preventDefault()
     setError('')
-    setNotice('')
 
     if (!identifier.trim() || !password) {
       setError(config.missing)
@@ -107,20 +104,10 @@ export default function Login() {
 
     const { token, user } = result.json
 
-    // A provisioned account starts on a temporary password, and
+    // landingFor() decides: a temporary password routes to /change-password, since
     // `requirePasswordChanged` answers PASSWORD_CHANGE_REQUIRED 403 on every other
-    // route until it is changed. There is no change-password page yet, so storing a
-    // session here would drop them into an app where nothing works. Better to say
-    // so and keep them here.
-    if (user.mustChangePassword) {
-      setNotice(
-        'This account is still on its temporary password and must change it before signing in. That screen is not built yet.',
-      )
-      return
-    }
-
-    setSession({ token, user })
-    navigate(homeForRole(user.role), { replace: true })
+    // route and the role home would render an app where nothing loads.
+    navigate(landingFor(setSession({ token, user })), { replace: true })
   }
 
   return (
@@ -168,7 +155,6 @@ export default function Login() {
               {error}
             </p>
           )}
-          {notice && <p className="notice">{notice}</p>}
 
           <div className="form-grid">
             <label className="field field--full">

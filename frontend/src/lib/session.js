@@ -56,12 +56,45 @@ export function setSession({ token, user }) {
   return session
 }
 
+// Merge fields into the stored session.
+//
+// `POST /api/auth/change-password` answers with a fresh token and NOTHING else — no
+// user object — so there is nothing to rebuild a session from. The new token has to
+// replace the stored one while every other field survives, because changing the
+// password revokes every older token: keep the old one and the very next request is
+// SESSION_REVOKED, throwing the user to login immediately after succeeding.
+export function patchSession(patch) {
+  const current = getSession()
+  if (!current) return null
+  const next = { ...current, ...patch }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* in memory for this visit only */
+  }
+  return next
+}
+
 export function clearSession() {
   try {
     localStorage.removeItem(KEY)
   } catch {
     /* nothing to clear */
   }
+}
+
+// Where a signed-in account belongs right now.
+//
+// This exists because the rule was written twice and the two copies disagreed: the
+// login handler routed a temporary-password account to /change-password, while
+// Login's own "already signed in" redirect sent the same account to its role home,
+// where every route answers PASSWORD_CHANGE_REQUIRED 403. Whichever render won
+// decided the outcome. One function, called from every redirect, so they cannot
+// drift again.
+export function landingFor(session) {
+  if (!session?.role) return '/login'
+  if (session.mustChangePassword) return '/change-password'
+  return homeForRole(session.role)
 }
 
 // The server's role values, not display names. `sysadmin` and `parishioner` are

@@ -6,8 +6,9 @@ import AdminLayout from './layouts/AdminLayout.jsx'
 import ManagerLayout from './layouts/ManagerLayout.jsx'
 import PriestLayout from './layouts/PriestLayout.jsx'
 import UserLayout from './layouts/UserLayout.jsx'
-import { getSession, homeForRole } from './lib/session.js'
+import { getSession, landingFor } from './lib/session.js'
 import Announcements from './pages/Announcements.jsx'
+import ChangePassword from './pages/ChangePassword.jsx'
 import BlockDate from './pages/BlockDate.jsx'
 import ChurchDetail from './pages/ChurchDetail.jsx'
 import CreateEvent from './pages/CreateEvent.jsx'
@@ -15,6 +16,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import DocumentRequests from './pages/DocumentRequests.jsx'
 import EventScheduling from './pages/EventScheduling.jsx'
 import Login from './pages/Login.jsx'
+import Managers from './pages/Managers.jsx'
 import MyCalendar from './pages/MyCalendar.jsx'
 import MyRequests from './pages/MyRequests.jsx'
 import ParishDirectory from './pages/ParishDirectory.jsx'
@@ -29,14 +31,18 @@ import Verify from './pages/Verify.jsx'
 function RequireRole({ role, children }) {
   const session = getSession()
   if (!session) return <Navigate to="/login" replace />
-  if (session.role !== role) return <Navigate to={homeForRole(session.role)} replace />
+  // A temporary password reaches no route but /change-password — everything behind
+  // these layouts answers PASSWORD_CHANGE_REQUIRED 403 — so send them there rather
+  // than render a page where every request fails.
+  if (session.mustChangePassword) return <Navigate to="/change-password" replace />
+  if (session.role !== role) return <Navigate to={landingFor(session)} replace />
   return children
 }
 
 function HomeRedirect() {
   const session = getSession()
   if (!session) return <Navigate to="/login" replace />
-  return <Navigate to={homeForRole(session.role)} replace />
+  return <Navigate to={landingFor(session)} replace />
 }
 
 export default function App() {
@@ -44,6 +50,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/verify" element={<Verify />} />
+      <Route path="/change-password" element={<ChangePassword />} />
 
       <Route
         path="/admin"
@@ -69,6 +76,7 @@ export default function App() {
         <Route index element={<MyCalendar />} />
         <Route path="unavailable" element={<UnavailableDate />} />
         <Route path="approvals" element={<PendingApprovals />} />
+        <Route path="managers" element={<Managers />} />
       </Route>
 
       <Route

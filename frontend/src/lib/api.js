@@ -14,6 +14,8 @@
 // The cost of that choice: every call site must check `if (!r.ok)`. Forgetting to
 // renders `undefined` rather than showing the error.
 
+import { getToken } from './session.js'
+
 const BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:4000').replace(/\/$/, '')
 
 // The only three codes that mean the session itself is gone.
@@ -73,6 +75,15 @@ export async function call({
   }
 
   return { ok: res.ok, status: res.status, json }
+}
+
+// call() with the stored Bearer token attached.
+//
+// Every authenticated page uses this, so no call site has to remember the header —
+// forgetting it does not fail loudly, it returns NO_TOKEN 401, which the session rule
+// then reads as a dead session and signs the user out.
+export function authed(options) {
+  return call({ ...options, token: getToken() })
 }
 
 export default call

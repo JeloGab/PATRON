@@ -15,6 +15,7 @@ const MANAGER_LINKS = [
 const PRIEST_LINKS = [
   { to: '/priest', label: 'My calendar', end: true },
   { to: '/priest/approvals', label: 'Pending approvals' },
+  { to: '/priest/managers', label: 'Parish managers' },
 ]
 
 function isCurrent(item, pathname) {

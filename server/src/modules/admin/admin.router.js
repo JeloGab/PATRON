@@ -1,14 +1,7 @@
 import { Router } from 'express'
 import { AppError } from '../../lib/appError.js'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import {
-  createParish,
-  getParishes,
-  provisionPriest,
-  getPriests,
-  setPriestStatus,
-  resetPriestPassword,
-} from './admin.services.js'
+import { createParish, getParishes, provisionPriest, getPriests, setPriestStatus,resetPriestPassword,} from './admin.services.js'
 
 const router = Router()
 
