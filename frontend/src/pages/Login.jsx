@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 import { call } from '../lib/api.js'
 import { getSession, landingFor, setSession } from '../lib/session.js'
@@ -185,6 +185,18 @@ export default function Login() {
           <button type="submit" className="btn btn--gold login__submit" disabled={pending}>
             {pending ? 'Signing in…' : 'Sign in'}
           </button>
+
+          {/* The reciprocal of the verifier's own "Parish sign in" link. Someone holding
+              a certificate needs no account at all, and this is the only place they
+              would think to look for that. */}
+          <p className="login__account">
+            Only need to check a certificate?
+            <span>
+              <Link to="/verify" className="text-btn">
+                Verify a document — no account needed
+              </Link>
+            </span>
+          </p>
         </form>
       </main>
     </div>
