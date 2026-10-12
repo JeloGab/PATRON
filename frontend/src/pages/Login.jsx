@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 import { call } from '../lib/api.js'
+import { clearEmailConfirmed, peekEmailConfirmed } from '../lib/authFragment.js'
 import { getSession, landingFor, setSession } from '../lib/session.js'
 
 // Two sign-in routes, because there are two credential systems.
@@ -57,11 +58,22 @@ const MESSAGES = {
 export default function Login() {
   const navigate = useNavigate()
   const session = getSession()
-  const [mode, setMode] = useState('staff')
+  // Set by `consumeAuthFragment()` when someone arrives from a confirmation email.
+  // Confirming an address signs nobody in — the `app_user` row is created at the first
+  // successful login — so the link lands here, and the least it can do is say why and
+  // open the right tab.
+  const [confirmed] = useState(() => peekEmailConfirmed())
+  const [mode, setMode] = useState(confirmed ? 'parishioner' : 'staff')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+
+  // Cleared in an effect rather than when read, so StrictMode's double render cannot
+  // swallow the notice before it is shown once.
+  useEffect(() => {
+    if (confirmed) clearEmailConfirmed()
+  }, [confirmed])
 
   if (session?.role) return <Navigate to={landingFor(session)} replace />
 
@@ -150,6 +162,13 @@ export default function Login() {
             ))}
           </div>
 
+          {confirmed && !error && (
+            <p className="notice">
+              Your email address is confirmed. Sign in below — your account is set up on this first
+              sign-in.
+            </p>
+          )}
+
           {error && (
             <p className="alert" role="alert">
               {error}
@@ -185,6 +204,34 @@ export default function Login() {
           <button type="submit" className="btn btn--gold login__submit" disabled={pending}>
             {pending ? 'Signing in…' : 'Sign in'}
           </button>
+
+          {/* Mode-aware, because self-service exists for exactly one of the two
+              credential systems. Offering a priest "create an account" or "forgot
+              password" would offer him two things that cannot work: staff are
+              provisioned by their parish, and `app_user` holds no email to send a
+              link to. */}
+          {mode === 'parishioner' ? (
+            <p className="login__account">
+              New here?
+              <span>
+                <Link to="/signup" className="text-btn">
+                  Create a parishioner account
+                </Link>
+                {' · '}
+                <Link to="/forgot-password" className="text-btn">
+                  Forgot password
+                </Link>
+              </span>
+            </p>
+          ) : (
+            <p className="login__account">
+              Lost your password?
+              <span>
+                Ask your parish priest to reset a manager, or the diocesan administrator to reset a
+                priest — a new temporary password is handed over directly.
+              </span>
+            </p>
+          )}
 
           {/* The reciprocal of the verifier's own "Parish sign in" link. Someone holding
               a certificate needs no account at all, and this is the only place they

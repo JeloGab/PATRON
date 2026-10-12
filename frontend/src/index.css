@@ -261,6 +261,18 @@ textarea:focus {
   padding-bottom: 0.85rem;
 }
 
+/* The strip hugs its own links and sits in the middle, rather than being a
+   1120px-wide pill with the links bunched at the left edge — the same shape as the
+   sign-in toggle, which spans its two choices and nothing more.
+   Scoped to .topbar__tabs so the parishioner navigation, whose .tabs is a flex item
+   beside the brand and the account block, keeps its own placement. */
+.topbar__tabs .tabs {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  justify-content: center;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -307,8 +319,18 @@ textarea:focus {
   color: var(--muted);
 }
 
+/* An <a> since slice A — the way to /account from every navigation. The display
+   rules at the two breakpoints below still apply; these only stop it looking like a
+   link until it is hovered. */
 .topbar__meta {
   display: none;
+  color: inherit;
+  text-decoration: none;
+}
+
+.topbar__meta:hover .topbar__name,
+.topbar__meta:focus-visible .topbar__name {
+  text-decoration: underline;
 }
 
 .avatar {
@@ -1245,6 +1267,67 @@ textarea:focus {
   font-weight: 600;
 }
 
+/* Drop target for ledger photos. The file input inside it is .sr-only rather than
+   display:none, so it stays keyboard reachable and the label still opens the picker. */
+.dropzone {
+  margin: 0.9rem 0 0;
+  padding: 1.1rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: var(--ivory);
+  text-align: center;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.dropzone.is-dragging {
+  border-color: var(--gold);
+  background: var(--paper);
+}
+
+.dropzone__lead {
+  margin: 0 0 0.35rem;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.dropzone__pick {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.dropzone .form-hint {
+  margin: 0.5rem 0 0;
+}
+
+/* A ledger photo fetched with the token and shown from a blob URL. */
+.ledger-preview {
+  margin: 0.9rem 0 0;
+}
+
+.ledger-preview__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+/* Subject groups in the record form. The fieldset carries the grouping for screen
+   readers — these inputs describe one person — but a browser's default inset border
+   has no place inside a card, so it is replaced with the same hairline rule
+   .login__accounts uses. */
+.subject-group {
+  border: 0;
+  margin: 0.4rem 0 0;
+  padding: 0.9rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.subject-group > legend {
+  padding: 0;
+}
+
 .login__accounts {
   display: grid;
   gap: 0.75rem;
@@ -1405,7 +1488,14 @@ img {
   font-size: 0.88rem;
 }
 
+/* One container width for everything that reads as a column: the brand row, the tab
+   strip under it, the page body and the footer.
+   `.topbar__tabs` was missing here while being present in the padding rule above,
+   so on the priest and manager navigations — the only two with a tab strip — the
+   brand row was centred inside 1120px and the tabs below it ran the full width of
+   the window, flush left and visibly out of line with everything else. */
 .topbar__inner,
+.topbar__tabs,
 .page,
 .foot {
   width: min(1120px, calc(100% - 2rem));

@@ -7,9 +7,11 @@ import ManagerLayout from './layouts/ManagerLayout.jsx'
 import PriestLayout from './layouts/PriestLayout.jsx'
 import UserLayout from './layouts/UserLayout.jsx'
 import { getSession, landingFor } from './lib/session.js'
+import Account from './pages/Account.jsx'
 import Announcements from './pages/Announcements.jsx'
 import ChangePassword from './pages/ChangePassword.jsx'
 import BlockDate from './pages/BlockDate.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
 import ChurchDetail from './pages/ChurchDetail.jsx'
 import CreateEvent from './pages/CreateEvent.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -23,8 +25,10 @@ import ParishDirectory from './pages/ParishDirectory.jsx'
 import PendingApprovals from './pages/PendingApprovals.jsx'
 import RegisteredParishes from './pages/RegisteredParishes.jsx'
 import RequestDocument from './pages/RequestDocument.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import SacramentApplications from './pages/SacramentApplications.jsx'
 import SacramentalRecords from './pages/SacramentalRecords.jsx'
+import Signup from './pages/Signup.jsx'
 import UnavailableDate from './pages/UnavailableDate.jsx'
 import Verify from './pages/Verify.jsx'
 
@@ -49,9 +53,21 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/verify" element={<Verify />} />
       <Route path="/verify/:code" element={<Verify />} />
+
+      {/* Recovery. /reset-password is the route `consumeAuthFragment()` rewrites the
+          Supabase fragment to, so it must exist for every role and outside every
+          guard — the person opening it is, by definition, signed out. */}
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Both of these are role-agnostic and provider-free on purpose: TopNav's
+          PriestNav calls useParish(), so mounting them inside a role layout would
+          crash for a priest. */}
       <Route path="/change-password" element={<ChangePassword />} />
+      <Route path="/account" element={<Account />} />
 
       <Route
         path="/admin"

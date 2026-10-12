@@ -55,10 +55,13 @@ function ManagerNav() {
           <div className="avatar" aria-hidden="true">
             {initial}
           </div>
-          <div className="topbar__meta">
+          {/* The name block is the way to /account in all four navigations. /account is
+              a top-level route outside every layout, so this link leaves the layout
+              rather than navigating within it. */}
+          <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || session?.email || 'Parish office'}</p>
             <p className="topbar__role">Parish manager</p>
-          </div>
+          </NavLink>
           <SignOut />
         </div>
       </div>
@@ -102,10 +105,10 @@ function PriestNav() {
           <div className="avatar" aria-hidden="true">
             {initial}
           </div>
-          <div className="topbar__meta">
+          <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || 'Parish priest'}</p>
             <p className="topbar__role">Parish priest</p>
-          </div>
+          </NavLink>
           <SignOut />
         </div>
       </div>
@@ -154,10 +157,10 @@ function AdminNav() {
           <div className="avatar" aria-hidden="true">
             {initial}
           </div>
-          <div className="topbar__meta">
+          <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || 'System admin'}</p>
             <p className="topbar__role">System admin</p>
-          </div>
+          </NavLink>
           <SignOut />
         </div>
       </div>
@@ -169,7 +172,6 @@ function UserNav() {
   const { pathname } = useLocation()
   const session = getSession()
   const onParishes = pathname === '/user' || pathname.startsWith('/user/parish')
-  const onVerify = pathname === '/verify'
   const onRequests = pathname.startsWith('/user/requests')
   const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
 
@@ -180,6 +182,35 @@ function UserNav() {
           <Logo compact />
         </NavLink>
 
+        <div className="topbar__user">
+          {session ? (
+            <>
+              <div className="avatar" aria-hidden="true">
+                {initial}
+              </div>
+              <NavLink to="/account" className="topbar__meta" aria-label="Your account">
+                <p className="topbar__name">{session.name || 'Parishioner'}</p>
+                <p className="topbar__role">Parishioner</p>
+              </NavLink>
+              <SignOut />
+            </>
+          ) : (
+            <NavLink to="/login" className="btn btn--ghost">
+              Sign in
+            </NavLink>
+          )}
+        </div>
+      </div>
+
+      {/* Second row, like the priest and manager navigations, so this strip is
+          centred by the same rule instead of needing one of its own. In a single row
+          it was a flex item between the brand and the account block, which can only
+          ever be centred in the space those two leave over — never on the page.
+
+          Two tabs signed in, one signed out: "My requests" has nothing to show
+          without a session, and /verify is reachable from the sign-in page and from
+          every certificate's QR. */}
+      <div className="topbar__tabs">
         <nav className="tabs" aria-label="Parishioner">
           <NavLink to="/user" end className={`tabs__link ${onParishes ? 'is-active' : ''}`}>
             Parishes
@@ -189,29 +220,7 @@ function UserNav() {
               My requests
             </NavLink>
           )}
-          <NavLink to="/verify" className={`tabs__link ${onVerify ? 'is-active' : ''}`}>
-            Verify document
-          </NavLink>
         </nav>
-
-        <div className="topbar__user">
-          {session ? (
-            <>
-              <div className="avatar" aria-hidden="true">
-                {initial}
-              </div>
-              <div className="topbar__meta">
-                <p className="topbar__name">{session.name || 'Parishioner'}</p>
-                <p className="topbar__role">Parishioner</p>
-              </div>
-              <SignOut />
-            </>
-          ) : (
-            <NavLink to="/login" className="btn btn--ghost">
-              Sign in
-            </NavLink>
-          )}
-        </div>
       </div>
     </header>
   )
