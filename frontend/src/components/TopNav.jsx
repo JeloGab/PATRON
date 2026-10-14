@@ -1,21 +1,24 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useParish } from '../context/ParishContext.jsx'
 import { clearSession, getSession } from '../lib/session.js'
 import Logo from './Logo.jsx'
 
 const MANAGER_LINKS = [
   { to: '/manager', label: 'Dashboard', end: true },
   { to: '/manager/schedule', label: 'Event scheduling', also: ['/manager/events'] },
-  { to: '/manager/applications', label: 'Sacrament applications' },
+  { to: '/manager/roster', label: 'Event rosters' },
   { to: '/manager/records', label: 'Sacramental records' },
   { to: '/manager/documents', label: 'Document requests' },
   { to: '/manager/announcements', label: 'Announcements' },
+  { to: '/manager/parish', label: 'Parish profile' },
 ]
 
 const PRIEST_LINKS = [
   { to: '/priest', label: 'My calendar', end: true },
   { to: '/priest/approvals', label: 'Pending approvals' },
+  { to: '/priest/documents', label: 'Document approvals' },
+  { to: '/priest/announcements', label: 'Announcements' },
   { to: '/priest/managers', label: 'Parish managers' },
+  { to: '/priest/parish', label: 'Parish profile' },
 ]
 
 function isCurrent(item, pathname) {
@@ -55,9 +58,6 @@ function ManagerNav() {
           <div className="avatar" aria-hidden="true">
             {initial}
           </div>
-          {/* The name block is the way to /account in all four navigations. /account is
-              a top-level route outside every layout, so this link leaves the layout
-              rather than navigating within it. */}
           <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || session?.email || 'Parish office'}</p>
             <p className="topbar__role">Parish manager</p>
@@ -88,10 +88,9 @@ function ManagerNav() {
   )
 }
 
-function PriestNav() {
+function PriestNav({ pendingCount }) {
   const { pathname } = useLocation()
   const session = getSession()
-  const { pendingCount } = useParish()
   const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
 
   return (
@@ -173,6 +172,7 @@ function UserNav() {
   const session = getSession()
   const onParishes = pathname === '/user' || pathname.startsWith('/user/parish')
   const onRequests = pathname.startsWith('/user/requests')
+  const onFeed = pathname === '/feed'
   const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
 
   return (
@@ -202,14 +202,6 @@ function UserNav() {
         </div>
       </div>
 
-      {/* Second row, like the priest and manager navigations, so this strip is
-          centred by the same rule instead of needing one of its own. In a single row
-          it was a flex item between the brand and the account block, which can only
-          ever be centred in the space those two leave over — never on the page.
-
-          Two tabs signed in, one signed out: "My requests" has nothing to show
-          without a session, and /verify is reachable from the sign-in page and from
-          every certificate's QR. */}
       <div className="topbar__tabs">
         <nav className="tabs" aria-label="Parishioner">
           <NavLink to="/user" end className={`tabs__link ${onParishes ? 'is-active' : ''}`}>
@@ -220,15 +212,18 @@ function UserNav() {
               My requests
             </NavLink>
           )}
+          <NavLink to="/feed" className={`tabs__link ${onFeed ? 'is-active' : ''}`}>
+            Announcements
+          </NavLink>
         </nav>
       </div>
     </header>
   )
 }
 
-export default function TopNav() {
+export default function TopNav({ pendingCount = 0 }) {
   const session = getSession()
-  if (session?.role === 'priest') return <PriestNav />
+  if (session?.role === 'priest') return <PriestNav pendingCount={pendingCount} />
   if (session?.role === 'sysadmin') return <AdminNav />
   if (session?.role === 'manager') return <ManagerNav />
   return <UserNav />

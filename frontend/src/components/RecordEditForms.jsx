@@ -1,24 +1,9 @@
-import { useState } from 'react'
+// Editing an entry and its subjects; both forms diff against what they loaded.
 
-// The two PATCH surfaces, as inline forms inside the record dialog.
-//
-//   PATCH /api/records/:recordId
-//     bookNo, pageNo, entryNo, recordDate, dateOfDeath, officiantName
-//     recordType is absent on purpose — it is permanently immutable.
-//
-//   PATCH /api/records/:recordId/subjects/:subjectId
-//     fullName, dateOfBirth, placeOfBirth, gender, fatherName, motherName,
-//     sponsorNames
-//
-// Both services read `body.<field> !== undefined`, so a field that is present is a
-// field being changed. Sending the whole form every time would rewrite values nobody
-// touched; sending nothing is NO_FIELDS_TO_UPDATE 400. So both forms diff against what
-// was loaded and send only what actually moved.
+import { useState } from 'react'
 
 const BIRTH_DATE_REQUIRED = new Set(['baptism', 'confirmation'])
 
-// '' from an emptied input is not the same as "clear this column". Dates are sent as
-// null to clear, and text as '' which the optional validators normalise away.
 function diff(initial, current, dateKeys) {
   const patch = {}
   for (const key of Object.keys(current)) {
@@ -157,10 +142,6 @@ export function SubjectEditForm({ record, subject, onSave, onCancel }) {
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
 
-  // On a marriage, gender is frozen. Changing it re-derives `role`, and the other
-  // spouse already holds the role it would become — so the server refuses it in
-  // either direction, with no ordering that works and no transaction spanning both
-  // subjects. Names are what get swapped to correct a reversed entry.
   const genderFrozen = record.subjects.length === 2
   const needsBirthDate = BIRTH_DATE_REQUIRED.has(record.recordType)
 

@@ -1,13 +1,13 @@
+// The shared drop target for ledger photos: drag-and-drop, or the file picker.
+
 import { useState } from 'react'
 import { ACCEPT } from '../lib/fileCheck.js'
 
-// The drop target, used in two places: holding one file in the encode form, and
-// uploading straight away on a saved entry. Presentational only — it hands files up
-// and knows nothing about records or requests.
 export default function PhotoDrop({
   onFiles,
   disabled = false,
   multiple = false,
+  accept = ACCEPT,
   lead = 'Drag a photo of the register page here',
   busyLead = 'Uploading…',
   busy = false,
@@ -15,9 +15,6 @@ export default function PhotoDrop({
 }) {
   const [dragging, setDragging] = useState(false)
 
-  // dragover MUST preventDefault, or the browser treats the drop as navigation and
-  // opens the file in the tab instead of handing it over. This is the usual reason a
-  // drop target appears to do nothing at all.
   function onDragOver(event) {
     event.preventDefault()
     if (!disabled && !dragging) setDragging(true)
@@ -37,10 +34,6 @@ export default function PhotoDrop({
   }
 
   function onPick(event) {
-    // Array.from BEFORE clearing the input. `input.files` is a LIVE FileList: reset
-    // the input first and the array just read out of it is empty, the upload silently
-    // receives nothing, and drag-and-drop still works — which is exactly what makes
-    // it so hard to spot.
     const files = Array.from(event.target.files ?? [])
     event.target.value = ''
     if (files.length > 0) onFiles(multiple ? files : files.slice(0, 1))
@@ -60,7 +53,7 @@ export default function PhotoDrop({
         <input
           type="file"
           className="sr-only"
-          accept={ACCEPT}
+          accept={accept}
           multiple={multiple}
           onChange={onPick}
           disabled={disabled || busy}

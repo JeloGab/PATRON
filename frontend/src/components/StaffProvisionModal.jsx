@@ -1,22 +1,8 @@
+// Provisioning one staff account; the role is fixed by the caller.
+
 import { useState } from 'react'
 import Modal from './Modal.jsx'
 
-// One provisioning surface, used by both tiers:
-//
-//   sysadmin → priest    POST /api/admin/priests   { fullName, parishId }
-//   priest   → manager   POST /api/users/managers  { fullName }
-//
-// The role used to be a select in this modal, which was wrong in one direction only:
-// a sysadmin cannot provision a manager — `/api/users/managers` is
-// `requireRole('priest')` — so offering the choice here promised a route that does not
-// exist. The caller fixes the role instead, and the modal is reused rather than
-// duplicated.
-//
-// Date of birth and address were also removed: `app_user` has no columns for them, so
-// they were collected and discarded.
-//
-// `onProvision({ fullName })` returns either `{ error }` or
-// `{ credentials: { fullName, username, tempPassword } }`.
 export default function StaffProvisionModal({
   open,
   onClose,
@@ -53,7 +39,7 @@ export default function StaffProvisionModal({
       setError('Enter the full name.')
       return
     }
-    // `requireFullName` is 2–50 server-side.
+
     if (trimmed.length < 2 || trimmed.length > 50) {
       setError('Full name must be between 2 and 50 characters.')
       return
@@ -67,9 +53,7 @@ export default function StaffProvisionModal({
       setError(result.error)
       return
     }
-    // Deliberately does NOT close. The username is derived by the server and the
-    // temporary password is stored only as a bcrypt hash — neither can be retrieved
-    // again, so the dialog has to stay up until it is explicitly dismissed.
+
     setCredentials(result.credentials)
   }
 
@@ -79,7 +63,6 @@ export default function StaffProvisionModal({
       await navigator.clipboard.writeText(text)
       setCopied(true)
     } catch {
-      // Clipboard access is refused in some contexts; the values are on screen anyway.
       setCopied(false)
     }
   }

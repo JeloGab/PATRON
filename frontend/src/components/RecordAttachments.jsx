@@ -1,24 +1,11 @@
+// Ledger photos on a saved entry: raw-body upload, bytes fetched with the token.
+
 import { useEffect, useRef, useState } from 'react'
 import { authed, isSessionError } from '../lib/api.js'
 import { messageFor } from '../lib/errors.js'
 import { checkPhoto, contentTypeFor, MAX_PER_RECORD } from '../lib/fileCheck.js'
 import PhotoDrop from './PhotoDrop.jsx'
 
-// Ledger photos on a saved entry — the page of the physical register it was copied
-// from.
-//
-// The upload is a RAW body, not multipart:
-//
-//   Content-Type   the file's own type. express.raw only parses the types it was
-//                  given, so this header decides whether the body arrives at all.
-//                  Taken from the sniffed bytes rather than file.type, which comes
-//                  from the OS and is sometimes empty.
-//   X-File-Name    percent-encoded. An unencoded name makes fetch() THROW before it
-//                  sends, because HTTP headers are Latin-1 only and a screenshot's
-//                  name often contains a narrow no-break space.
-//
-// The server sniffs the bytes and ignores what we declared, so `checkPhoto` here is
-// only a pre-flight — it saves a wasted 5 MB round trip, it is not the gate.
 export default function RecordAttachments({ record, canWrite, onRecordChange, onSessionEnd }) {
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
@@ -26,7 +13,6 @@ export default function RecordAttachments({ record, canWrite, onRecordChange, on
   const [preview, setPreview] = useState(null)
   const previewUrl = useRef(null)
 
-  // Blob URLs are not garbage collected — they hold the bytes until revoked.
   function setPreviewUrl(next) {
     if (previewUrl.current) URL.revokeObjectURL(previewUrl.current)
     previewUrl.current = next?.url ?? null
@@ -64,9 +50,6 @@ export default function RecordAttachments({ record, canWrite, onRecordChange, on
     return null
   }
 
-  // Sequential, never parallel. Each POST answers with the whole record, so parallel
-  // uploads would race on which response wins — and worse, two requests could each
-  // see room under the ten-per-entry limit and both succeed.
   async function uploadMany(files) {
     setError('')
     setUploading(true)
@@ -82,11 +65,6 @@ export default function RecordAttachments({ record, canWrite, onRecordChange, on
     setUploading(false)
   }
 
-  // The route sends the bytes with Content-Disposition: inline and still requires the
-  // Bearer token, so this cannot be an <img src>. It is fetched with the token and
-  // turned into a blob URL. One at a time, deliberately: fetching several in an
-  // effect keyed on the results makes the first to resolve re-run the effect, whose
-  // cleanup cancels every sibling still in flight.
   async function view(attachment) {
     setBusyId(attachment.attachmentId)
     setError('')

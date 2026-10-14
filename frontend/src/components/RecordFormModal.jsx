@@ -1,15 +1,10 @@
+// Encoding a register entry, with an optional ledger photo.
+
 import { useState } from 'react'
 import { checkPhoto } from '../lib/fileCheck.js'
 import Modal from './Modal.jsx'
 import PhotoDrop from './PhotoDrop.jsx'
 
-// Encoding a register entry. There was no create path in the frontend at all — the
-// old page could only edit — so this is written against the schema rather than
-// adapted from the mock.
-//
-// The four types are the parish REGISTERS, not the sacraments. The mock offered seven
-// options including First Communion, Confession and Anointing of the Sick, none of
-// which a parish registers and none of which the database will accept.
 export const RECORD_TYPES = [
   { value: 'baptism', label: 'Baptism' },
   { value: 'confirmation', label: 'Confirmation' },
@@ -17,18 +12,6 @@ export const RECORD_TYPES = [
   { value: 'death', label: 'Death' },
 ]
 
-// Two rules the schema enforces, mirrored here so the form cannot submit something
-// Postgres will refuse:
-//
-//   a marriage is EXACTLY two subjects, one male and one female
-//     check (role = 'primary' or (role='groom' and gender='male')
-//                             or (role='bride' and gender='female'))
-//     unique (record_id, role)   -- so a second groom is impossible
-//
-//   a date of birth is required for baptism and confirmation ONLY
-//     — the same two types Path 2 builds records from
-//
-// `role` is never sent. The server derives it from `gender`.
 const BIRTH_DATE_REQUIRED = new Set(['baptism', 'confirmation'])
 
 function emptySubject() {
@@ -73,9 +56,6 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
     setPending(false)
   }
 
-  // Checked here, before anything is created. records_summary.md §5.1 step 1: a bad
-  // file never causes a record to exist. Size, declared type and the first twelve
-  // bytes, so a .txt renamed to .jpg is caught before the POST.
   async function takePhoto(files) {
     const file = files[0]
     const message = await checkPhoto(file)
@@ -93,9 +73,6 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
     onClose()
   }
 
-  // Changing the type changes how many subjects are legal, so the rows follow it.
-  // A marriage gets a second row pre-set to female, because one of each is the only
-  // shape the unique index permits.
   function changeType(next) {
     setRecordType(next)
     setError('')
@@ -149,8 +126,6 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
       }
     }
 
-    // Only non-empty optional fields are sent. An empty string is not the same as
-    // absent for a `date` column, and the server would read '' as an invalid date.
     const payload = {
       recordType,
       bookNo: bookNo.trim(),
@@ -267,8 +242,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
                 <select
                   value={row.gender}
                   onChange={(e) => updateSubject(index, { gender: e.target.value })}
-                  // A marriage's two roles are fixed by gender and the unique index
-                  // allows only one of each, so flipping one here would collide.
+
                   disabled={isMarriage}
                 >
                   <option value="male">Male</option>

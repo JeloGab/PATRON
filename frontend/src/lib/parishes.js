@@ -1,16 +1,5 @@
-// Parish helpers.
-//
-// `loadParishes` / `saveParishes` lived here and seeded `localStorage` from
-// `data/initialParishes.js`. They are gone: parishes now come from
-// `GET /api/admin/parishes`, and keeping a browser-side copy of them would give every
-// sysadmin a private, divergent registry. `createParishId` is gone too — Postgres
-// mints the uuid via `gen_random_uuid()`.
-//
-// What survives is the two functions that compute rather than store.
+// Parish helpers that compute rather than store.
 
-// The parish table has no `municipality` column, so the card derives one from the
-// address. Last comma-separated part first, since a PH address ends
-// "…, Libmanan, Camarines Sur".
 export function municipalityFromAddress(address) {
   const parts = String(address ?? '')
     .split(',')
@@ -34,9 +23,6 @@ export function formatRegisteredDate(iso) {
   })
 }
 
-// `ChurchMedia` colours its placeholder from an `accent`, which the mock parishes
-// carried and real ones do not. Derived from the uuid so a parish keeps the same
-// colour across reloads and machines, rather than flickering on every render.
 const ACCENTS = ['#5c1824', '#4a1c14', '#3d5a3a', '#2c3d5a', '#1e4d6b', '#3b2a55']
 
 export function accentFor(id) {
