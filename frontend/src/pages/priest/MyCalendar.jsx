@@ -112,8 +112,8 @@ export default function MyCalendar() {
           <p className="eyebrow">My schedule</p>
           <h1>My calendar</h1>
           <p className="lede">
-            Your assigned events, the parish’s blocked dates and your own unavailable days. Only
-            sacramental events assigned to you need your approval.
+            Assigned Events, Parish Block Dates, Unavailable Dates and Parish Calendar
+             as a Whole.
           </p>
         </div>
         <div className="panel__actions">

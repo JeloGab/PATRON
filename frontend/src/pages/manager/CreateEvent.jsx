@@ -209,6 +209,7 @@ export default function CreateEvent() {
               {priests.map((priest) => (
                 <option key={priest.userId} value={priest.userId}>
                   {priest.fullName}
+                  {priest.hasSignature === false ? ' · no signature yet' : ''}
                 </option>
               ))}
             </select>

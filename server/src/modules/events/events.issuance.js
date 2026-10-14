@@ -27,7 +27,9 @@ async function selectContext(client, { recordType, priestId }) {
     `select p.name as parish_name, p.address as parish_address,
             p.contact_no as parish_contact,
             t.type_id, t.name as document_name, t.availability,
-            priest.full_name as signatory_name, priest.status as signatory_status
+            priest.full_name as signatory_name, priest.status as signatory_status,
+            priest.signature as signatory_signature,
+            priest.signature_content_type as signatory_signature_type
        from public.parish p
        join public.document_type t on t.record_type = $1
        join public.app_user priest on priest.user_id = $2
@@ -102,6 +104,11 @@ export async function completeEventAndIssue(
         recordType,
         priestId: event.assigned_priest_id,
       })
+      // The event update above has already run in this transaction, so throwing here
+      // rolls it back: the event stays approved and nothing is written. The manager
+      // completes again once the priest has drawn his signature.
+      if (!context.signatory_signature) throw new AppError('SIGNATURE_REQUIRED', 409)
+
       const roster = await selectRoster(client, eventId)
 
       const { drafts, warnings } = planRecords({
@@ -184,11 +191,13 @@ export async function completeEventAndIssue(
         await client.query(
           `insert into public.document_file
              (parish_id, document_type_id, record_id, source_event_id, release_type,
-              verification_code, snapshot, signatory_id, issued_by)
-           values ($1, $2, $3, $4, 'event_completion', $5, $6, $7, $8)`,
+              verification_code, snapshot, signatory_id, issued_by,
+              signature, signature_content_type)
+           values ($1, $2, $3, $4, 'event_completion', $5, $6, $7, $8, $9, $10)`,
           [
             actor.parishId, context.type_id, recordId, eventId, mintCode(),
             JSON.stringify(snapshot), event.assigned_priest_id, actor.userId,
+            context.signatory_signature, context.signatory_signature_type,
           ]
         )
       }

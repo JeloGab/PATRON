@@ -2,7 +2,7 @@ import { pool } from '../../db/pool.js'
 import { withActor } from '../../db/withTenant.js'
 
 const COLUMNS = `parish_id, name, address, contact_no, email,
-                 facebook_page_id, status, created_at`
+                 facebook_page_id, status, created_at, photo_content_type`
 
 const DIRECTORY_COLUMNS = `parish_id, name, address, contact_no, email`
 
@@ -24,6 +24,7 @@ function mapParish(row) {
     facebookPageId: row.facebook_page_id,
     status: row.status,
     createdAt: row.created_at,
+    hasPhoto: row.photo_content_type !== null && row.photo_content_type !== undefined,
   }
 }
 
@@ -41,6 +42,7 @@ function mapPriest(row) {
   return {
     userId: row.user_id,
     fullName: row.full_name,
+    hasSignature: row.has_signature,
   }
 }
 
@@ -50,6 +52,42 @@ export async function findOwnParish(actor) {
     if (rows.length === 0) return null
     return mapParish(rows[0])
   })
+}
+
+export async function setParishPhoto(actor, { contentType, content }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set photo = $1,
+              photo_content_type = $2
+        where parish_id = public.current_parish_id()`,
+      [content, contentType]
+    )
+    return rowCount
+  })
+}
+
+export async function clearParishPhoto(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set photo = null,
+              photo_content_type = null
+        where parish_id = public.current_parish_id()`
+    )
+    return rowCount
+  })
+}
+
+export async function findPublicParishPhoto(parishId) {
+  const { rows } = await pool.query(
+    `select photo_content_type, photo
+       from public.parish_photo_public
+      where parish_id = $1`,
+    [parishId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].photo_content_type, content: rows[0].photo }
 }
 
 export async function updateOwnParish(actor, patch) {
@@ -94,7 +132,7 @@ export async function findDirectoryEntry(parishId) {
 export async function listActivePriests(actor) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
-      `select user_id, full_name
+      `select user_id, full_name, (signature is not null) as has_signature
          from public.app_user
         where role = 'priest' and status = 'active'
         order by full_name`

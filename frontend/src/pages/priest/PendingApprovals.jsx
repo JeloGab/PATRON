@@ -86,9 +86,7 @@ export default function PendingApprovals() {
           <p className="eyebrow">Approvals</p>
           <h1>Pending approvals</h1>
           <p className="lede">
-            Sacramental events assigned to you. Approving one confirms the date against the
-            parish’s blocked dates, your unavailability and your other events — all three are
-            checked again now, not only when the office created it.
+            Sacramental Events that are Assigned to You.
           </p>
         </div>
         <p className="stat">

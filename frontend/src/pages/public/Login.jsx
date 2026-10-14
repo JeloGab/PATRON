@@ -112,9 +112,7 @@ export default function Login() {
           <p className="eyebrow">PATRON</p>
           <h1>Parish Management System</h1>
           <p className="lede">
-            Sign in with your account. A system admin opens the diocesan registry, a parish priest
-            opens the priest calendar, a parish manager opens the parish office, and a parishioner
-            opens the parish directory.
+            The Parish Management System is a centralized platform connecting our local church offices, parish leadership, and faith community. From managing sacramental records and event calendars to streamlining administrative services, we bring parish operations closer to the people we serve.
           </p>
           <ul className="login__points">
             <li>System admin registry</li>
@@ -203,8 +201,7 @@ export default function Login() {
             <p className="login__account">
               Lost your password?
               <span>
-                Ask your parish priest to reset a manager, or the diocesan administrator to reset a
-                priest — a new temporary password is handed over directly.
+                Ask your parish priest to reset a manager or the System Administrator for a priest account.
               </span>
             </p>
           )}

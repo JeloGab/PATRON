@@ -19,11 +19,12 @@ function emptyDetail() {
   return { fatherName: '', motherName: '', placeOfBirth: '', dateOfDeath: '' }
 }
 
-export default function CompleteEventModal({ event, participants, onClose, onDone, onSessionEnd }) {
+export default function CompleteEventModal({ event, participants, signatory, onClose, onDone, onSessionEnd }) {
   const sacramental = event.eventType === 'sacramental'
   const register = REGISTER_FOR[event.sacramentType]
   const cleared = participants.filter((person) => person.status === 'cleared')
   const skipped = participants.filter((person) => person.status === 'pending')
+  const signatoryBlocked = sacramental && signatory?.hasSignature === false
 
   const [registry, setRegistry] = useState({ bookNo: '', pageNo: '' })
   const [details, setDetails] = useState(() =>
@@ -164,6 +165,14 @@ export default function CompleteEventModal({ event, participants, onClose, onDon
         </>
       )}
 
+      {signatoryBlocked && (
+        <p className="alert">
+          {signatory.fullName} has no signature on file, so no certificate can be issued. He
+          draws one on his own account page — ask him, then complete this event. Nothing is
+          written until then.
+        </p>
+      )}
+
       {cleared.length === 0 ? (
         <p className="empty">
           No participant is cleared, so completing this event would write nothing to the register.
@@ -254,7 +263,11 @@ export default function CompleteEventModal({ event, participants, onClose, onDon
               <button type="button" className="btn btn--ghost" onClick={onClose}>
                 Not yet
               </button>
-              <button type="submit" className="btn btn--gold" disabled={pending}>
+              <button
+                type="submit"
+                className="btn btn--gold"
+                disabled={pending || signatoryBlocked}
+              >
                 {pending ? 'Writing the register…' : 'Complete and issue'}
               </button>
             </div>

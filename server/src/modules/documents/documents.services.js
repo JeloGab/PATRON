@@ -1,7 +1,7 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import {clean, optionalContact, optionalDescription, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
-import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate } from './documents.queries.js'
+import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate, findCertificateSignature, hasOwnSignature } from './documents.queries.js'
 import {mintVerificationCode} from '../../lib/verificationCode.js'
 import { buildCertificatePdf } from './documents.pdf.js'
 
@@ -195,6 +195,9 @@ export async function approveApplication(actor, applicationId) {
   const application = await requireApplication(actor, applicationId)
   if (application.status !== 'verified') throw new AppError('APPLICATION_NOT_VERIFIED', 409)
 
+  // Before the retry loop, or a missing signature costs five transactions.
+  if (!(await hasOwnSignature(actor))) throw new AppError('SIGNATURE_REQUIRED', 409)
+
   for (let attempt = 1; attempt <= MAX_CODE_ATTEMPTS; attempt += 1) {
     try {
       const issued = await issueCertificate(actor, {
@@ -222,9 +225,10 @@ export async function getCertificate(actor, applicationId) {
   return certificate
 }
 
-export async function renderCertificatePdf(certificate) {
+export async function renderCertificatePdf(certificate, signature = null) {
   const buffer = await buildCertificatePdf({
     certificate,
+    signature,
     verifyUrl: `${VERIFY_BASE}/${certificate.verificationCode}`,
   })
 
@@ -237,6 +241,8 @@ export async function renderCertificatePdf(certificate) {
 }
 
 export async function getCertificatePdf(actor, applicationId) {
-  return renderCertificatePdf(await getCertificate(actor, applicationId))
+  const certificate = await getCertificate(actor, applicationId)
+  const signature = await findCertificateSignature(actor, certificate.certificateId)
+  return renderCertificatePdf(certificate, signature)
 }
 

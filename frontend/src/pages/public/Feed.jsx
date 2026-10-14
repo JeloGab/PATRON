@@ -4,11 +4,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
-import { call } from '../../lib/api.js'
+import { BASE, call } from '../../lib/api.js'
 import { formatLongDate } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
-
-const BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:4000').replace(/\/$/, '')
 
 export default function Feed() {
   const [announcements, setAnnouncements] = useState(null)

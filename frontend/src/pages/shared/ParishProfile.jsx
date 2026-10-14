@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ChurchMedia from '../../components/ChurchMedia.jsx'
+import PhotoDrop from '../../components/PhotoDrop.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
 import { formatLongDate } from '../../lib/dates.js'
-import { municipalityFromAddress } from '../../lib/parishes.js'
+import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
 import { clearSession, getSession } from '../../lib/session.js'
 
 const EDITABLE = ['name', 'address', 'contactNo', 'email', 'facebookPageId']
@@ -44,6 +46,8 @@ export default function ParishProfile() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState('')
+  const [photoVersion, setPhotoVersion] = useState(0)
 
   const endSession = useCallback(() => {
     clearSession()
@@ -76,6 +80,64 @@ export default function ParishProfile() {
       live = false
     }
   }, [endSession])
+
+  async function uploadPhoto(files) {
+    const file = files[0]
+    if (!file) return
+    setError('')
+    setNotice('')
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError('That image is larger than 2 MB.')
+      return
+    }
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setError('A parish photo must be a JPEG or a PNG.')
+      return
+    }
+
+    setPhotoBusy('upload')
+    const r = await authed({
+      method: 'POST',
+      path: '/api/parish/photo',
+      raw: file,
+      headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) },
+    })
+    setPhotoBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setParish(r.json.parish)
+    setPhotoVersion((current) => current + 1)
+    setNotice('The parish photo was updated. It shows on the public directory at once.')
+  }
+
+  async function removePhoto() {
+    if (!window.confirm('Remove the parish photo?')) return
+    setError('')
+    setNotice('')
+    setPhotoBusy('remove')
+    const r = await authed({ method: 'DELETE', path: '/api/parish/photo' })
+    setPhotoBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setParish(r.json.parish)
+    setPhotoVersion((current) => current + 1)
+    setNotice('The parish photo was removed. The directory shows the parish crest instead.')
+  }
 
   function update(field) {
     return (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
@@ -258,6 +320,38 @@ export default function ParishProfile() {
         )}
 
         <aside className="stack">
+          <section className="card">
+            <p className="eyebrow">Parish photo</p>
+            <ChurchMedia
+              id={parish.parishId}
+              accent={accentFor(parish.parishId)}
+              className="parish-card__media"
+              name={parish.name}
+              alt={parish.name}
+              version={photoVersion}
+            />
+            {parish.hasPhoto ? (
+              <div className="form-actions__buttons">
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={removePhoto}
+                  disabled={photoBusy === 'remove'}
+                >
+                  {photoBusy === 'remove' ? 'Removing…' : 'Remove photo'}
+                </button>
+              </div>
+            ) : (
+              <PhotoDrop
+                onFiles={uploadPhoto}
+                accept="image/jpeg,image/png"
+                busy={photoBusy === 'upload'}
+                lead="Drag a photo of the church here"
+                hint="JPEG or PNG, up to 2 MB. Shown on the public directory and on this parish's page."
+              />
+            )}
+          </section>
+
           <section className="card">
             <p className="eyebrow">Clergy</p>
             {priests.length === 0 ? (

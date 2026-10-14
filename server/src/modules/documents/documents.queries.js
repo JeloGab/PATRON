@@ -296,7 +296,9 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
                 r.date_of_death, r.officiant_name,
                 p.name as parish_name, p.address as parish_address, p.contact_no as parish_contact,
                 t.name as document_name,
-                me.full_name as signatory_name
+                me.full_name as signatory_name,
+                me.signature as signatory_signature,
+                me.signature_content_type as signatory_signature_type
            from public.sacramental_record r
            join public.parish p on p.parish_id = r.parish_id
            join public.document_type t on t.type_id = $2
@@ -319,8 +321,9 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
       const { rows } = await client.query(
         `insert into public.document_file
            (parish_id, document_type_id, record_id, application_id, release_type,
-            verification_code, snapshot, signatory_id, issued_by)
-         values ($1, $2, $3, $4, 'request', $5, $6, $7, $7)
+            verification_code, snapshot, signatory_id, issued_by,
+            signature, signature_content_type)
+         values ($1, $2, $3, $4, 'request', $5, $6, $7, $7, $8, $9)
          returning file_id`,
         [
           actor.parishId,
@@ -330,6 +333,8 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
           verificationCode,
           JSON.stringify(snapshot),
           actor.userId,
+          recordRows[0].signatory_signature,
+          recordRows[0].signatory_signature_type,
         ]
       )
       return rows[0].file_id
@@ -351,6 +356,30 @@ export async function countRecordDocuments(actor, recordId) {
       requestCount: Number(rows[0].request_count),
       issuedCount: Number(rows[0].issued_count),
     }
+  })
+}
+
+// Deliberately NOT part of CERT_COLUMNS: that list is shared with
+// findEventCertificates, so a twelve-baptism ceremony would ship twelve signatures to
+// draw a list of download links. Only the PDF ever reads these bytes.
+export async function findCertificateSignature(actor, fileId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select signature from public.document_file where file_id = $1`,
+      [fileId]
+    )
+    return rows.length === 0 ? null : rows[0].signature
+  })
+}
+
+export async function hasOwnSignature(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select (signature is not null) as ok
+         from public.app_user
+        where user_id = public.current_user_id()`
+    )
+    return rows.length > 0 && rows[0].ok
   })
 }
 

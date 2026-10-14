@@ -1,7 +1,11 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
-import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests } from './parish.queries.js'
+import { sniffContentType } from '../../lib/fileType.js'
+import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto } from './parish.queries.js'
+
+export const PHOTO_TYPES = ['image/jpeg', 'image/png']
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024
 
 
 
@@ -45,4 +49,35 @@ export async function getPublicParish(parishId) {
 
 export async function getActivePriests(actor) {
   return listActivePriests(actor)
+}
+
+export async function setPhoto(actor, { buffer, typeAccepted = true }) {
+  if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)
+  if (buffer.length > MAX_PHOTO_BYTES) throw new AppError('FILE_TOO_LARGE', 413)
+
+  const contentType = sniffContentType(buffer)
+  if (!PHOTO_TYPES.includes(contentType)) throw new AppError('INVALID_FILE_TYPE', 400)
+
+  const changed = await setParishPhoto(actor, { contentType, content: buffer })
+  if (changed === 0) throw new AppError('PARISH_NOT_FOUND', 404)
+
+  return getOwnParish(actor)
+}
+
+export async function removePhoto(actor) {
+  const changed = await clearParishPhoto(actor)
+  if (changed === 0) throw new AppError('PARISH_NOT_FOUND', 404)
+
+  return getOwnParish(actor)
+}
+
+export async function getPublicPhoto(parishId) {
+  const target = clean(parishId)
+  if (!isUuid(target)) throw new AppError('INVALID_PARISH_ID', 400)
+
+  const photo = await findPublicParishPhoto(target)
+  if (!photo) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  return photo
 }

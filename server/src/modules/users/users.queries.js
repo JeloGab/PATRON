@@ -18,6 +18,43 @@ function mapUser(row) {
   }
 }
 
+export async function setOwnSignature(actor, { contentType, content }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.app_user
+          set signature = $1,
+              signature_content_type = $2
+        where user_id = public.current_user_id()`,
+      [content, contentType]
+    )
+    return rowCount
+  })
+}
+
+export async function clearOwnSignature(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.app_user
+          set signature = null,
+              signature_content_type = null
+        where user_id = public.current_user_id()`
+    )
+    return rowCount
+  })
+}
+
+export async function findOwnSignature(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select signature_content_type, signature
+         from public.app_user
+        where user_id = public.current_user_id()`
+    )
+    if (rows.length === 0 || rows[0].signature === null) return null
+    return { contentType: rows[0].signature_content_type, content: rows[0].signature }
+  })
+}
+
 export async function insertManager(actor, { fullName, username, passwordHash }) {
   return withActor(actor, async (client) => {
     try {

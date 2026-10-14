@@ -1,8 +1,9 @@
 // GET /api/auth/me, read-only: no route lets an account edit its own name.
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
+import SignaturePad from '../../components/SignaturePad.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
 import { clearSession, getSession, landingFor, patchSession } from '../../lib/session.js'
@@ -22,6 +23,27 @@ export default function Account() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [sending, setSending] = useState(false)
+  const [signatureUrl, setSignatureUrl] = useState(null)
+  const [signatureState, setSignatureState] = useState('loading')
+  const [signatureBusy, setSignatureBusy] = useState('')
+
+  const endSession = useCallback(() => {
+    clearSession()
+    navigate('/login', { replace: true })
+  }, [navigate])
+
+  const loadSignature = useCallback(async () => {
+    const r = await authed({ path: '/api/users/signature', as: 'blob' })
+    if (!r.ok) {
+      setSignatureState('none')
+      return
+    }
+    setSignatureUrl((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return URL.createObjectURL(r.blob)
+    })
+    setSignatureState('present')
+  }, [])
 
   useEffect(() => {
     let live = true
@@ -31,8 +53,7 @@ export default function Account() {
       if (!live) return
 
       if (isSessionError(r)) {
-        clearSession()
-        navigate('/login', { replace: true })
+        endSession()
         return
       }
       if (!r.ok) {
@@ -61,7 +82,11 @@ export default function Account() {
     return () => {
       live = false
     }
-  }, [navigate])
+  }, [endSession])
+
+  useEffect(() => {
+    if ((me?.role ?? session?.role) === 'priest') loadSignature()
+  }, [me?.role, session?.role, loadSignature])
 
   if (!session) return <Navigate to="/login" replace />
 
@@ -90,6 +115,58 @@ export default function Account() {
     setNotice(
       `A reset link has been sent to ${me?.email ?? session.email}. Open it to choose a new password.`,
     )
+  }
+
+  async function saveSignature(blob) {
+    setError('')
+    setNotice('')
+    setSignatureBusy('save')
+    const r = await authed({
+      method: 'POST',
+      path: '/api/users/signature',
+      raw: blob,
+      headers: { 'Content-Type': 'image/png' },
+    })
+    setSignatureBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(
+        r.status === 404
+          ? 'The signature feature is not deployed on the server yet.'
+          : messageFor(r),
+      )
+      return
+    }
+    setNotice('Your signature was saved. Every certificate you sign from now on carries it.')
+    loadSignature()
+  }
+
+  async function removeSignature() {
+    if (!window.confirm('Remove your signature? No certificate can be issued without one.')) return
+    setError('')
+    setNotice('')
+    setSignatureBusy('remove')
+    const r = await authed({ method: 'DELETE', path: '/api/users/signature' })
+    setSignatureBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setSignatureUrl((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+    setSignatureState('none')
+    setNotice('Your signature was removed. Certificates cannot be issued until you draw a new one.')
   }
 
   const role = me?.role ?? session.role
@@ -152,6 +229,52 @@ export default function Account() {
                 </dd>
               </div>
             </dl>
+          )}
+
+          {role === 'priest' && (
+            <>
+              <h3 className="eyebrow">Signature</h3>
+              <p className="muted">
+                Drawn once and reused. Every certificate you approve carries it, and a copy is
+                kept with that certificate — so redrawing it never changes one already issued.
+                No certificate can be issued while you have none.
+              </p>
+
+              {signatureState === 'loading' ? (
+                <p className="empty">Loading your signature…</p>
+              ) : signatureState === 'present' ? (
+                <>
+                  <img className="signature__preview" src={signatureUrl} alt="Your signature" />
+                  <div className="form-actions__buttons">
+                    <button
+                      type="button"
+                      className="btn btn--ghost"
+                      onClick={() => setSignatureState('drawing')}
+                    >
+                      Draw a new one
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--ghost"
+                      onClick={removeSignature}
+                      disabled={signatureBusy === 'remove'}
+                    >
+                      {signatureBusy === 'remove' ? 'Removing…' : 'Remove'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {signatureState === 'none' && (
+                    <p className="alert">
+                      You have no signature on file, so no certificate can be issued with your
+                      name — including those generated when a sacramental event is completed.
+                    </p>
+                  )}
+                  <SignaturePad onSave={saveSignature} busy={signatureBusy === 'save'} />
+                </>
+              )}
+            </>
           )}
 
           <h3 className="eyebrow">Password</h3>

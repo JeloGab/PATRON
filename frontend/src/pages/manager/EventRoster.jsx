@@ -35,6 +35,7 @@ export default function EventRoster() {
   const eventId = params.get('eventId') ?? ''
   const [events, setEvents] = useState(null)
   const [participants, setParticipants] = useState(null)
+  const [priests, setPriests] = useState([])
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [adding, setAdding] = useState(false)
@@ -72,6 +73,18 @@ export default function EventRoster() {
       live = false
     }
   }, [endSession])
+
+  useEffect(() => {
+    let live = true
+    async function loadPriests() {
+      const r = await authed({ path: '/api/parish/priests' })
+      if (live && r.ok) setPriests(r.json.priests)
+    }
+    loadPriests()
+    return () => {
+      live = false
+    }
+  }, [])
 
   const event = useMemo(
     () => (events ?? []).find((item) => item.eventId === eventId) ?? null,
@@ -446,6 +459,7 @@ export default function EventRoster() {
         <CompleteEventModal
           event={event}
           participants={participants}
+          signatory={priests.find((p) => p.userId === event.assignedPriestId) ?? null}
           onClose={() => setCompleting(false)}
           onDone={(updated) => {
             setEvents((current) =>

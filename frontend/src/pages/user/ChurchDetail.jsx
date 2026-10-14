@@ -3,12 +3,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
-import { call } from '../../lib/api.js'
+import { BASE, call } from '../../lib/api.js'
 import { formatLongDate } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
 import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
-
-const IMAGE_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:4000').replace(/\/$/, '')
 
 export default function ChurchDetail() {
   const { id } = useParams()
@@ -169,7 +167,7 @@ export default function ChurchDetail() {
                         <img
                           key={index}
                           className="feed__image"
-                          src={`${IMAGE_BASE}/api/feed/${item.announcementId}/images/${index + 1}`}
+                          src={`${BASE}/api/feed/${item.announcementId}/images/${index + 1}`}
                           alt=""
                           loading="lazy"
                         />

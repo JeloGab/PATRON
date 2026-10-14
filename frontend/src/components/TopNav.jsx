@@ -14,9 +14,9 @@ const MANAGER_LINKS = [
 
 const PRIEST_LINKS = [
   { to: '/priest', label: 'My calendar', end: true },
-  { to: '/priest/approvals', label: 'Pending approvals' },
-  { to: '/priest/documents', label: 'Document approvals' },
-  { to: '/priest/announcements', label: 'Announcements' },
+  { to: '/priest/approvals', label: 'Pending approvals', badge: 'events' },
+  { to: '/priest/documents', label: 'Document approvals', badge: 'documents' },
+  { to: '/priest/announcements', label: 'Announcements', badge: 'announcements' },
   { to: '/priest/managers', label: 'Parish managers' },
   { to: '/priest/parish', label: 'Parish profile' },
 ]
@@ -88,7 +88,19 @@ function ManagerNav() {
   )
 }
 
-function PriestNav({ pendingCount }) {
+// The count is read by name off the layout's counts object, so adding a badge to
+// another tab is one key in PRIEST_LINKS and one count in PriestLayout.
+function Badge({ waiting }) {
+  if (!waiting || waiting.count === 0) return null
+  const shown = waiting.more ? `${waiting.count}+` : String(waiting.count)
+  return (
+    <span className="notif" aria-label={`${shown} waiting`}>
+      {shown}
+    </span>
+  )
+}
+
+function PriestNav({ counts }) {
   const { pathname } = useLocation()
   const session = getSession()
   const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
@@ -124,11 +136,7 @@ function PriestNav({ pendingCount }) {
                 className={`tabs__link ${current ? 'is-active' : ''}`}
                 aria-current={current ? 'page' : undefined}
               >
-                {item.to === '/priest/approvals' && pendingCount > 0 && (
-                  <span className="notif" aria-label={`${pendingCount} pending`}>
-                    {pendingCount}
-                  </span>
-                )}
+                <Badge waiting={item.badge ? counts[item.badge] : null} />
                 {item.label}
               </NavLink>
             )
@@ -221,9 +229,9 @@ function UserNav() {
   )
 }
 
-export default function TopNav({ pendingCount = 0 }) {
+export default function TopNav({ counts = {} }) {
   const session = getSession()
-  if (session?.role === 'priest') return <PriestNav pendingCount={pendingCount} />
+  if (session?.role === 'priest') return <PriestNav counts={counts} />
   if (session?.role === 'sysadmin') return <AdminNav />
   if (session?.role === 'manager') return <ManagerNav />
   return <UserNav />

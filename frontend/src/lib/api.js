@@ -2,7 +2,7 @@
 
 import { getToken } from './session.js'
 
-const BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:4000').replace(/\/$/, '')
+export const BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:4000').replace(/\/$/, '')
 
 const SESSION_CODES = new Set(['NO_TOKEN', 'INVALID_TOKEN', 'SESSION_REVOKED'])
 

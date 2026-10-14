@@ -401,7 +401,7 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
-  padding: 1.15rem 1.2rem 0.4rem;
+  padding: 1.15rem 1.2rem 1.2rem;
 }
 
 .panel--spaced {
@@ -414,7 +414,19 @@ textarea:focus {
   justify-content: space-between;
   gap: 0.85rem;
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+
+/* The h2 is a flex item here, so its own bottom margin fights align-items: center and
+   makes the gap below the head unpredictable. The head owns the spacing instead. */
+.panel__head h2 {
+  margin: 0;
+}
+
+/* A panel with no __head: the bare heading needs the same room the head has. */
+.panel > h2,
+.panel > h3 {
+  margin-bottom: 0.9rem;
 }
 
 .panel__note {
@@ -601,10 +613,11 @@ textarea:focus {
 .cal {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .cal__weekday {
+  margin-bottom: 0.25rem;
   padding: 0.15rem 0.2rem 0.35rem;
   font-size: 0.72rem;
   font-weight: 700;
@@ -1679,6 +1692,8 @@ img {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
   color: white;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -1993,7 +2008,7 @@ dd {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.2rem 1.35rem 0.35rem;
+  padding: 1.35rem 1.4rem 0.5rem;
 }
 
 .modal__head h2 {
@@ -2014,7 +2029,17 @@ dd {
 }
 
 .modal__body {
-  padding: 0.5rem 1.35rem 1.35rem;
+  padding: 0.85rem 1.4rem 1.4rem;
+}
+
+/* The pill row under a dialog title. Without a rule these were bare inline spans, and
+   JSX emits no whitespace between elements on separate lines, so they touched. */
+.modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.95rem;
 }
 
 .priest-list {
@@ -2035,6 +2060,59 @@ dd {
   padding-inline: 0.85rem;
 }
 
+/* The signature pad. The canvas sits above a ruled line, like a signature block on
+   paper, and touch-action: none stops a finger scrolling the page mid-stroke. */
+.signature {
+  margin: 0.6rem 0 0;
+}
+
+.signature__frame {
+  position: relative;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: var(--ivory);
+  overflow: hidden;
+}
+
+.signature__canvas {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature__rule {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 2.6rem;
+  border-bottom: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.signature__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* A stored signature, shown back to its owner. */
+.signature__preview {
+  display: block;
+  max-width: 320px;
+  max-height: 120px;
+  margin: 0.5rem 0;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
 /* A row that can expand: the checklist opens a decision form inside the row, and at
    760px the row is `1fr auto`, so without this the form would be squeezed into the
    first column with the button's column left empty beside it. */
@@ -2047,6 +2125,18 @@ dd {
   flex-wrap: wrap;
   gap: 0.55rem;
   justify-content: flex-end;
+  margin-top: 1.1rem;
+}
+
+/* ...except where the parent is already a gapped grid or flex row, which would then
+   space it twice. A grid item honours its margin on top of the gap. */
+.form-grid > .form-actions__buttons,
+.form-actions > .form-actions__buttons,
+.priest-list__row > .form-actions__buttons,
+.stack > .form-actions__buttons,
+.seg > .form-actions__buttons,
+.page__hero > .form-actions__buttons {
+  margin-top: 0;
 }
 
 @media (min-width: 760px) {
@@ -2278,3 +2368,70 @@ dd {
   color: var(--wine);
 }
 
+
+
+/* ---------------------------------------------------------------------------
+   Spacing between blocks.
+
+   The sheet gave each element its own margins and left the relationships
+   between them unstated, so anything whose neighbour happened to carry no
+   bottom margin ended up flush against it. These rules state the three
+   relationships that were missing.
+   --------------------------------------------------------------------------- */
+
+/* Two panels in a row had nothing between them — .panel carries no margin and
+   .panel--spaced was only remembered sometimes. A page is normal flow, so this
+   margin collapses with whatever the previous block already had: the result is
+   max(previous, 1.15rem), never the sum. */
+.page > * + .panel,
+.page > * + .card {
+  margin-top: 1.15rem;
+}
+
+/* .eyebrow is a kicker above a title — no top margin, by design. As an h2 or h3 it
+   is a section heading inside a card, and then it needs to stand off the section
+   above it. :not(:first-child) keeps the one that opens a card tight to the edge. */
+h2.eyebrow:not(:first-child),
+h3.eyebrow:not(:first-child) {
+  margin-top: 1.5rem;
+}
+
+/* The flow rule the sheet never had. Inside a normal-flow container, every child
+   after the first stands off the one above it.
+
+   Adjacent sibling margins COLLAPSE rather than add, so the gap each pair ends up
+   with is max(what the first already declared, 0.9rem) — never the sum. That is why
+   this can be stated once instead of per pair: a block that already asks for more
+   room keeps it, and a block that declared nothing stops touching its neighbour.
+
+   Scoped to containers that are genuinely normal flow. A gapped grid or flex row
+   (.form-grid, .stack, .seg, .verify-bar, .filters) spaces its own children, and a
+   margin there WOULD add to the gap — those are not listed, and the one bare <form>
+   in a dialog is matched by :not([class]) so a .verify-bar form is left alone. .modal is excluded for
+   the same reason in reverse: its two children carry the dialog's own padding. */
+.card:not(.modal) > * + *,
+.panel > * + *,
+.modal__body > * + *,
+.modal__body > form:not([class]) > * + *,
+.day-detail > * + *,
+.subject-group > * + * {
+  margin-top: 0.9rem;
+}
+
+/* One pairing the flow rule must not break: a kicker belongs to the title under it,
+   so the two stay as tight as .eyebrow's own bottom margin makes them. */
+.eyebrow + h1,
+.eyebrow + h2,
+.eyebrow + h3 {
+  margin-top: 0;
+}
+
+/* A container's own padding is the bottom spacing; a trailing margin inside it only
+   pushes the padding further out and makes identical cards different heights. */
+.card > :last-child,
+.panel > :last-child,
+.modal__body > :last-child,
+.parish-card__body > :last-child,
+.day-detail > :last-child {
+  margin-bottom: 0;
+}

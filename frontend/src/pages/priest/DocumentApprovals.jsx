@@ -1,7 +1,7 @@
 // The priest's approval queue; approving issues the certificate in the same call.
 
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import ApplicationModal from '../../components/ApplicationModal.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
@@ -22,10 +22,12 @@ const TABS = [
 
 export default function DocumentApprovals() {
   const navigate = useNavigate()
+  const { refresh } = useOutletContext()
   const [status, setStatus] = useState('verified')
   const [requests, setRequests] = useState(null)
   const [openId, setOpenId] = useState(null)
   const [error, setError] = useState('')
+  const [canSign, setCanSign] = useState(true)
 
   const endSession = useCallback(() => {
     clearSession()
@@ -50,10 +52,27 @@ export default function DocumentApprovals() {
     load()
   }, [load])
 
+  useEffect(() => {
+    let live = true
+    async function checkSignature() {
+      const r = await authed({ path: '/api/users/signature', as: 'blob' })
+      // A 404 means no signature on file. It also means the route is not deployed yet,
+      // in which case the old name-only behaviour still applies and the banner is
+      // merely premature - not wrong.
+      if (live) setCanSign(r.ok)
+    }
+    checkSignature()
+    return () => {
+      live = false
+    }
+  }, [])
+
   function applyChange(next) {
     setRequests((current) =>
       (current ?? []).map((item) => (item.applicationId === next.applicationId ? next : item)),
     )
+
+    refresh()
   }
 
   const open = (requests ?? []).find((item) => item.applicationId === openId) ?? null
@@ -78,6 +97,17 @@ export default function DocumentApprovals() {
       {error && (
         <p className="alert" role="alert">
           {error}
+        </p>
+      )}
+
+      {!canSign && (
+        <p className="alert">
+          You have no signature on file. A certificate cannot be issued without it — including
+          those generated when a sacramental event is completed. Draw one on{' '}
+          <Link to="/account" className="text-btn">
+            your account page
+          </Link>
+          .
         </p>
       )}
 

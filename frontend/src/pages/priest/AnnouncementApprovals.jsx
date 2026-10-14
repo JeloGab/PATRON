@@ -2,7 +2,7 @@
 // — which is born approved, and therefore cannot carry an image.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { STATUS_HINT, STATUS_LABEL, canArchive, statusPill } from '../../lib/announcements.js'
@@ -15,6 +15,7 @@ const EMPTY = { title: '', content: '' }
 
 export default function AnnouncementApprovals() {
   const navigate = useNavigate()
+  const { refresh } = useOutletContext()
   const [announcements, setAnnouncements] = useState(null)
   const [status, setStatus] = useState('pending')
   const [draft, setDraft] = useState(EMPTY)
@@ -81,6 +82,7 @@ export default function AnnouncementApprovals() {
     setRejectingId(null)
     setReason('')
     load()
+    refresh()
   }
 
   async function post(submitEvent) {
