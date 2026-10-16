@@ -15,6 +15,7 @@ function mapUser(row) {
     mustChangePassword: row.must_change_password,
     createdAt: row.created_at,
     deactivatedAt: row.deactivated_at ?? null,
+    hasPhoto: row.has_photo ?? null,
   }
 }
 
@@ -79,7 +80,7 @@ export async function insertManager(actor, { fullName, username, passwordHash })
 export async function listManagers(actor) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
-      `select ${COLUMNS}
+      `select ${COLUMNS}, (photo is not null) as has_photo
          from public.app_user
         where role = 'manager'
         order by full_name`

@@ -10,6 +10,7 @@ import {
   RELATIONSHIPS,
 } from '../../lib/documents.js'
 import { messageFor } from '../../lib/errors.js'
+import { ACCEPT, checkIdFile, contentTypeFor } from '../../lib/fileCheck.js'
 import { clearSession, getSession } from '../../lib/session.js'
 
 const EMPTY = {
@@ -22,6 +23,7 @@ const EMPTY = {
   motherName: '',
   sacramentYear: '',
   notes: '',
+  invoiceNo: '',
 }
 
 export default function RequestDocument() {
@@ -35,6 +37,9 @@ export default function RequestDocument() {
   const [lookupError, setLookupError] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  // The ID is a second request by necessity — the row must exist before it can carry a
+  // file — so it is held here and uploaded right after the create succeeds.
+  const [idFile, setIdFile] = useState(null)
 
   useEffect(() => {
     let live = true
@@ -105,6 +110,7 @@ export default function RequestDocument() {
 
     const subjectName = form.subjectName.trim().replace(/\s+/g, ' ')
     const purpose = form.purpose.trim().replace(/\s+/g, ' ')
+    const invoiceNo = form.invoiceNo.trim().replace(/\s+/g, ' ')
 
     if (!form.documentTypeId) {
       setError('Choose which certificate you need.')
@@ -130,6 +136,18 @@ export default function RequestDocument() {
         return
       }
     }
+    if (invoiceNo.length < LIMITS.invoiceNo.min || invoiceNo.length > LIMITS.invoiceNo.max) {
+      setError(
+        `Enter the reference number of your payment — ${LIMITS.invoiceNo.min} to ${LIMITS.invoiceNo.max} characters. Pay the parish first, then file this request.`,
+      )
+      return
+    }
+
+    const badFile = await checkIdFile(idFile)
+    if (badFile) {
+      setError(badFile)
+      return
+    }
 
     const body = {
       parishId: parish.parishId,
@@ -137,6 +155,7 @@ export default function RequestDocument() {
       relationship: form.relationship,
       purpose,
       subjectName,
+      invoiceNo,
     }
     if (form.subjectBirthDate) body.subjectBirthDate = form.subjectBirthDate
     if (form.fatherName.trim()) body.fatherName = form.fatherName.trim()
@@ -158,7 +177,38 @@ export default function RequestDocument() {
       return
     }
 
-    navigate(`/user/requests?submitted=${r.json.request.applicationId}`, { replace: true })
+    const applicationId = r.json.request.applicationId
+
+    // The request exists from here on. If the ID upload fails the request is still
+    // valid — it just has no file — so say so plainly rather than losing the request,
+    // and send them on to My requests where the office can be asked for it.
+    if (idFile) {
+      setPending(true)
+      const upload = await authed({
+        method: 'POST',
+        path: `/api/requests/${encodeURIComponent(applicationId)}/id-file`,
+        raw: idFile,
+        headers: {
+          'Content-Type': await contentTypeFor(idFile),
+          'X-File-Name': encodeURIComponent(idFile.name),
+        },
+      })
+      setPending(false)
+
+      if (isSessionError(upload)) {
+        clearSession()
+        navigate('/login', { replace: true })
+        return
+      }
+      if (!upload.ok) {
+        setError(
+          `Your request was filed, but the ID did not upload (${messageFor(upload)}). Open it under My requests to try again.`,
+        )
+        return
+      }
+    }
+
+    navigate(`/user/requests?submitted=${applicationId}`, { replace: true })
   }
 
   return (
@@ -273,6 +323,38 @@ export default function RequestDocument() {
               onChange={update('notes')}
               placeholder="A former surname, the chapel where it took place, a sibling baptised the same day"
             />
+          </label>
+
+          <h3 className="eyebrow field--full">Payment and identification</h3>
+
+          <label className="field field--full">
+            <span>Payment reference number *</span>
+            <input
+              value={form.invoiceNo}
+              onChange={update('invoiceNo')}
+              placeholder="The reference number from your payment"
+              maxLength={LIMITS.invoiceNo.max}
+            />
+            <span className="form-hint">
+              <strong>Pay {parish.name} first</strong>, then enter the reference number your
+              payment gave you here. Contact the parish office
+              {parish.contactNo ? ` at ${parish.contactNo}` : ''} if you are unsure how to pay.
+              The office checks this number against its records before the request is processed.
+            </span>
+          </label>
+
+          <label className="field field--full">
+            <span>Photo or scan of a valid ID</span>
+            <input
+              type="file"
+              accept={ACCEPT}
+              onChange={(event) => setIdFile(event.target.files?.[0] ?? null)}
+            />
+            <span className="form-hint">
+              Optional, and only useful if you are requesting this for someone else — it is how
+              the office checks the relationship you stated above. A walk-in shows their ID at
+              the counter instead. JPEG, PNG, WebP or PDF, up to 5 MB.
+            </span>
           </label>
         </div>
 

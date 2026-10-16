@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
+import PhotoDrop from '../../components/PhotoDrop.jsx'
 import SignaturePad from '../../components/SignaturePad.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
+import { contentTypeFor } from '../../lib/fileCheck.js'
 import { clearSession, getSession, landingFor, patchSession } from '../../lib/session.js'
 
 const ROLE_LABEL = {
@@ -26,6 +28,9 @@ export default function Account() {
   const [signatureUrl, setSignatureUrl] = useState(null)
   const [signatureState, setSignatureState] = useState('loading')
   const [signatureBusy, setSignatureBusy] = useState('')
+  const [photoUrl, setPhotoUrl] = useState(null)
+  const [photoState, setPhotoState] = useState('loading')
+  const [photoBusy, setPhotoBusy] = useState('')
 
   const endSession = useCallback(() => {
     clearSession()
@@ -43,6 +48,23 @@ export default function Account() {
       return URL.createObjectURL(r.blob)
     })
     setSignatureState('present')
+  }, [])
+
+  // Unlike the signature, every role may hold a photo, so this runs for everyone.
+  // 'none' covers both "no photo on file" and "these routes are not deployed yet",
+  // because IMAGE_NOT_FOUND and a 404 from an absent route are indistinguishable here
+  // — and both mean the same thing to the page: show the empty state.
+  const loadPhoto = useCallback(async () => {
+    const r = await authed({ path: '/api/auth/photo', as: 'blob' })
+    if (!r.ok) {
+      setPhotoState('none')
+      return
+    }
+    setPhotoUrl((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return URL.createObjectURL(r.blob)
+    })
+    setPhotoState('present')
   }, [])
 
   useEffect(() => {
@@ -70,6 +92,7 @@ export default function Account() {
         role: r.json.user.role,
         parishId: r.json.user.parishId ?? null,
         mustChangePassword: Boolean(r.json.user.mustChangePassword),
+        hasPhoto: Boolean(r.json.user.hasPhoto),
       })
 
       if (r.json.user.role === 'priest' || r.json.user.role === 'manager') {
@@ -87,6 +110,10 @@ export default function Account() {
   useEffect(() => {
     if ((me?.role ?? session?.role) === 'priest') loadSignature()
   }, [me?.role, session?.role, loadSignature])
+
+  useEffect(() => {
+    loadPhoto()
+  }, [loadPhoto])
 
   if (!session) return <Navigate to="/login" replace />
 
@@ -169,6 +196,77 @@ export default function Account() {
     setNotice('Your signature was removed. Certificates cannot be issued until you draw a new one.')
   }
 
+  // JPEG and PNG only, 1 MB, enforced again by the server from the magic bytes. The
+  // checks here are for a decent message, not for safety.
+  async function savePhoto(files) {
+    const file = files[0]
+    if (!file) return
+
+    setError('')
+    setNotice('')
+
+    const contentType = await contentTypeFor(file)
+    if (contentType !== 'image/jpeg' && contentType !== 'image/png') {
+      setError('A profile photo must be a JPEG or a PNG.')
+      return
+    }
+    if (file.size > 1024 * 1024) {
+      setError(`${file.name} is larger than 1 MB. Choose a smaller photo.`)
+      return
+    }
+
+    setPhotoBusy('save')
+    const r = await authed({
+      method: 'POST',
+      path: '/api/auth/photo',
+      raw: file,
+      headers: { 'Content-Type': contentType },
+    })
+    setPhotoBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(
+        r.status === 404 ? 'The profile photo feature is not deployed on the server yet.' : messageFor(r),
+      )
+      return
+    }
+
+    // The top bar reads hasPhoto from the session, so it would keep showing the letter
+    // until the next /api/auth/me without this.
+    patchSession({ hasPhoto: true })
+    setNotice('Your photo was saved.')
+    loadPhoto()
+  }
+
+  async function removePhoto() {
+    if (!window.confirm('Remove your photo?')) return
+    setError('')
+    setNotice('')
+    setPhotoBusy('remove')
+    const r = await authed({ method: 'DELETE', path: '/api/auth/photo' })
+    setPhotoBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setPhotoUrl((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+    setPhotoState('none')
+    patchSession({ hasPhoto: false })
+    setNotice('Your photo was removed.')
+  }
+
   const role = me?.role ?? session.role
   const isStaff = role === 'sysadmin' || role === 'priest' || role === 'manager'
 
@@ -229,6 +327,52 @@ export default function Account() {
                 </dd>
               </div>
             </dl>
+          )}
+
+          <h3 className="eyebrow">Photo</h3>
+          <p className="muted">
+            Optional. It replaces the initial beside your name in the top bar.
+            {role === 'priest'
+              ? ' Because you are a priest, it is also shown on your parish’s public page, where anyone can see it — so use one you are happy to publish.'
+              : role === 'parishioner'
+                ? ' Only you can see it.'
+                : ' Only staff of your own parish can see it.'}
+          </p>
+
+          {photoState === 'loading' ? (
+            <p className="empty">Loading your photo…</p>
+          ) : photoState === 'present' ? (
+            <div className="account-photo">
+              <img className="account-photo__img" src={photoUrl} alt="Your photo" />
+              <div className="form-actions__buttons">
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={removePhoto}
+                  disabled={photoBusy === 'remove'}
+                >
+                  {photoBusy === 'remove' ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <PhotoDrop
+              onFiles={savePhoto}
+              accept="image/jpeg,image/png"
+              lead="Drag a photo of yourself here"
+              busy={photoBusy === 'save'}
+              hint="JPEG or PNG, up to 1 MB."
+            />
+          )}
+
+          {photoState === 'present' && (
+            <PhotoDrop
+              onFiles={savePhoto}
+              accept="image/jpeg,image/png"
+              lead="Drag a new photo here to replace it"
+              busy={photoBusy === 'save'}
+              hint="JPEG or PNG, up to 1 MB."
+            />
           )}
 
           {role === 'priest' && (

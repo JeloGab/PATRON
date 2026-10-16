@@ -1,9 +1,11 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import {clean, optionalContact, optionalDescription, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
+import {clean, optionalContact, optionalDescription, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requireInvoiceNo, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
 import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate, findCertificateSignature, hasOwnSignature } from './documents.queries.js'
 import {mintVerificationCode} from '../../lib/verificationCode.js'
 import { buildCertificatePdf } from './documents.pdf.js'
+import { updateIdFile, findIdFile } from './documents.queries.js'
+import { sniffContentType, sanitizeFileName, ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES } from '../../lib/fileType.js'
 
 
 const PAGE_SIZE = 50
@@ -100,6 +102,7 @@ export async function fileRequest(actor, body) {
     applicantId: actor.userId,
     requestorName: null,
     requestorContact: null,
+    invoiceNo: requireInvoiceNo(body.invoiceNo),
     createdBy: actor.userId,
   })
   return findApplication(actor, applicationId)
@@ -115,6 +118,7 @@ export async function fileWalkIn(actor, body) {
     applicantId: null,
     requestorName: requireFullName(body.requestorName),
     requestorContact: optionalContact(body.requestorContact),
+    invoiceNo: null,
     createdBy: actor.userId,
   })
   return findApplication(actor, applicationId)
@@ -246,3 +250,38 @@ export async function getCertificatePdf(actor, applicationId) {
   return renderCertificatePdf(certificate, signature)
 }
 
+
+export async function attachIdFile(actor, applicationId, { fileName, buffer, typeAccepted = true }) {
+  if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)
+  if (buffer.length > MAX_ATTACHMENT_BYTES) throw new AppError('FILE_TOO_LARGE', 413)
+
+  const contentType = sniffContentType(buffer)
+  if (!contentType || !ATTACHMENT_TYPES.includes(contentType)) {
+    throw new AppError('INVALID_FILE_TYPE', 400)
+  }
+
+  const application = await requireApplication(actor, applicationId)
+  const allowed = actor.role === 'manager' ? OPEN_STATUSES : ['pending']
+  if (!allowed.includes(application.status)) throw new AppError('APPLICATION_NOT_EDITABLE', 409)
+
+  const changed = await updateIdFile(actor, {
+    applicationId: application.applicationId,
+    fileName: sanitizeFileName(fileName, contentType),
+    contentType,
+    content: buffer,
+  })
+  if (changed === 0) throw new AppError('APPLICATION_NOT_EDITABLE', 409)
+
+  return findApplication(actor, application.applicationId)
+}
+
+/* ID_FILE_NOT_FOUND is the one new error code these changes introduce. After a release
+   it is the normal answer for every approved request, because the bytes are purged in
+   the same statement that approves it. */
+export async function getIdFile(actor, applicationId) {
+  const file = await findIdFile(actor, requireId(applicationId, 'INVALID_APPLICATION_ID'))
+  if (!file) throw new AppError('ID_FILE_NOT_FOUND', 404)
+
+  return file
+}

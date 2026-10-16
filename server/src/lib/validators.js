@@ -16,6 +16,7 @@ export const LIMITS = {
   description: { max: 500 },
   purpose: { min: 3, max: 200 },
   requestorContact: { max: 60 },
+  invoiceNo: { min: 3, max: 40 },
    content: { min: 5, max: 5000 }
 }
 
@@ -255,4 +256,19 @@ export function optionalContact(value) {
   if (!contact) return null
   if (contact.length > LIMITS.requestorContact.max) throw new AppError('INVALID_CONTACT', 400)
   return contact
+}
+
+
+export function optionalInvoiceNo(value) {
+  const invoice = squeeze(value)
+  if (!invoice) return null
+  if (invoice.length < LIMITS.invoiceNo.min) throw new AppError('INVALID_INVOICE_NO', 400)
+  if (invoice.length > LIMITS.invoiceNo.max) throw new AppError('INVALID_INVOICE_NO', 400)
+  return invoice
+}
+
+export function requireInvoiceNo(value) {
+  const invoice = optionalInvoiceNo(value)
+  if (!invoice) throw new AppError('INVALID_INVOICE_NO', 400)
+  return invoice
 }

@@ -6,6 +6,7 @@ const COLUMNS = `a.application_id, a.parish_id, a.record_id, a.applicant_id,
                  a.requestor_name, a.requestor_contact, a.relationship, a.purpose,
                  a.subject_name, a.subject_birth_date, a.father_name, a.mother_name,
                  a.sacrament_year, a.notes, a.status, a.status_reason, a.is_paid,
+                 a.invoice_no, a.id_file_name, (a.id_file is not null) as has_id_file,
                  a.submitted_at, a.verified_at, a.approved_at,
                  coalesce(a.rejected_at, a.cancelled_at) as closed_at,
                  t.name as document_name, t.record_type,
@@ -59,6 +60,9 @@ function mapApplication(row) {
     status: row.status,
     statusReason: row.status_reason,
     isPaid: row.is_paid,
+    invoiceNo: row.invoice_no,
+    hasIdFile: row.has_id_file,
+    idFileName: row.id_file_name,
     createdByName: row.created_by_name,
     submittedAt: row.submitted_at,
     verifiedByName: row.verified_by_name,
@@ -167,8 +171,8 @@ export async function insertApplication(actor, application) {
         `insert into public.document_application
            (parish_id, document_type_id, applicant_id, requestor_name, requestor_contact,
             relationship, purpose, subject_name, subject_birth_date, father_name,
-            mother_name, sacrament_year, notes, created_by)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            mother_name, sacrament_year, notes, invoice_no, created_by)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          returning application_id`,
         [
           application.parishId,
@@ -184,6 +188,7 @@ export async function insertApplication(actor, application) {
           application.motherName,
           application.sacramentYear,
           application.notes,
+          application.invoiceNo,
           application.createdBy,
         ]
       )
@@ -231,7 +236,8 @@ export async function rejectApplication(actor, applicationId, reason, rejectedBy
     const { rowCount } = await client.query(
       `update public.document_application
           set status = 'rejected', status_reason = $2,
-              rejected_by = $3, rejected_at = now()
+              rejected_by = $3, rejected_at = now(),
+              id_file = null, id_file_content_type = null, id_file_name = null
         where application_id = $1
           and status in ('pending', 'verified')`,
       [applicationId, reason, rejectedBy]
@@ -245,7 +251,8 @@ export async function cancelApplication(actor, applicationId, reason) {
     const { rowCount } = await client.query(
       `update public.document_application
           set status = 'cancelled', status_reason = $2,
-              cancelled_by = $3, cancelled_at = now()
+              cancelled_by = $3, cancelled_at = now(),
+              id_file = null, id_file_content_type = null, id_file_name = null
         where application_id = $1
           and status = 'pending'`,
       [applicationId, reason, actor.userId]
@@ -280,7 +287,8 @@ export async function issueCertificate(actor, { applicationId, verificationCode,
     try {
       const approved = await client.query(
         `update public.document_application
-            set status = 'approved', approved_by = $2, approved_at = now()
+            set status = 'approved', approved_by = $2, approved_at = now(),
+                id_file = null, id_file_content_type = null, id_file_name = null
           where application_id = $1
             and status = 'verified'
           returning record_id, document_type_id, purpose`,
@@ -407,3 +415,34 @@ export async function findEventCertificate(actor, { eventId, certificateId }) {
   })
 }
 
+
+export async function updateIdFile(actor, { applicationId, fileName, contentType, content }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.document_application
+          set id_file = $2,
+              id_file_content_type = $3,
+              id_file_name = $4
+        where application_id = $1`,
+      [applicationId, content, contentType, fileName]
+    )
+    return rowCount
+  })
+}
+
+export async function findIdFile(actor, applicationId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select id_file_content_type, id_file_name, id_file
+         from public.document_application
+        where application_id = $1`,
+      [applicationId]
+    )
+    if (rows.length === 0 || rows[0].id_file === null) return null
+    return {
+      contentType: rows[0].id_file_content_type,
+      fileName: rows[0].id_file_name,
+      content: rows[0].id_file,
+    }
+  })
+}

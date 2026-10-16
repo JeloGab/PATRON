@@ -4,13 +4,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
+import StaffPhoto from '../../components/StaffPhoto.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
 import { formatLongDate } from '../../lib/dates.js'
-import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
+import { LIMITS, accentFor, municipalityFromAddress } from '../../lib/parishes.js'
 import { clearSession, getSession } from '../../lib/session.js'
 
-const EDITABLE = ['name', 'address', 'contactNo', 'email', 'facebookPageId']
+const EDITABLE = [
+  'name',
+  'address',
+  'contactNo',
+  'email',
+  'facebookPageId',
+  'officeHours',
+  'massSchedule',
+]
 
 const PH_MOBILE = /^09\d{9}$/
 
@@ -33,6 +42,8 @@ function toForm(parish) {
     contactNo: parish.contactNo ?? '',
     email: parish.email ?? '',
     facebookPageId: parish.facebookPageId ?? '',
+    officeHours: parish.officeHours ?? '',
+    massSchedule: parish.massSchedule ?? '',
   }
 }
 
@@ -268,6 +279,38 @@ export default function ParishProfile() {
                   page sync is built.
                 </span>
               </label>
+
+              <h3 className="eyebrow field--full">Shown to the public</h3>
+
+              <label className="field field--full">
+                <span>Office hours</span>
+                <textarea
+                  rows={3}
+                  value={form.officeHours}
+                  onChange={update('officeHours')}
+                  maxLength={LIMITS.officeHours.max}
+                  placeholder={'Monday to Friday, 8:00 AM - 5:00 PM\nSaturday, 8:00 AM - 12:00 NN\nClosed Sunday'}
+                />
+                <span className="form-hint">
+                  Optional. One line each — the line breaks are kept exactly as you type them.
+                  Up to {LIMITS.officeHours.max} characters. Clear it to remove it.
+                </span>
+              </label>
+
+              <label className="field field--full">
+                <span>Mass schedule</span>
+                <textarea
+                  rows={5}
+                  value={form.massSchedule}
+                  onChange={update('massSchedule')}
+                  maxLength={LIMITS.massSchedule.max}
+                  placeholder={'Sunday, 6:00 / 8:00 / 10:00 AM and 5:00 PM\nWeekdays, 6:00 AM\nFirst Friday, 6:00 PM'}
+                />
+                <span className="form-hint">
+                  Optional, and typed however your parish writes it — first Fridays, novenas and
+                  anything else. Up to {LIMITS.massSchedule.max} characters.
+                </span>
+              </label>
             </div>
 
             <div className="form-actions">
@@ -311,6 +354,14 @@ export default function ParishProfile() {
               <div>
                 <dt>Facebook page ID</dt>
                 <dd>{parish.facebookPageId || 'Not set'}</dd>
+              </div>
+              <div>
+                <dt>Office hours</dt>
+                <dd className="schedule-text">{parish.officeHours || 'Not set'}</dd>
+              </div>
+              <div>
+                <dt>Mass schedule</dt>
+                <dd className="schedule-text">{parish.massSchedule || 'Not set'}</dd>
               </div>
             </dl>
             <button type="button" className="btn btn--gold" onClick={() => setEditing(true)}>
@@ -357,9 +408,16 @@ export default function ParishProfile() {
             {priests.length === 0 ? (
               <p className="empty">No active priest is assigned to this parish.</p>
             ) : (
-              <ul className="pills">
+              <ul className="clergy-cards">
                 {priests.map((priest) => (
-                  <li key={priest.userId}>{priest.fullName}</li>
+                  <li key={priest.userId} className="clergy-cards__item">
+                    <StaffPhoto
+                      userId={priest.userId}
+                      name={priest.fullName}
+                      hasPhoto={priest.hasPhoto}
+                    />
+                    <span className="clergy-cards__name">{priest.fullName}</span>
+                  </li>
                 ))}
               </ul>
             )}

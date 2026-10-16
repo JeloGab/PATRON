@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
+import PriestPhoto from '../../components/PriestPhoto.jsx'
 import { BASE, call } from '../../lib/api.js'
 import { formatLongDate } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -66,6 +67,10 @@ export default function ChurchDetail() {
   const accent = accentFor(parish.parishId)
   const municipality = municipalityFromAddress(parish.address)
 
+  // Absent until the clergy views exist; empty for a parish with no active priest.
+  // Both render nothing rather than an empty card.
+  const priests = Array.isArray(parish.priests) ? parish.priests : []
+
   return (
     <div className="page">
       <Link to="/user" className="back">
@@ -115,6 +120,20 @@ export default function ChurchDetail() {
                   )}
                 </dd>
               </div>
+              {/* Both are nullable and each renders only when present, so a parish that
+                  has typed neither looks exactly as this page does today. */}
+              {parish.officeHours && (
+                <div>
+                  <dt>Office hours</dt>
+                  <dd className="schedule-text">{parish.officeHours}</dd>
+                </div>
+              )}
+              {parish.massSchedule && (
+                <div>
+                  <dt>Mass schedule</dt>
+                  <dd className="schedule-text">{parish.massSchedule}</dd>
+                </div>
+              )}
             </dl>
           </section>
 
@@ -147,6 +166,25 @@ export default function ChurchDetail() {
             </section>
           </aside>
         </div>
+
+        {priests.length > 0 && (
+          <section className="card">
+            <p className="eyebrow">Priests</p>
+            <ul className="clergy">
+              {priests.map((priest) => (
+                <li key={priest.userId} className="clergy__row">
+                  <PriestPhoto
+                    parishId={parish.parishId}
+                    userId={priest.userId}
+                    name={priest.fullName}
+                    hasPhoto={priest.hasPhoto}
+                  />
+                  <span className="clergy__name">{priest.fullName}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="card">
           <p className="eyebrow">Announcements</p>

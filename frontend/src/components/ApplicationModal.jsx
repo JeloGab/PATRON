@@ -26,6 +26,7 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
   const [rejecting, setRejecting] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
+  const [idPreview, setIdPreview] = useState(null)
 
   const isManager = role === 'manager'
   const isPriest = role === 'priest'
@@ -50,6 +51,39 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
       live = false
     }
   }, [request.applicationId, request.status])
+
+  // An <img src> cannot send a Bearer header, so the ID is read as a blob and shown
+  // from an object URL — the same pattern as the ledger photos. Every createObjectURL
+  // gets its revokeObjectURL, or the bytes stay in memory for the life of the tab.
+  useEffect(() => {
+    let live = true
+    let created = null
+
+    if (!request.hasIdFile) {
+      setIdPreview(null)
+      return undefined
+    }
+
+    async function load() {
+      const r = await authed({
+        path: `/api/documents/${request.applicationId}/id-file`,
+        as: 'blob',
+      })
+      if (!live) return
+      if (!r.ok) {
+        setIdPreview(null)
+        return
+      }
+      created = URL.createObjectURL(r.blob)
+      setIdPreview({ url: created, contentType: r.blob.type })
+    }
+
+    load()
+    return () => {
+      live = false
+      if (created) URL.revokeObjectURL(created)
+    }
+  }, [request.applicationId, request.hasIdFile])
 
   const act = useCallback(
     async ({ label, method = 'POST', path, body }) => {
@@ -161,6 +195,18 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
           <dt>Purpose</dt>
           <dd>{request.purpose}</dd>
         </div>
+        <div>
+          <dt>Payment reference</dt>
+          <dd>
+            {request.invoiceNo ? (
+              <code>{request.invoiceNo}</code>
+            ) : (
+              <span className="muted">
+                {request.isWalkIn ? 'Paid at the counter' : 'Not provided'}
+              </span>
+            )}
+          </dd>
+        </div>
         {request.subjectBirthDate && (
           <div>
             <dt>Date of birth</dt>
@@ -214,6 +260,40 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
           </div>
         )}
       </dl>
+
+      <h3 className="eyebrow">Identification</h3>
+      {request.hasIdFile ? (
+        <div className="id-file">
+          {idPreview ? (
+            idPreview.contentType.startsWith('image/') ? (
+              <img className="id-file__img" src={idPreview.url} alt="The requestor's ID" />
+            ) : (
+              <a
+                className="btn btn--ghost"
+                href={idPreview.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open {request.idFileName || 'the ID'}
+              </a>
+            )
+          ) : (
+            <p className="muted">Loading the ID…</p>
+          )}
+          <p className="form-hint">
+            {request.idFileName}. Attached by the requestor as proof of the relationship they
+            stated. It is deleted the moment the certificate is released.
+          </p>
+        </div>
+      ) : (
+        <p className="muted">
+          {request.isWalkIn
+            ? 'A walk-in shows their ID at the counter, so none is held here.'
+            : request.status === 'approved' || request.status === 'rejected' || request.status === 'cancelled'
+              ? 'No ID is held. Any file attached to this request was deleted when it closed.'
+              : 'No ID attached. Nothing is blocked by this — reject the request with a reason if you need proof.'}
+        </p>
+      )}
 
       <h3 className="eyebrow">Register entry</h3>
       {request.recordId ? (

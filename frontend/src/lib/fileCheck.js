@@ -48,6 +48,32 @@ export async function checkPhoto(file, alreadyHeld = 0) {
   return null
 }
 
+// The same checks for the one ID file on a document request. Separate from checkPhoto
+// because that one counts against MAX_PER_RECORD and words its errors for a ledger
+// page; a request holds exactly one file and the server replaces it rather than adding.
+export async function checkIdFile(file) {
+  if (!file) return null
+
+  if (file.size === 0) return `${file.name} is empty.`
+  if (file.size > MAX_BYTES) {
+    return `${file.name} is larger than 5 MB. Take the photo at a lower resolution, or scan the ID as a PDF.`
+  }
+
+  let sniffed = null
+  try {
+    const head = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+    sniffed = sniff(head)
+  } catch {
+    return null
+  }
+
+  if (!sniffed) {
+    return `${file.name} is not a JPEG, PNG, WebP or PDF — its contents do not match any of those.`
+  }
+
+  return null
+}
+
 export async function contentTypeFor(file) {
   try {
     const head = new Uint8Array(await file.slice(0, 12).arrayBuffer())

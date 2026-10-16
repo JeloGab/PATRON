@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getSession } from '../lib/session.js'
+import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
 
 const MANAGER_LINKS = [
@@ -55,9 +56,7 @@ function ManagerNav() {
         </NavLink>
 
         <div className="topbar__user">
-          <div className="avatar" aria-hidden="true">
-            {initial}
-          </div>
+          <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
           <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || session?.email || 'Parish office'}</p>
             <p className="topbar__role">Parish manager</p>
@@ -113,9 +112,7 @@ function PriestNav({ counts }) {
         </NavLink>
 
         <div className="topbar__user">
-          <div className="avatar" aria-hidden="true">
-            {initial}
-          </div>
+          <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
           <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || 'Parish priest'}</p>
             <p className="topbar__role">Parish priest</p>
@@ -161,9 +158,7 @@ function AdminNav() {
         <p className="topbar__section">Registered parishes</p>
 
         <div className="topbar__user">
-          <div className="avatar" aria-hidden="true">
-            {initial}
-          </div>
+          <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
           <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || 'System admin'}</p>
             <p className="topbar__role">System admin</p>
@@ -193,9 +188,7 @@ function UserNav() {
         <div className="topbar__user">
           {session ? (
             <>
-              <div className="avatar" aria-hidden="true">
-                {initial}
-              </div>
+              <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
               <NavLink to="/account" className="topbar__meta" aria-label="Your account">
                 <p className="topbar__name">{session.name || 'Parishioner'}</p>
                 <p className="topbar__role">Parishioner</p>

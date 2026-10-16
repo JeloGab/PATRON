@@ -1,8 +1,10 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
 import { attachRecord, fileWalkIn, getApplication, listApplications, markPaid, rejectApplication, } from './documents.services.js'
 import {approveApplication, getCertificate, getCertificatePdf} from './documents.services.js'
+import { attachIdFile, getIdFile } from './documents.services.js'
+import { ATTACHMENT_TYPES } from '../../lib/fileType.js'
 
 const submissionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -56,6 +58,25 @@ router.get('/:applicationId/certificate.pdf', async (req, res) => {
   res.type('application/pdf')
   res.set('Content-Disposition', `inline; filename="${file.fileName}"`)
   res.send(file.buffer)
+})
+
+
+const idUpload = express.raw({ type: ATTACHMENT_TYPES, limit: '5mb' })
+
+router.post('/:applicationId/id-file', managerOnly, idUpload, async (req, res) => {
+  const request = await attachIdFile(req.user, req.params.applicationId, {
+    fileName: req.get('x-file-name'),
+    buffer: req.body,
+    typeAccepted: req.is(ATTACHMENT_TYPES) !== false,
+  })
+  res.status(201).json({ ok: true, request })
+})
+
+router.get('/:applicationId/id-file', async (req, res) => {
+  const file = await getIdFile(req.user, req.params.applicationId)
+  res.type(file.contentType)
+  res.set('Content-Disposition', `inline; filename="${file.fileName}"`)
+  res.send(file.content)
 })
 
 export default router

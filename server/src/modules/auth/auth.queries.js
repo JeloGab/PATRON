@@ -48,7 +48,8 @@ export async function findSelf(actor) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
       `select user_id, full_name, username, email, role, status,
-              parish_id, must_change_password
+              parish_id, must_change_password,
+              (photo is not null) as has_photo
          from public.app_user
         where user_id = $1`,
       [actor.userId]
@@ -65,6 +66,7 @@ export async function findSelf(actor) {
       status: row.status,
       parishId: row.parish_id,
       mustChangePassword: row.must_change_password,
+      hasPhoto: row.has_photo,
     }
   })
 }
@@ -111,4 +113,42 @@ export async function checkSession(userId) {
     mustChangePassword: row.must_change_password,
     passwordChangedAt: row.password_changed_at,
   }
+}
+
+export async function setOwnPhoto(actor, { contentType, content }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.app_user
+          set photo = $1,
+              photo_content_type = $2
+        where user_id = public.current_user_id()`,
+      [content, contentType]
+    )
+    return rowCount
+  })
+}
+
+export async function clearOwnPhoto(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.app_user
+          set photo = null,
+              photo_content_type = null
+        where user_id = public.current_user_id()`
+    )
+    return rowCount
+  })
+}
+
+export async function findPhoto(actor, userId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select photo_content_type, photo
+         from public.app_user
+        where user_id = $1`,
+      [userId]
+    )
+    if (rows.length === 0 || rows[0].photo === null) return null
+    return { contentType: rows[0].photo_content_type, content: rows[0].photo }
+  })
 }

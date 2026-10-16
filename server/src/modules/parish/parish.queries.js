@@ -43,6 +43,7 @@ function mapPriest(row) {
     userId: row.user_id,
     fullName: row.full_name,
     hasSignature: row.has_signature,
+    hasPhoto: row.has_photo,
   }
 }
 
@@ -132,7 +133,9 @@ export async function findDirectoryEntry(parishId) {
 export async function listActivePriests(actor) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
-      `select user_id, full_name, (signature is not null) as has_signature
+      `select user_id, full_name,
+              (signature is not null) as has_signature,
+              (photo is not null) as has_photo
          from public.app_user
         where role = 'priest' and status = 'active'
         order by full_name`
@@ -152,4 +155,30 @@ export async function findActivePriest(actor, priestId) {
     if (rows.length === 0) return null
     return rows[0].user_id
   })
+}
+
+export async function listPublicClergy(parishId) {
+  const { rows } = await pool.query(
+    `select user_id, full_name, has_photo
+       from public.parish_clergy_public
+      where parish_id = $1
+      order by full_name`,
+    [parishId]
+  )
+  return rows.map((row) => ({
+    userId: row.user_id,
+    fullName: row.full_name,
+    hasPhoto: row.has_photo,
+  }))
+}
+
+export async function findPublicClergyPhoto(parishId, userId) {
+  const { rows } = await pool.query(
+    `select photo_content_type, photo
+       from public.parish_clergy_photo_public
+      where parish_id = $1 and user_id = $2`,
+    [parishId, userId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].photo_content_type, content: rows[0].photo }
 }

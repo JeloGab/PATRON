@@ -1630,6 +1630,134 @@ img {
   user-select: none;
 }
 
+/* Office hours and the Mass schedule. pre-line is load-bearing, not cosmetic: the
+   validator keeps the line breaks the parish typed, and without this HTML collapses
+   them and the schedule renders as one run-on line. */
+.schedule-text {
+  white-space: pre-line;
+}
+
+/* Staff photographs: one 64px circle, whether it holds an image or a letter, so a row
+   never reflows when the bytes arrive. */
+.staff-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--wine);
+}
+
+.staff-photo--empty {
+  display: grid;
+  place-items: center;
+  color: var(--gold-soft);
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+/* The clergy card on the parish profile: photo above the name, wrapping into as many
+   columns as fit. */
+.clergy-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 1rem 0.75rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clergy-cards__item {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.clergy-cards__name {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* A photograph in the top bar, sharing the .avatar box exactly so the row does not
+   reflow when the image loads. */
+.avatar--photo {
+  object-fit: cover;
+}
+
+/* The photo card on the account page. Centred, unlike the signature preview, because a
+   round portrait reads as a subject rather than as a field value. */
+.account-photo {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+}
+
+/* Overrides the shared left-aligned button row for this one block. */
+.account-photo > .form-actions__buttons {
+  justify-content: center;
+}
+
+.account-photo__img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+/* The requestor's ID on a document request. Capped in height so a portrait scan does
+   not push the approval controls off the modal. */
+.id-file {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.id-file__img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+/* The active priests of a parish, on the public parish page. The photo and the letter
+   share one 44px box, so a row does not reflow when an image finishes loading. */
+.clergy {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.clergy__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.clergy__photo {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--wine);
+}
+
+.clergy__photo--empty {
+  display: grid;
+  place-items: center;
+  color: var(--gold-soft);
+  font-family: var(--serif);
+  font-weight: 700;
+}
+
+.clergy__name {
+  font-weight: 600;
+}
+
 /* The public announcement feed on a parish listing. Its images are public bytes, so
    they are ordinary <img> elements — nothing here needs a token. */
 .feed {
@@ -2135,7 +2263,8 @@ dd {
 .priest-list__row > .form-actions__buttons,
 .stack > .form-actions__buttons,
 .seg > .form-actions__buttons,
-.page__hero > .form-actions__buttons {
+.page__hero > .form-actions__buttons,
+.account-photo > .form-actions__buttons {
   margin-top: 0;
 }
 

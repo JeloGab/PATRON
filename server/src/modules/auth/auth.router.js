@@ -1,8 +1,9 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { AppError } from '../../lib/appError.js'
 import { loginStaff, changePassword, getSelf,registerParishioner, loginParishioner,requestPasswordReset, completePasswordReset } from './auth.services.js'
 import { requireAuth } from './auth.middleware.js'
+import { savePhoto, deletePhoto, getPhoto, PHOTO_TYPES } from './auth.services.js'
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -59,6 +60,35 @@ router.post('/forgot-password', emailLimiter, async (req, res) => {
 router.post('/reset-password', loginLimiter, async (req, res) => {
   const { accessToken, newPassword } = req.body ?? {}
   res.json({ ok: true, ...(await completePasswordReset({ accessToken, newPassword })) })
+})
+
+
+const photoUpload = express.raw({ type: PHOTO_TYPES, limit: '1mb' })
+
+router.post('/photo', requireAuth, photoUpload, async (req, res) => {
+  res.status(201).json({
+    ok: true,
+    ...(await savePhoto(req.user, {
+      buffer: req.body,
+      typeAccepted: req.is(PHOTO_TYPES) !== false,
+    })),
+  })
+})
+
+router.delete('/photo', requireAuth, async (req, res) => {
+  res.json({ ok: true, ...(await deletePhoto(req.user)) })
+})
+
+router.get('/photo', requireAuth, async (req, res) => {
+  const photo = await getPhoto(req.user, req.user.userId)
+  res.type(photo.contentType)
+  res.send(photo.content)
+})
+
+router.get('/photo/:userId', requireAuth, async (req, res) => {
+  const photo = await getPhoto(req.user, req.params.userId)
+  res.type(photo.contentType)
+  res.send(photo.content)
 })
 
 export default router

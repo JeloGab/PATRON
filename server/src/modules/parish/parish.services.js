@@ -2,7 +2,7 @@ import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
 import { sniffContentType } from '../../lib/fileType.js'
-import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto } from './parish.queries.js'
+import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto } from './parish.queries.js'
 
 export const PHOTO_TYPES = ['image/jpeg', 'image/png']
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024
@@ -44,7 +44,10 @@ export async function getPublicParish(parishId) {
   const parish = await findDirectoryEntry(target)
   if (!parish) throw new AppError('PARISH_NOT_FOUND', 404)
 
-  return parish
+  // The clergy ride inside the response the detail page already waits for. The
+  // directory LIST is deliberately untouched: thirty parishes must not fan out into
+  // thirty extra reads for something nobody reads at list level.
+  return { ...parish, priests: await listPublicClergy(target) }
 }
 
 export async function getActivePriests(actor) {
@@ -77,6 +80,19 @@ export async function getPublicPhoto(parishId) {
   if (!isUuid(target)) throw new AppError('INVALID_PARISH_ID', 400)
 
   const photo = await findPublicParishPhoto(target)
+  if (!photo) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  return photo
+}
+
+
+export async function getPublicClergyPhoto(parishId, userId) {
+  const parish = clean(parishId)
+  const user = clean(userId)
+  if (!isUuid(parish)) throw new AppError('INVALID_PARISH_ID', 400)
+  if (!isUuid(user)) throw new AppError('INVALID_USER_ID', 400)
+
+  const photo = await findPublicClergyPhoto(parish, user)
   if (!photo) throw new AppError('IMAGE_NOT_FOUND', 404)
 
   return photo
