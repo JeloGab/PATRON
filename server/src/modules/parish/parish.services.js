@@ -1,6 +1,6 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
+import { clean, requireParishName, requireAddress, requireMobile, optionalEmail, optionalOfficeHours, optionalMassSchedule } from '../../lib/validators.js'
 import { sniffContentType } from '../../lib/fileType.js'
 import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto } from './parish.queries.js'
 
@@ -24,6 +24,8 @@ export async function editOwnParish(actor, body) {
   if (body.contactNo !== undefined) patch.contactNo = requireMobile(body.contactNo)
   if (body.email !== undefined) patch.email = optionalEmail(body.email)
   if (body.facebookPageId !== undefined) patch.facebookPageId = clean(body.facebookPageId) || null
+  if (body.officeHours !== undefined) patch.officeHours = optionalOfficeHours(body.officeHours)
+  if (body.massSchedule !== undefined) patch.massSchedule = optionalMassSchedule(body.massSchedule)
 
   if (Object.keys(patch).length === 0) throw new AppError('NO_FIELDS_TO_UPDATE', 400)
 
@@ -44,9 +46,6 @@ export async function getPublicParish(parishId) {
   const parish = await findDirectoryEntry(target)
   if (!parish) throw new AppError('PARISH_NOT_FOUND', 404)
 
-  // The clergy ride inside the response the detail page already waits for. The
-  // directory LIST is deliberately untouched: thirty parishes must not fan out into
-  // thirty extra reads for something nobody reads at list level.
   return { ...parish, priests: await listPublicClergy(target) }
 }
 

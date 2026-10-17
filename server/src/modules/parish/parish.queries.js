@@ -2,9 +2,11 @@ import { pool } from '../../db/pool.js'
 import { withActor } from '../../db/withTenant.js'
 
 const COLUMNS = `parish_id, name, address, contact_no, email,
-                 facebook_page_id, status, created_at, photo_content_type`
+                 facebook_page_id, status, created_at, photo_content_type,
+                 office_hours, mass_schedule`
 
-const DIRECTORY_COLUMNS = `parish_id, name, address, contact_no, email`
+const DIRECTORY_COLUMNS = `parish_id, name, address, contact_no, email,
+                           office_hours, mass_schedule`
 
 const EDITABLE = [
   ['name', 'name'],
@@ -12,6 +14,8 @@ const EDITABLE = [
   ['contactNo', 'contact_no'],
   ['email', 'email'],
   ['facebookPageId', 'facebook_page_id'],
+  ['officeHours', 'office_hours'],
+  ['massSchedule', 'mass_schedule'],
 ]
 
 function mapParish(row) {
@@ -25,6 +29,8 @@ function mapParish(row) {
     status: row.status,
     createdAt: row.created_at,
     hasPhoto: row.photo_content_type !== null && row.photo_content_type !== undefined,
+    officeHours: row.office_hours,
+    massSchedule: row.mass_schedule,
   }
 }
 
@@ -35,6 +41,8 @@ function mapDirectoryEntry(row) {
     address: row.address,
     contactNo: row.contact_no,
     email: row.email,
+    officeHours: row.office_hours,
+    massSchedule: row.mass_schedule,
   }
 }
 
