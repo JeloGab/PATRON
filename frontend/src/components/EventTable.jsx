@@ -1,28 +1,31 @@
+// The event list, on the real event shape.
+
 import { useMemo, useState } from 'react'
-import StatusPill from './StatusPill.jsx'
-import { formatDateTime, isUpcomingEvent } from '../lib/dates.js'
-import { eventStatusLabel, eventTypeLabel } from '../lib/events.js'
+import { formatDateTime } from '../lib/dates.js'
+import { STATUS_LABEL, eventTypeLabel, statusPill, timeRange } from '../lib/schedule.js'
 
 export default function EventTable({
   events,
   empty,
-  showWhen = false,
   onSelect,
   selectedId,
   showSearch = false,
 }) {
   const [type, setType] = useState('all')
+  const [status, setStatus] = useState('all')
   const [query, setQuery] = useState('')
+
   const types = useMemo(
     () => ['all', ...Array.from(new Set(events.map((event) => eventTypeLabel(event))))],
     [events],
   )
+
   const rows = events.filter((event) => {
     if (type !== 'all' && eventTypeLabel(event) !== type) return false
+    if (status !== 'all' && event.status !== status) return false
     if (!showSearch || !query.trim()) return true
-    const hay =
-      `${event.title} ${event.priest || ''} ${eventTypeLabel(event)} ${eventStatusLabel(event)}`.toLowerCase()
-    return hay.includes(query.trim().toLowerCase())
+    const hay = `${event.title} ${event.assignedPriestName || ''} ${eventTypeLabel(event)}`
+    return hay.toLowerCase().includes(query.trim().toLowerCase())
   })
 
   if (events.length === 0) {
@@ -42,62 +45,74 @@ export default function EventTable({
             ))}
           </select>
         </label>
+        <label className="field filters__type">
+          <span>Status</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="all">All statuses</option>
+            {Object.entries(STATUS_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
         {showSearch && (
           <label className="field filters__search">
             <span>Search</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search title, priest, or type"
+              placeholder="Search title, priest or type"
             />
           </label>
         )}
       </div>
+
       {rows.length === 0 ? (
         <p className="empty">{empty}</p>
       ) : (
-    <div className="table-wrap">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Date & time</th>
-            <th>Title</th>
-            <th>Type</th>
-            <th>Priest</th>
-            <th>No. of participants</th>
-            <th>Status</th>
-            {showWhen && <th>When</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((event) => {
-            const upcoming = isUpcomingEvent(event)
-            return (
-              <tr
-                key={event.id}
-                className={[
-                  onSelect ? 'is-clickable' : '',
-                  selectedId === event.id ? 'is-selected' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={onSelect ? () => onSelect(event) : undefined}
-              >
-                <td>{formatDateTime(event.date, event.time)}</td>
-                <td>{event.title}</td>
-                <td>{eventTypeLabel(event)}</td>
-                <td>{event.priest || '—'}</td>
-                <td>{event.participants == null ? '—' : event.participants.toLocaleString()}</td>
-                <td>
-                  <StatusPill status={eventStatusLabel(event)} />
-                </td>
-                {showWhen && <td>{upcoming ? 'Upcoming' : 'Past'}</td>}
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Date &amp; time</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Priest</th>
+                <th>Hours</th>
+                <th>Status</th>
               </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+            </thead>
+            <tbody>
+              {rows.map((event) => (
+                <tr
+                  key={event.eventId}
+                  className={[
+                    onSelect ? 'is-clickable' : '',
+                    selectedId === event.eventId ? 'is-selected' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={onSelect ? () => onSelect(event) : undefined}
+                >
+                  <td>{formatDateTime(event.eventDate, event.startTime)}</td>
+                  <td>{event.title}</td>
+                  <td>{eventTypeLabel(event)}</td>
+                  <td>
+                    {event.assignedPriestName || '—'}
+                    {event.priestNeedsReassignment && (
+                      <span className="chip chip--quiet">Needs reassignment</span>
+                    )}
+                  </td>
+                  <td>{timeRange(event.startTime, event.endTime)}</td>
+                  <td>
+                    <span className={statusPill(event.status)}>{STATUS_LABEL[event.status]}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { createEvent, listEvents, getEvent, editEvent, approveEvent, rejectEvent, cancelEvent, completeEvent, listEventCertificates, getEventCertificatePdf } from './events.services.js'
+import { createEvent, listEvents, getEvent, editEvent, approveEvent, rejectEvent, cancelEvent, completeEvent, listEventCertificates, getEventCertificatePdf, suggestPriest } from './events.services.js'
 
 const router = Router()
 
@@ -11,6 +11,10 @@ const priestOnly = requireRole('priest')
 
 router.get('/', async (req, res) => {
   res.json({ ok: true, events: await listEvents(req.user, req.query) })
+})
+
+router.get('/priest-suggestion', managerOnly, async (req, res) => {
+  res.json({ ok: true, ...(await suggestPriest(req.user, req.query)) })
 })
 
 router.get('/:eventId', async (req, res) => {

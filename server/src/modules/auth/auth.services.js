@@ -5,6 +5,9 @@ import { findStaffByUsername, findOwnPasswordHash, setPassword, findSelf } from 
 import { signUp,signInWithPassword,requestRecovery, updatePassword} from '../../integrations/supabaseAuth.js'
 import { findParishionerBySupabaseId, insertParishioner,} from './auth.queries.js'
 import { requireFullName, requireEmail } from '../../lib/validators.js'
+import { sniffContentType } from '../../lib/fileType.js'
+import { isUuid } from '../../lib/credentials.js'
+import { setOwnPhoto, clearOwnPhoto, findPhoto } from './auth.queries.js'
 
 const BCRYPT_ROUNDS = 12
 const DUMMY_HASH = bcrypt.hashSync('no-such-user', BCRYPT_ROUNDS)
@@ -166,4 +169,41 @@ export async function completePasswordReset({ accessToken, newPassword }) {
     throw new AppError('AUTH_PROVIDER_ERROR', 502)
   }
   return { passwordChanged: true }
+}
+
+export const PHOTO_TYPES = ['image/jpeg', 'image/png']
+const MAX_PHOTO_BYTES = 1024 * 1024
+
+export async function savePhoto(actor, { buffer, typeAccepted = true }) {
+  if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)
+  if (buffer.length > MAX_PHOTO_BYTES) throw new AppError('FILE_TOO_LARGE', 413)
+
+  const contentType = sniffContentType(buffer)
+  if (!PHOTO_TYPES.includes(contentType)) throw new AppError('INVALID_FILE_TYPE', 400)
+
+  const changed = await setOwnPhoto(actor, { contentType, content: buffer })
+  if (changed === 0) throw new AppError('USER_NOT_FOUND', 404)
+
+  return { saved: true }
+}
+
+export async function deletePhoto(actor) {
+  const changed = await clearOwnPhoto(actor)
+  if (changed === 0) throw new AppError('USER_NOT_FOUND', 404)
+
+  return { removed: true }
+}
+
+/* isUuid first, or a malformed path parameter raises 22P02 and the handler answers 500
+   for what is really a 404. IMAGE_NOT_FOUND covers three cases on purpose: no photo,
+   no such user, and a user this actor may not see — a distinct "forbidden" would
+   confirm that a user id exists in another parish. */
+export async function getPhoto(actor, userId) {
+  if (!isUuid(String(userId ?? ''))) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  const photo = await findPhoto(actor, userId)
+  if (!photo) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  return photo
 }

@@ -1,3 +1,5 @@
+// design to be changed for template
+
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 
@@ -22,7 +24,7 @@ function line(doc, label, value) {
   doc.moveDown(0.6)
 }
 
-export async function buildCertificatePdf({ certificate, verifyUrl }) {
+export async function buildCertificatePdf({ certificate, signature = null, verifyUrl }) {
   const snapshot = certificate.snapshot ?? {}
   const qr = await QRCode.toBuffer(verifyUrl, { margin: 1, width: 240 })
 
@@ -87,8 +89,12 @@ export async function buildCertificatePdf({ certificate, verifyUrl }) {
     .text(certificate.verificationCode, 176, qrTop + 14, { characterSpacing: 2 })
   doc.font('Helvetica').fontSize(8).fillColor(MUTED).text(verifyUrl, 176, qrTop + 38, { width: 320 })
 
-  doc.font('Times-Roman').fontSize(12).fillColor(INK).text(snapshot.signatoryName ?? '', 176, qrTop + 70)
-  doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Parish Priest', 176, qrTop + 86)
+  if (signature) {
+    doc.image(signature, 176, qrTop + 48, { fit: [200, 34] })
+  }
+
+  doc.font('Times-Roman').fontSize(12).fillColor(INK).text(snapshot.signatoryName ?? '', 176, qrTop + 86)
+  doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Parish Priest', 176, qrTop + 102)
 
   doc.end()
   return finished

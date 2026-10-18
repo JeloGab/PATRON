@@ -197,3 +197,19 @@ export async function findEventsOnDates(actor, { dates, priestId }) {
     return rows.map(mapEvent)
   })
 }
+
+export async function countPriestEventsInMonth(actor, { eventDate }) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select assigned_priest_id, count(*)::int as month_count
+         from public.parish_event
+        where assigned_priest_id is not null
+          and status in ('pending', 'approved')
+          and event_date >= date_trunc('month', $1::date)
+          and event_date <  date_trunc('month', $1::date) + interval '1 month'
+        group by assigned_priest_id`,
+      [eventDate]
+    )
+    return new Map(rows.map((row) => [row.assigned_priest_id, row.month_count]))
+  })
+}

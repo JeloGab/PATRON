@@ -1,49 +1,66 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { EventsProvider } from './context/EventsContext.jsx'
-import { OfficeProvider } from './context/OfficeContext.jsx'
-import { ParishProvider } from './context/ParishContext.jsx'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import ManagerLayout from './layouts/ManagerLayout.jsx'
 import PriestLayout from './layouts/PriestLayout.jsx'
 import UserLayout from './layouts/UserLayout.jsx'
-import { getSession, homeForRole } from './lib/session.js'
-import Announcements from './pages/Announcements.jsx'
-import BlockDate from './pages/BlockDate.jsx'
-import ChurchDetail from './pages/ChurchDetail.jsx'
-import CreateEvent from './pages/CreateEvent.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import DocumentRequests from './pages/DocumentRequests.jsx'
-import EventScheduling from './pages/EventScheduling.jsx'
-import Login from './pages/Login.jsx'
-import MyCalendar from './pages/MyCalendar.jsx'
-import MyRequests from './pages/MyRequests.jsx'
-import ParishDirectory from './pages/ParishDirectory.jsx'
-import PendingApprovals from './pages/PendingApprovals.jsx'
-import RegisteredParishes from './pages/RegisteredParishes.jsx'
-import RequestDocument from './pages/RequestDocument.jsx'
-import SacramentApplications from './pages/SacramentApplications.jsx'
-import SacramentalRecords from './pages/SacramentalRecords.jsx'
-import UnavailableDate from './pages/UnavailableDate.jsx'
-import Verify from './pages/Verify.jsx'
+import { getSession, landingFor } from './lib/session.js'
+import Account from './pages/public/Account.jsx'
+import AnnouncementApprovals from './pages/priest/AnnouncementApprovals.jsx'
+import Announcements from './pages/manager/Announcements.jsx'
+import Feed from './pages/public/Feed.jsx'
+import ChangePassword from './pages/public/ChangePassword.jsx'
+import BlockDate from './pages/manager/BlockDate.jsx'
+import ForgotPassword from './pages/public/ForgotPassword.jsx'
+import ChurchDetail from './pages/user/ChurchDetail.jsx'
+import CreateEvent from './pages/manager/CreateEvent.jsx'
+import Dashboard from './pages/manager/Dashboard.jsx'
+import DocumentApprovals from './pages/priest/DocumentApprovals.jsx'
+import DocumentRequests from './pages/manager/DocumentRequests.jsx'
+import EventScheduling from './pages/manager/EventScheduling.jsx'
+import Login from './pages/public/Login.jsx'
+import Managers from './pages/priest/Managers.jsx'
+import MyCalendar from './pages/priest/MyCalendar.jsx'
+import MyRequests from './pages/user/MyRequests.jsx'
+import ParishDirectory from './pages/user/ParishDirectory.jsx'
+import ParishProfile from './pages/shared/ParishProfile.jsx'
+import PendingApprovals from './pages/priest/PendingApprovals.jsx'
+import RegisteredParishes from './pages/admin/RegisteredParishes.jsx'
+import RequestDocument from './pages/user/RequestDocument.jsx'
+import ResetPassword from './pages/public/ResetPassword.jsx'
+import EventRoster from './pages/manager/EventRoster.jsx'
+import SacramentalRecords from './pages/manager/SacramentalRecords.jsx'
+import Signup from './pages/public/Signup.jsx'
+import UnavailableDate from './pages/priest/UnavailableDate.jsx'
+import Verify from './pages/public/Verify.jsx'
 
 function RequireRole({ role, children }) {
   const session = getSession()
   if (!session) return <Navigate to="/login" replace />
-  if (session.role !== role) return <Navigate to={homeForRole(session.role)} replace />
+
+  if (session.mustChangePassword) return <Navigate to="/change-password" replace />
+  if (session.role !== role) return <Navigate to={landingFor(session)} replace />
   return children
 }
 
 function HomeRedirect() {
   const session = getSession()
   if (!session) return <Navigate to="/login" replace />
-  return <Navigate to={homeForRole(session.role)} replace />
+  return <Navigate to={landingFor(session)} replace />
 }
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/verify" element={<Verify />} />
+      <Route path="/verify/:code" element={<Verify />} />
+
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      <Route path="/change-password" element={<ChangePassword />} />
+      <Route path="/account" element={<Account />} />
 
       <Route
         path="/admin"
@@ -60,26 +77,24 @@ export default function App() {
         path="/priest"
         element={
           <RequireRole role="priest">
-            <ParishProvider>
-              <PriestLayout />
-            </ParishProvider>
+            <PriestLayout />
           </RequireRole>
         }
       >
         <Route index element={<MyCalendar />} />
         <Route path="unavailable" element={<UnavailableDate />} />
         <Route path="approvals" element={<PendingApprovals />} />
+        <Route path="managers" element={<Managers />} />
+        <Route path="documents" element={<DocumentApprovals />} />
+        <Route path="announcements" element={<AnnouncementApprovals />} />
+        <Route path="parish" element={<ParishProfile />} />
       </Route>
 
       <Route
         path="/manager"
         element={
           <RequireRole role="manager">
-            <EventsProvider>
-              <OfficeProvider>
-                <ManagerLayout />
-              </OfficeProvider>
-            </EventsProvider>
+            <ManagerLayout />
           </RequireRole>
         }
       >
@@ -87,24 +102,36 @@ export default function App() {
         <Route path="schedule" element={<EventScheduling />} />
         <Route path="events/new" element={<CreateEvent />} />
         <Route path="events/block" element={<BlockDate />} />
-        <Route path="applications" element={<SacramentApplications />} />
+        <Route path="roster" element={<EventRoster />} />
         <Route path="records" element={<SacramentalRecords />} />
         <Route path="documents" element={<DocumentRequests />} />
         <Route path="announcements" element={<Announcements />} />
+        <Route path="parish" element={<ParishProfile />} />
       </Route>
 
-      <Route
-        path="/user"
-        element={
-          <RequireRole role="parishioner">
-            <UserLayout />
-          </RequireRole>
-        }
-      >
-        <Route index element={<ParishDirectory />} />
-        <Route path="parish/:id" element={<ChurchDetail />} />
-        <Route path="parish/:id/request" element={<RequestDocument />} />
-        <Route path="requests" element={<MyRequests />} />
+      {/* One pathless layout route, so /feed and /user/* render inside the SAME mounted
+          UserLayout — and therefore the same TopNav. Two sibling routes each rendering
+          their own UserLayout would sit at different positions in the element tree, so
+          React would unmount the nav and mount a fresh one on every move between them;
+          that is what stopped the nav's sliding pill animating on the way to
+          Announcements. The guard stays on /user alone: /feed is public and UserNav
+          already handles having no session. */}
+      <Route element={<UserLayout />}>
+        <Route path="/feed" element={<Feed />} />
+
+        <Route
+          path="/user"
+          element={
+            <RequireRole role="parishioner">
+              <Outlet />
+            </RequireRole>
+          }
+        >
+          <Route index element={<ParishDirectory />} />
+          <Route path="parish/:id" element={<ChurchDetail />} />
+          <Route path="parish/:id/request" element={<RequestDocument />} />
+          <Route path="requests" element={<MyRequests />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<HomeRedirect />} />

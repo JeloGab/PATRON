@@ -1,11 +1,33 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import { AppError } from '../../lib/appError.js'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { provisionManager, getManagers, setManagerActive, resetManagerPassword } from './users.services.js'
+import { provisionManager, getManagers, setManagerActive, resetManagerPassword, saveSignature, deleteSignature, getSignature, SIGNATURE_TYPES } from './users.services.js'
 
 const router = Router()
 
+const upload = express.raw({ type: SIGNATURE_TYPES, limit: '1mb' })
+
 router.use(requireAuth, requirePasswordChanged, requireRole('priest'))
+
+router.post('/signature', upload, async (req, res) => {
+  res.status(201).json({
+    ok: true,
+    ...(await saveSignature(req.user, {
+      buffer: req.body,
+      typeAccepted: req.is(SIGNATURE_TYPES) !== false,
+    })),
+  })
+})
+
+router.delete('/signature', async (req, res) => {
+  res.json({ ok: true, ...(await deleteSignature(req.user)) })
+})
+
+router.get('/signature', async (req, res) => {
+  const signature = await getSignature(req.user)
+  res.type(signature.contentType)
+  res.send(signature.content)
+})
 
 router.post('/managers', async (req, res) => {
   const { fullName, username } = req.body ?? {}

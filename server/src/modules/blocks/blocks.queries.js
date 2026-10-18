@@ -18,19 +18,6 @@ function mapBlock(row) {
   }
 }
 
-export async function findActivePriest(actor, priestId) {
-  return withActor(actor, async (client) => {
-    const { rows } = await client.query(
-      `select user_id
-         from public.app_user
-        where user_id = $1 and role = 'priest' and status = 'active'`,
-      [priestId]
-    )
-    if (rows.length === 0) return null
-    return rows[0].user_id
-  })
-}
-
 export async function insertBlocks(actor, { type, priestId, dates, startTime, endTime, reason }) {
   return withActor(actor, async (client) => {
     const blocks = []

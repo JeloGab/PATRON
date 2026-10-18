@@ -1,28 +1,39 @@
 import { useState } from 'react'
 import Modal from './Modal.jsx'
-import { createParishId, municipalityFromAddress } from '../lib/parishes.js'
 
-const ACCENTS = ['#5c1824', '#4a1c14', '#3d5a3a', '#2c3d5a', '#1e4d6b', '#3b2a55']
+// Registering a parish and provisioning its priests were one form. They are now two
+// actions, because the API has no coupling between them:
+//
+//   POST /api/admin/parishes   { name, address, contactNo, email? }
+//   POST /api/admin/priests    { fullName, parishId }
+//
+// Combining them meant N+1 requests with no transaction, so "parish created, 2 of 3
+// priests provisioned" was a state the UI had to report. It also implied priests are
+// fixed at registration, which is the opposite of the reassignment rule — a priest
+// moving parish is deactivated at the old one and provisioned fresh at the new one,
+// so provisioning recurs over a parish's whole life.
+//
+// `onRegister` returns an error message to display, or nothing on success.
 
-function rowId() {
-  return globalThis.crypto?.randomUUID?.() ?? `priest-${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
-function emptyPriestRow() {
-  return { id: rowId(), name: '' }
-}
+// PH mobile only, the same rule `requireMobile` enforces server-side. Checked here so
+// a typo does not cost a round trip, but the server remains the authority.
+const MOBILE = /^09\d{9}$/
 
 export default function RegisterParishModal({ open, onClose, onRegister }) {
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
-  const [priests, setPriests] = useState([emptyPriestRow()])
+  const [contactNo, setContactNo] = useState('')
+  const [email, setEmail] = useState('')
   const [error, setError] = useState('')
+  const [pending, setPending] = useState(false)
 
   function reset() {
     setName('')
     setAddress('')
-    setPriests([emptyPriestRow()])
+    setContactNo('')
+    setEmail('')
     setError('')
+    setPending(false)
   }
 
   function close() {
@@ -30,46 +41,44 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
     onClose()
   }
 
-  function updatePriest(id, value) {
-    setPriests((rows) => rows.map((row) => (row.id === id ? { ...row, name: value } : row)))
-  }
-
-  function addPriest() {
-    setPriests((rows) => [...rows, emptyPriestRow()])
-  }
-
-  function removePriest(id) {
-    setPriests((rows) => (rows.length === 1 ? rows : rows.filter((row) => row.id !== id)))
-  }
-
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault()
+    setError('')
+
     const trimmedName = name.trim()
     const trimmedAddress = address.trim()
-    const priestNames = priests.map((row) => row.name.trim()).filter(Boolean)
+    const trimmedContact = contactNo.trim()
 
-    if (!trimmedName || !trimmedAddress) {
-      setError('Parish name and address are required.')
+    if (!trimmedName || !trimmedAddress || !trimmedContact) {
+      setError('Parish name, address and contact number are required.')
       return
     }
-    if (priestNames.length === 0) {
-      setError('Add at least one parish priest.')
+    if (trimmedName.length < 3 || trimmedName.length > 50) {
+      setError('Parish name must be between 3 and 50 characters.')
+      return
+    }
+    if (trimmedAddress.length < 5) {
+      setError('Address must be at least 5 characters.')
+      return
+    }
+    if (!MOBILE.test(trimmedContact)) {
+      setError('Contact number must be a PH mobile number, e.g. 09171234567.')
       return
     }
 
-    onRegister({
-      id: createParishId(trimmedName),
+    setPending(true)
+    const message = await onRegister({
       name: trimmedName,
       address: trimmedAddress,
-      diocese: 'Pending diocesan assignment',
-      municipality: municipalityFromAddress(trimmedAddress),
-      priests: priestNames,
-      staffCount: priestNames.length,
-      parishioners: 0,
-      registeredAt: new Date().toISOString().slice(0, 10),
-      status: 'active',
-      accent: ACCENTS[Math.floor(Math.random() * ACCENTS.length)],
+      contactNo: trimmedContact,
+      email: email.trim() || undefined,
     })
+    setPending(false)
+
+    if (message) {
+      setError(message)
+      return
+    }
     close()
   }
 
@@ -77,7 +86,8 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
     <Modal title="Register parish" open={open} onClose={close}>
       <form className="form-grid" onSubmit={submit}>
         <p className="muted field--full">
-          Add a parish to the PATRON registry. This form is frontend-only and saves to your browser.
+          Adds the parish to the diocesan registry. Priests are provisioned separately, from the
+          parish once it exists.
         </p>
 
         {error && (
@@ -105,41 +115,37 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
           />
         </label>
 
-        <div className="field field--full">
-          <span>Parish priest(s)</span>
-          <ul className="priest-list">
-            {priests.map((row, index) => (
-              <li key={row.id} className="priest-list__row">
-                <input
-                  value={row.name}
-                  onChange={(e) => updatePriest(row.id, e.target.value)}
-                  placeholder={index === 0 ? 'Rev. Fr. …' : 'Additional priest (optional)'}
-                  aria-label={`Parish priest ${index + 1}`}
-                />
-                <button
-                  type="button"
-                  className="btn btn--ghost priest-list__remove"
-                  onClick={() => removePriest(row.id)}
-                  disabled={priests.length === 1}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button type="button" className="text-btn" onClick={addPriest}>
-            + Add another priest
-          </button>
-        </div>
+        <label className="field">
+          <span>Contact number</span>
+          <input
+            value={contactNo}
+            onChange={(e) => setContactNo(e.target.value)}
+            placeholder="09171234567"
+            inputMode="numeric"
+          />
+        </label>
+
+        <label className="field">
+          <span>Email (optional)</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="parish@example.com"
+          />
+        </label>
 
         <div className="form-actions field--full">
-          <p className="form-hint muted">New parishes start as active with zero parishioners on record.</p>
+          <p className="form-hint muted">
+            The address decides the municipality shown on the card. Email appears on the public
+            parish directory.
+          </p>
           <div className="form-actions__buttons">
-            <button type="button" className="btn btn--ghost" onClick={close}>
+            <button type="button" className="btn btn--ghost" onClick={close} disabled={pending}>
               Cancel
             </button>
-            <button type="submit" className="btn btn--gold">
-              Register parish
+            <button type="submit" className="btn btn--gold" disabled={pending}>
+              {pending ? 'Registering…' : 'Register parish'}
             </button>
           </div>
         </div>

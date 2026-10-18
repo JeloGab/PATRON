@@ -16,26 +16,11 @@ export function isoOffset(days, from = new Date()) {
   return toISODate(date)
 }
 
-export function weekdayOffset(targetDay, from = new Date()) {
-  return targetDay - from.getDay()
-}
-
 export function startOfWeek(date) {
   const start = new Date(date)
   start.setHours(0, 0, 0, 0)
   start.setDate(start.getDate() - start.getDay())
   return start
-}
-
-export function isUpcomingEvent(event, today = todayISO()) {
-  return event.date >= today
-}
-
-export function isThisWeek(event, now = new Date()) {
-  const start = startOfWeek(now)
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6)
-  return event.date >= toISODate(start) && event.date <= toISODate(end)
 }
 
 export function formatWeekRange(now = new Date()) {

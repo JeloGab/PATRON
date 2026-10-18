@@ -27,7 +27,9 @@ async function selectContext(client, { recordType, priestId }) {
     `select p.name as parish_name, p.address as parish_address,
             p.contact_no as parish_contact,
             t.type_id, t.name as document_name, t.availability,
-            priest.full_name as signatory_name, priest.status as signatory_status
+            priest.full_name as signatory_name, priest.status as signatory_status,
+            priest.signature as signatory_signature,
+            priest.signature_content_type as signatory_signature_type
        from public.parish p
        join public.document_type t on t.record_type = $1
        join public.app_user priest on priest.user_id = $2
@@ -78,7 +80,7 @@ async function lastEntryNumber(client, recordType) {
 
 export async function completeEventAndIssue(
   actor,
-  { eventId, registry, details, planRecords, buildSnapshot, mintCode }
+  { eventId, registry, details, officiantName, planRecords, buildSnapshot, mintCode }
 ) {
   return withActor(actor, async (client) => {
     try {
@@ -102,12 +104,15 @@ export async function completeEventAndIssue(
         recordType,
         priestId: event.assigned_priest_id,
       })
+      
+      if (!context.signatory_signature) throw new AppError('SIGNATURE_REQUIRED', 409)
+
       const roster = await selectRoster(client, eventId)
 
       const { drafts, warnings } = planRecords({
         recordType,
         eventDate: event.event_date,
-        officiantName: context.signatory_name,
+        officiantName: officiantName ?? context.signatory_name,
         registry,
         details,
         roster,
@@ -115,7 +120,11 @@ export async function completeEventAndIssue(
 
       if (context.signatory_status !== 'active') {
         warnings.push(
-          `${context.signatory_name} is no longer active — recorded as officiant and signatory anyway`
+          // The two roles can now differ, so the warning must not claim he was recorded
+          // as the officiant when someone else was named.
+          officiantName
+            ? `${context.signatory_name} is no longer active — recorded as signatory anyway`
+            : `${context.signatory_name} is no longer active — recorded as officiant and signatory anyway`
         )
       }
       if (drafts.length === 0) return { records: 0, certificates: 0, warnings }
@@ -184,11 +193,13 @@ export async function completeEventAndIssue(
         await client.query(
           `insert into public.document_file
              (parish_id, document_type_id, record_id, source_event_id, release_type,
-              verification_code, snapshot, signatory_id, issued_by)
-           values ($1, $2, $3, $4, 'event_completion', $5, $6, $7, $8)`,
+              verification_code, snapshot, signatory_id, issued_by,
+              signature, signature_content_type)
+           values ($1, $2, $3, $4, 'event_completion', $5, $6, $7, $8, $9, $10)`,
           [
             actor.parishId, context.type_id, recordId, eventId, mintCode(),
             JSON.stringify(snapshot), event.assigned_priest_id, actor.userId,
+            context.signatory_signature, context.signatory_signature_type,
           ]
         )
       }

@@ -11,6 +11,17 @@
   --shadow: 0 18px 50px rgba(52, 16, 22, 0.12);
   --serif: 'Cormorant Garamond', Georgia, serif;
   --sans: 'Source Sans 3', system-ui, sans-serif;
+
+  /* Interaction. One easing and one ring for the whole app, so every control
+     answers the pointer at the same speed and focus looks the same everywhere.
+     --wine-hover and --gold-hover are the only hover tints; nothing else
+     re-picks a hover colour by hand. */
+  --ease: 140ms cubic-bezier(0.2, 0, 0.2, 1);
+  --ring: 0 0 0 3px rgba(196, 163, 90, 0.5);
+  --wine-hover: #6d2432;
+  --gold-hover: linear-gradient(180deg, #ddc078, #cdae64);
+  --hover-wash: rgba(92, 24, 36, 0.07);
+  --lift: 0 10px 24px rgba(52, 16, 22, 0.16);
 }
 
 *,
@@ -177,9 +188,14 @@ select {
   box-shadow: var(--shadow);
 }
 
+/* align-content: start is what keeps inputs the same height across a row. A .field is
+   a grid item stretched to its row, and its own rows then absorb the slack — so one
+   field carrying a hint made the plain field beside it grow a taller box. Packing the
+   rows to the top leaves the spare space at the bottom instead. */
 .field {
   display: grid;
   gap: 0.35rem;
+  align-content: start;
 }
 
 .field span {
@@ -261,6 +277,18 @@ textarea:focus {
   padding-bottom: 0.85rem;
 }
 
+/* The strip hugs its own links and sits in the middle, rather than being a
+   1120px-wide pill with the links bunched at the left edge — the same shape as the
+   sign-in toggle, which spans its two choices and nothing more.
+   Scoped to .topbar__tabs so the parishioner navigation, whose .tabs is a flex item
+   beside the brand and the account block, keeps its own placement. */
+.topbar__tabs .tabs {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  justify-content: center;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -307,8 +335,18 @@ textarea:focus {
   color: var(--muted);
 }
 
+/* An <a> since slice A — the way to /account from every navigation. The display
+   rules at the two breakpoints below still apply; these only stop it looking like a
+   link until it is hovered. */
 .topbar__meta {
   display: none;
+  color: inherit;
+  text-decoration: none;
+}
+
+.topbar__meta:hover .topbar__name,
+.topbar__meta:focus-visible .topbar__name {
+  text-decoration: underline;
 }
 
 .avatar {
@@ -374,7 +412,7 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
-  padding: 1.15rem 1.2rem 0.4rem;
+  padding: 1.15rem 1.2rem 1.2rem;
 }
 
 .panel--spaced {
@@ -387,7 +425,19 @@ textarea:focus {
   justify-content: space-between;
   gap: 0.85rem;
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+
+/* The h2 is a flex item here, so its own bottom margin fights align-items: center and
+   makes the gap below the head unpredictable. The head owns the spacing instead. */
+.panel__head h2 {
+  margin: 0;
+}
+
+/* A panel with no __head: the bare heading needs the same room the head has. */
+.panel > h2,
+.panel > h3 {
+  margin-bottom: 0.9rem;
 }
 
 .panel__note {
@@ -509,10 +559,6 @@ textarea:focus {
   background: #fff8e8;
 }
 
-.notice--follow {
-  margin-top: 1.35rem;
-}
-
 .map-summary {
   display: flex;
   flex-wrap: wrap;
@@ -548,20 +594,17 @@ textarea:focus {
 }
 
 .cal-legend__item--sacramental::before,
-.cal__event--sacramental,
-.kind-card--sacramental .kind-card__swatch {
+.cal__event--sacramental {
   background: #fcaeae;
 }
 
 .cal-legend__item--general::before,
-.cal__event--general,
-.kind-card--general .kind-card__swatch {
+.cal__event--general {
   background: #d4ffd0;
 }
 
 .cal-legend__item--seminar::before,
-.cal__event--seminar,
-.kind-card--seminar .kind-card__swatch {
+.cal__event--seminar {
   background: #d0f2ff;
 }
 
@@ -574,10 +617,11 @@ textarea:focus {
 .cal {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .cal__weekday {
+  margin-bottom: 0.25rem;
   padding: 0.15rem 0.2rem 0.35rem;
   font-size: 0.72rem;
   font-weight: 700;
@@ -823,6 +867,28 @@ textarea:focus {
   color: #4d453f;
 }
 
+/* `document_application.status` has five values and the frontend now renders them by
+   name, so the two that had no style needed one. `verified` borrows the review tone:
+   it means a register entry is attached and a priest has yet to approve — work in
+   progress, not a conclusion. `cancelled` is quiet, since the requestor withdrew it
+   themselves and nobody needs to act. */
+.status-pill--verified {
+  background: #efe6f6;
+  color: #5b3b78;
+}
+
+.status-pill--cancelled {
+  background: #ece7e1;
+  color: #4d453f;
+}
+
+/* A flat marker, not a status: "fee marked paid", an attached register reference. */
+.chip--quiet {
+  background: var(--ivory);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
 .form-card {
   width: 100%;
 }
@@ -859,45 +925,6 @@ textarea:focus {
   justify-self: start;
 }
 
-.kind-grid {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.kind-card {
-  display: grid;
-  justify-items: start;
-  gap: 0.35rem;
-  padding: 1.2rem 1.25rem;
-  text-align: left;
-  cursor: pointer;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-}
-
-.kind-card:hover {
-  transform: translateY(-2px);
-}
-
-.kind-card__swatch {
-  width: 2.2rem;
-  height: 0.45rem;
-  border-radius: 999px;
-}
-
-.kind-card__title {
-  font-family: var(--serif);
-  font-size: 1.7rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.kind-card__text {
-  color: var(--muted);
-}
-
 .filters {
   display: grid;
   gap: 0.75rem;
@@ -906,12 +933,6 @@ textarea:focus {
 
 .filters__type {
   max-width: 240px;
-}
-
-.table-select {
-  min-height: 2.2rem;
-  width: auto;
-  padding: 0.25rem 0.55rem;
 }
 
 .editor {
@@ -945,27 +966,6 @@ textarea:focus {
   color: #c62828;
 }
 
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0.2rem 0 0.85rem;
-}
-
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-height: 2.4rem;
-  padding: 0.35rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: white;
-  color: var(--ink);
-  font-weight: 700;
-  cursor: pointer;
-}
-
 .filter-chip.is-active {
   background: var(--wine);
   border-color: var(--wine);
@@ -984,12 +984,6 @@ textarea:focus {
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1;
-}
-
-.request-split {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
 }
 
 .facts {
@@ -1015,23 +1009,6 @@ textarea:focus {
   margin: 0;
 }
 
-.match-score {
-  display: inline-flex;
-  margin: 0.2rem 0 0.8rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background: #e7f3e2;
-  color: #355a28;
-  font-weight: 700;
-}
-
-.match-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 1.15rem;
-}
-
 .page__hero .stat {
   margin: 0;
 }
@@ -1044,80 +1021,8 @@ textarea:focus {
   gap: 1rem;
 }
 
-.bulletin__top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem 0.6rem;
-  margin-bottom: 0.55rem;
-}
-
 .bulletin__top .eyebrow {
   margin: 0;
-}
-
-.bulletin__by {
-  margin: 0 0 0.35rem;
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.fb-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.3rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: var(--ivory);
-  color: var(--muted);
-}
-
-.fb-pill.is-on {
-  background: #e7f0fb;
-  color: #1d4e89;
-}
-
-.switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-top: 1rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.switch__track {
-  position: relative;
-  width: 2.6rem;
-  height: 1.45rem;
-  border-radius: 999px;
-  background: #ddd4c8;
-}
-
-.switch.is-on .switch__track {
-  background: var(--wine);
-}
-
-.switch__knob {
-  position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 50%;
-  background: white;
-  transition: transform 0.15s ease;
-}
-
-.switch.is-on .switch__knob {
-  transform: translateX(1.15rem);
 }
 
 @media (min-width: 760px) {
@@ -1139,10 +1044,6 @@ textarea:focus {
 
   .filters__search {
     grid-column: 1;
-  }
-
-  .kind-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .form-actions {
@@ -1245,29 +1146,68 @@ textarea:focus {
   font-weight: 600;
 }
 
-.login__accounts {
-  display: grid;
-  gap: 0.75rem;
-  margin: 1.15rem 0 0;
-  padding: 0.9rem 0 0;
-  list-style: none;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.92rem;
+/* Drop target for ledger photos. The file input inside it is .sr-only rather than
+   display:none, so it stays keyboard reachable and the label still opens the picker. */
+.dropzone {
+  margin: 0.9rem 0 0;
+  padding: 1.1rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: var(--ivory);
+  text-align: center;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
-.login__accounts span {
-  display: block;
-  margin-top: 0.2rem;
+.dropzone.is-dragging {
+  border-color: var(--gold);
+  background: var(--paper);
+}
+
+.dropzone__lead {
+  margin: 0 0 0.35rem;
+  font-family: var(--serif);
+  font-size: 1.15rem;
   color: var(--ink);
-  font-weight: 600;
+}
+
+.dropzone__pick {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.dropzone .form-hint {
+  margin: 0.5rem 0 0;
+}
+
+/* A ledger photo fetched with the token and shown from a blob URL. */
+.ledger-preview {
+  margin: 0.9rem 0 0;
+}
+
+.ledger-preview__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+/* Subject groups in the record form. The fieldset carries the grouping for screen
+   readers — these inputs describe one person — but a browser's default inset border
+   has no place inside a card, so it is replaced with the same hairline rule
+   .login__accounts uses. */
+.subject-group {
+  border: 0;
+  margin: 0.4rem 0 0;
+  padding: 0.9rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.subject-group > legend {
+  padding: 0;
 }
 
 @media (min-width: 900px) {
-  .request-split {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
 
   .login {
     grid-template-columns: 1.05fr 0.95fr;
@@ -1278,7 +1218,6 @@ textarea:focus {
     flex-direction: column;
   }
 }
-
 
 /* System admin styles */
 
@@ -1316,96 +1255,14 @@ img {
   color: var(--muted);
 }
 
-.auth {
-  min-height: 100vh;
-  display: grid;
-}
-
-.auth__panel {
-  display: none;
-  padding: 3rem;
-  color: #f4ead8;
-  background:
-    linear-gradient(160deg, rgba(52, 16, 22, 0.55), rgba(52, 16, 22, 0.88)),
-    url('https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&w=1600&q=80')
-      center / cover;
-}
-
-.auth__kicker {
-  margin-top: 3.5rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  color: var(--gold-soft);
-}
-
-.auth__title {
-  max-width: 12ch;
-  color: white;
-}
-
-.auth__lead {
-  max-width: 34rem;
-  color: rgba(255, 247, 232, 0.82);
-}
-
-.auth__points {
-  margin: 2rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.auth__points li {
-  position: relative;
-  padding: 0.35rem 0 0.35rem 1.2rem;
-}
-
-.auth__points li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.85rem;
-  width: 0.55rem;
-  height: 1px;
-  background: var(--gold);
-}
-
-.auth__form-wrap {
-  display: grid;
-  place-items: center;
-  padding: 2rem 1.25rem;
-}
-
-.auth__form {
-  width: min(420px, 100%);
-}
-
-.auth__divider {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 1.1rem 0 0.85rem;
-  color: var(--muted);
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.auth__divider::before,
-.auth__divider::after {
-  content: '';
-  height: 1px;
-  background: var(--line);
-}
-
-.auth__note {
-  margin: 0.7rem 0 0;
-  text-align: center;
-  font-size: 0.88rem;
-}
-
+/* One container width for everything that reads as a column: the brand row, the tab
+   strip under it, the page body and the footer.
+   `.topbar__tabs` was missing here while being present in the padding rule above,
+   so on the priest and manager navigations — the only two with a tab strip — the
+   brand row was centred inside 1120px and the tabs below it ran the full width of
+   the window, flush left and visibly out of line with everything else. */
 .topbar__inner,
+.topbar__tabs,
 .page,
 .foot {
   width: min(1120px, calc(100% - 2rem));
@@ -1482,6 +1339,218 @@ img {
   background: #2c1b1e;
 }
 
+/* Shown when a parish has no photograph, which is the normal case: `parish` has no
+   image column, so a photo exists only if a file named after the parish uuid has been
+   placed in public/churches/. The gradient above already carries the parish accent —
+   this only puts its initial in the middle so the panel reads as deliberate rather
+   than as an image that failed to load. */
+.church-media__crest {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+/* Office hours and the Mass schedule. pre-line is load-bearing, not cosmetic: the
+   validator keeps the line breaks the parish typed, and without this HTML collapses
+   them and the schedule renders as one run-on line. */
+.schedule-text {
+  white-space: pre-line;
+}
+
+/* Office hours and the Mass schedule sit in a Schedule card in the side column of both
+   the staff profile and the public parish page. They are the only multi-line values in
+   the app, so they opt out of the two-column .facts grid the wide breakpoint applies —
+   side by side in a 0.8fr column, every line of Mass times wrapped. Doubled class rather
+   than source order, so it wins wherever this rule ends up in the file. */
+.facts.facts--stacked {
+  grid-template-columns: 1fr;
+}
+
+.facts--stacked .schedule-text {
+  line-height: 1.6;
+}
+
+/* Staff photographs: one 64px circle, whether it holds an image or a letter, so a row
+   never reflows when the bytes arrive. */
+.staff-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--wine);
+}
+
+.staff-photo--empty {
+  display: grid;
+  place-items: center;
+  color: var(--gold-soft);
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+/* The clergy card on the parish profile: photo above the name, wrapping into as many
+   columns as fit. */
+.clergy-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 1rem 0.75rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clergy-cards__item {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.clergy-cards__name {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* A photograph in the top bar, sharing the .avatar box exactly so the row does not
+   reflow when the image loads. */
+.avatar--photo {
+  object-fit: cover;
+}
+
+/* The photo card on the account page. Centred, unlike the signature preview, because a
+   round portrait reads as a subject rather than as a field value. */
+.account-photo {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+}
+
+/* Overrides the shared left-aligned button row for this one block. */
+.account-photo > .form-actions__buttons {
+  justify-content: center;
+}
+
+.account-photo__img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+/* The requestor's ID on a document request. Capped in height so a portrait scan does
+   not push the approval controls off the modal. */
+.id-file {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.id-file__img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+/* The active priests of a parish, on the public parish page. The photo and the letter
+   share one 44px box, so a row does not reflow when an image finishes loading. */
+.clergy {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.clergy__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.clergy__photo {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--wine);
+}
+
+.clergy__photo--empty {
+  display: grid;
+  place-items: center;
+  color: var(--gold-soft);
+  font-family: var(--serif);
+  font-weight: 700;
+}
+
+.clergy__name {
+  font-weight: 600;
+}
+
+/* The public announcement feed on a parish listing. Its images are public bytes, so
+   they are ordinary <img> elements — nothing here needs a token. */
+.feed {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1.4rem;
+}
+
+/* The hairline divider belongs to a feed rendered as rows inside ONE card, which is
+   what ChurchDetail does. Feed.jsx instead puts .card and .feed__item on the same
+   element: both are single-class selectors, so .feed__item won on file order and took
+   the last card's bottom padding and border away with it - content flush against a
+   borderless edge. :not(.card) keeps the divider for rows and leaves a card to its own
+   padding. */
+.feed__item:not(.card) {
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.feed__item:not(.card):last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.feed__item h3 {
+  margin: 0 0 0.15rem;
+  font-family: var(--serif);
+  font-size: 1.3rem;
+}
+
+.feed__body {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+}
+
+.feed__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+}
+
+.feed__image {
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--ivory);
+}
+
 .parish-card__media .chip,
 .detail__banner-shade {
   position: relative;
@@ -1497,6 +1566,8 @@ img {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
   color: white;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -1509,25 +1580,12 @@ img {
   padding: 1.1rem 1.2rem 1.25rem;
 }
 
-.parish-card__diocese {
-  margin: 0 0 0.25rem;
-  color: var(--gold);
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .parish-card__summary {
   color: var(--muted);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.linkish {
-  color: var(--wine);
-  font-weight: 600;
 }
 
 .detail__banner {
@@ -1547,6 +1605,22 @@ img {
   background: linear-gradient(180deg, transparent, rgba(20, 10, 12, 0.82));
 }
 
+/* .detail carried no rule of its own, so the space between its sections came from each
+   child's own margin-bottom. That held only while .detail__grid was the one gapped
+   sibling: the Priests card put two bare .card children next to each other with nothing
+   between them, and their 1px borders read as one stitched box. The gap belongs to the
+   parent now. Scoped with > because ParishProfile also uses .detail__grid, is not inside
+   .detail, and still needs its own margin. */
+.detail {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.detail > .detail__banner,
+.detail > .detail__grid {
+  margin-bottom: 0;
+}
+
 .detail__grid {
   display: grid;
   gap: 1rem;
@@ -1558,6 +1632,17 @@ img {
   gap: 1rem;
 }
 
+/* The same trap as .field above, one level up. A .stack is a grid item in .detail__grid,
+   so it is stretched to the height of the taller column; its own auto rows then absorb
+   that slack, and every card in it grows — which showed as dead space under the Edit
+   details button and under the Mass schedule. Packing the rows to the top leaves the
+   spare space at the foot of the short column, where it belongs, and each card ends at
+   its own content. Scoped to .detail__grid: a .stack elsewhere is not in a two-column
+   row and has no slack to misplace. */
+.detail__grid > .stack {
+  align-content: start;
+}
+
 dt {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -1567,33 +1652,6 @@ dt {
 
 dd {
   margin: 0.15rem 0 0;
-}
-
-.pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pills li {
-  padding: 0.28rem 0.7rem;
-  border-radius: 999px;
-  background: var(--ivory);
-  border: 1px solid var(--line);
-  font-size: 0.88rem;
-}
-
-.schedule-note,
-.fact-note {
-  margin: 0.85rem 0 0;
-  font-size: 0.92rem;
-}
-
-.fact-note {
-  margin-top: 0.35rem;
 }
 
 .verify-bar {
@@ -1624,7 +1682,6 @@ dd {
   background: #f4f8ee;
 }
 
-.result--revoked,
 .result--unknown {
   border-color: #e3c0c0;
   background: #fbf3f3;
@@ -1642,7 +1699,6 @@ dd {
   color: #355a28;
 }
 
-.result--revoked .result__status,
 .result--unknown .result__status {
   color: var(--wine);
 }
@@ -1682,13 +1738,6 @@ dd {
 }
 
 @media (min-width: 760px) {
-  .auth {
-    grid-template-columns: 1.05fr 0.95fr;
-  }
-
-  .auth__panel {
-    display: block;
-  }
 
   .topbar__meta {
     display: block;
@@ -1811,7 +1860,7 @@ dd {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.2rem 1.35rem 0.35rem;
+  padding: 1.35rem 1.4rem 0.5rem;
 }
 
 .modal__head h2 {
@@ -1832,7 +1881,17 @@ dd {
 }
 
 .modal__body {
-  padding: 0.5rem 1.35rem 1.35rem;
+  padding: 0.85rem 1.4rem 1.4rem;
+}
+
+/* The pill row under a dialog title. Without a rule these were bare inline spans, and
+   JSX emits no whitespace between elements on separate lines, so they touched. */
+.modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.95rem;
 }
 
 .priest-list {
@@ -1853,11 +1912,84 @@ dd {
   padding-inline: 0.85rem;
 }
 
+/* The signature pad. The canvas sits above a ruled line, like a signature block on
+   paper, and touch-action: none stops a finger scrolling the page mid-stroke. */
+.signature {
+  margin: 0.6rem 0 0;
+}
+
+.signature__frame {
+  position: relative;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: var(--ivory);
+  overflow: hidden;
+}
+
+.signature__canvas {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature__rule {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 2.6rem;
+  border-bottom: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.signature__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* A stored signature, shown back to its owner. */
+.signature__preview {
+  display: block;
+  max-width: 320px;
+  max-height: 120px;
+  margin: 0.5rem 0;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+/* A row that can expand: the checklist opens a decision form inside the row, and at
+   760px the row is `1fr auto`, so without this the form would be squeezed into the
+   first column with the button's column left empty beside it. */
+.priest-list__row--stack > .form-grid {
+  grid-column: 1 / -1;
+}
+
 .form-actions__buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
   justify-content: flex-end;
+  margin-top: 1.1rem;
+}
+
+/* ...except where the parent is already a gapped grid or flex row, which would then
+   space it twice. A grid item honours its margin on top of the gap. */
+.form-grid > .form-actions__buttons,
+.form-actions > .form-actions__buttons,
+.priest-list__row > .form-actions__buttons,
+.stack > .form-actions__buttons,
+.seg > .form-actions__buttons,
+.page__hero > .form-actions__buttons,
+.account-photo > .form-actions__buttons {
+  margin-top: 0;
 }
 
 @media (min-width: 760px) {
@@ -1871,8 +2003,6 @@ dd {
   }
 }
 
-
-
 .role-admin .facts {
   gap: 0.85rem;
   margin: 1rem 0 0;
@@ -1884,208 +2014,404 @@ dd {
   padding-top: 0.7rem;
   border-top: 1px solid var(--line);
 }
-.detail__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 0 0 1.15rem;
+
+/* ---------------------------------------------------------------------------
+   Spacing between blocks.
+
+   The sheet gave each element its own margins and left the relationships
+   between them unstated, so anything whose neighbour happened to carry no
+   bottom margin ended up flush against it. These rules state the three
+   relationships that were missing.
+   --------------------------------------------------------------------------- */
+
+/* Two panels in a row had nothing between them — .panel carries no margin and
+   .panel--spaced was only remembered sometimes. A page is normal flow, so this
+   margin collapses with whatever the previous block already had: the result is
+   max(previous, 1.15rem), never the sum. */
+.page > * + .panel,
+.page > * + .card {
+  margin-top: 1.15rem;
 }
 
-.calendar-card {
-  margin-bottom: 1rem;
-  scroll-margin-top: 5.5rem;
+/* .eyebrow is a kicker above a title — no top margin, by design. As an h2 or h3 it
+   is a section heading inside a card, and then it needs to stand off the section
+   above it. :not(:first-child) keeps the one that opens a card tight to the edge. */
+h2.eyebrow:not(:first-child),
+h3.eyebrow:not(:first-child) {
+  margin-top: 1.5rem;
 }
 
-.calendar__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
+/* The flow rule the sheet never had. Inside a normal-flow container, every child
+   after the first stands off the one above it.
+
+   Adjacent sibling margins COLLAPSE rather than add, so the gap each pair ends up
+   with is max(what the first already declared, 0.9rem) — never the sum. That is why
+   this can be stated once instead of per pair: a block that already asks for more
+   room keeps it, and a block that declared nothing stops touching its neighbour.
+
+   Scoped to containers that are genuinely normal flow. A gapped grid or flex row
+   (.form-grid, .stack, .seg, .verify-bar, .filters) spaces its own children, and a
+   margin there WOULD add to the gap — those are not listed, and the one bare <form>
+   in a dialog is matched by :not([class]) so a .verify-bar form is left alone. .modal is excluded for
+   the same reason in reverse: its two children carry the dialog's own padding. */
+.card:not(.modal) > * + *,
+.panel > * + *,
+.modal__body > * + *,
+.modal__body > form:not([class]) > * + *,
+.day-detail > * + *,
+.subject-group > * + * {
+  margin-top: 0.9rem;
 }
 
-.calendar__title {
-  margin: 0;
-  text-align: center;
-  font-size: 1.6rem;
+/* One pairing the flow rule must not break: a kicker belongs to the title under it,
+   so the two stay as tight as .eyebrow's own bottom margin makes them. */
+.eyebrow + h1,
+.eyebrow + h2,
+.eyebrow + h3 {
+  margin-top: 0;
 }
 
-.calendar__nav {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--ivory);
+/* A container's own padding is the bottom spacing; a trailing margin inside it only
+   pushes the padding further out and makes identical cards different heights. */
+.card > :last-child,
+.panel > :last-child,
+.modal__body > :last-child,
+.parish-card__body > :last-child,
+.day-detail > :last-child {
+  margin-bottom: 0;
+}
+
+/* ===========================================================================
+   Interaction layer — added 2026-10-17.
+
+   Everything below is *additive*: it adds :hover, :active and :focus-visible to
+   controls that had none, and it changes no layout, colour or size in the resting
+   state. Before this block the only elements that answered the pointer at all were
+   .metric and .parish-card; .btn, .tabs__link, .seg__btn and .text-btn had no hover,
+   no press and no focus ring, which is what made clickable things read as inert.
+
+   Three rules hold it together:
+     1. One easing (--ease) and one ring (--ring), so nothing feels out of step.
+     2. Hover lifts and tints, :active presses back down — the press is what sells
+        a button as a button.
+     3. Every hover is guarded with :not(:disabled), because a disabled button that
+        still lifts is telling the user it will work.
+
+   Kept at the bottom of the file on purpose: additions here cannot collide with the
+   other developer's edits above, so a merge from ui/* stays clean.
+   =========================================================================== */
+
+.btn,
+.tabs__link,
+.seg__btn,
+.text-btn,
+.cal__date,
+.cal__event,
+.modal__close {
+  transition:
+    background-color var(--ease),
+    background-image var(--ease),
+    border-color var(--ease),
+    color var(--ease),
+    box-shadow var(--ease),
+    transform var(--ease);
+}
+
+/* --- buttons ------------------------------------------------------------- */
+
+.btn:not(:disabled):hover {
+  background-color: var(--wine-hover);
+  box-shadow: var(--lift);
+  transform: translateY(-1px);
+}
+
+.btn--gold:not(:disabled):hover {
+  background-image: var(--gold-hover);
+}
+
+.btn--ghost:not(:disabled):hover {
+  background-color: var(--hover-wash);
+  border-color: rgba(92, 24, 36, 0.35);
   color: var(--wine);
-  font-size: 1.4rem;
-  line-height: 1;
-  cursor: pointer;
 }
 
-.calendar__counts,
-.calendar__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin: 0 0 0.9rem;
-  padding: 0;
-  list-style: none;
+/* The press. translateY(0) cancels the hover lift rather than fighting it, so the
+   button returns to the surface under the finger instead of jumping. */
+.btn:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: none;
 }
 
-.calendar__legend {
-  margin: 0.9rem 0 0;
+.text-btn:hover {
+  color: var(--wine-deep);
 }
 
-.calendar__count {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.28rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
+/* --- tabs and segmented controls ---------------------------------------- */
+
+.tabs__link:not(.is-active):hover {
+  background: var(--hover-wash);
+  color: var(--ink);
 }
 
-.calendar__count::before {
+.tabs__link.is-active:hover,
+.seg__btn.is-active:hover {
+  background: var(--wine-hover);
+}
+
+.seg__btn:not(.is-active):hover {
+  background: var(--hover-wash);
+  color: var(--ink);
+}
+
+/* --- cards that already lifted: finish the gesture ---------------------- */
+
+.metric:hover,
+.parish-card:hover {
+  box-shadow: var(--lift);
+}
+
+/* --- rows and calendar cells -------------------------------------------- */
+
+.table tr.is-clickable {
+  transition: background-color var(--ease);
+}
+
+.cal__date:hover,
+.cal__event:hover {
+  background: var(--hover-wash);
+}
+
+.modal__close:hover {
+  background: var(--hover-wash);
+}
+
+/* --- focus, once, for every control ------------------------------------- */
+
+/* :focus-visible, not :focus — a mouse click on a button should not leave a ring
+   behind, but a Tab to it must. :where() keeps specificity at zero so any
+   component rule can still override the ring. */
+:where(a, button, .btn, .tabs__link, .seg__btn, .text-btn, .cal__date, .cal__event, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* --- motion is a preference --------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+
+  .btn:not(:disabled):hover,
+  .btn:not(:disabled):active,
+  .metric:hover,
+  .parish-card:hover {
+    transform: none;
+  }
+}
+
+/* --- the sliding pill on tab strips and segmented controls --------------- */
+
+/* .has-thumb is added by lib/useSlidingThumb.js only after it has successfully
+   measured the active item. Everything here is therefore scoped to that class: a strip
+   that never got measured, or one that does not use the hook, keeps the plain look
+   below where .is-active paints its own background. */
+
+.tabs.has-thumb,
+.seg.has-thumb {
+  position: relative;
+}
+
+.tabs.has-thumb::before,
+.seg.has-thumb::before {
   content: '';
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: currentColor;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  width: var(--thumb-w, 0);
+  height: var(--thumb-h, 0);
+  border-radius: 999px;
+  background: var(--wine);
+  opacity: var(--thumb-o, 0);
+  transform: translate(var(--thumb-x, 0), var(--thumb-y, 0));
+  /* 240ms rather than --ease's 140ms: this one travels a visible distance, and the
+     slight overshoot in the curve is what makes it read as a physical slide. */
+  transition:
+    transform 240ms cubic-bezier(0.3, 0.8, 0.2, 1),
+    width 240ms cubic-bezier(0.3, 0.8, 0.2, 1),
+    height 240ms cubic-bezier(0.3, 0.8, 0.2, 1),
+    background-color var(--ease),
+    opacity 160ms ease;
+  pointer-events: none;
 }
 
-.calendar__count--available {
-  background: #e7f3e2;
-  color: #355a28;
+/* The labels must sit above the pill, and the active one hands its background over. */
+.tabs.has-thumb .tabs__link,
+.seg.has-thumb .seg__btn {
+  position: relative;
+  z-index: 1;
 }
 
-.calendar__count--unavailable {
-  background: #f8e6e6;
-  color: var(--wine);
+.tabs.has-thumb .tabs__link.is-active,
+.tabs.has-thumb .tabs__link.is-active:hover,
+.seg.has-thumb .seg__btn.is-active,
+.seg.has-thumb .seg__btn.is-active:hover {
+  background: transparent;
 }
 
-.calendar__weekdays,
-.calendar__grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+/* Hovering the active option tints the pill instead of the label, so the hover feedback
+   survives having handed the background away. */
+.tabs.has-thumb:has(.tabs__link.is-active:hover)::before,
+.seg.has-thumb:has(.seg__btn.is-active:hover)::before {
+  background: var(--wine-hover);
 }
 
-.calendar__weekday {
-  text-align: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* --- modals arrive, rather than appearing ------------------------------- */
+
+/* Entrance only. An exit animation needs the modal to stay mounted while it plays, and
+   Modal.jsx returns null the moment `open` goes false — adding that is a state machine
+   in the component, not a stylesheet change. */
+.modal-overlay {
+  animation: overlay-in 140ms ease both;
+}
+
+.modal-overlay > .modal {
+  animation: modal-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- loading ------------------------------------------------------------ */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.5rem 0.4rem 1.8rem;
   color: var(--muted);
 }
 
-.calendar__pad {
-  min-height: 4.4rem;
+.loading--inline {
+  justify-content: flex-start;
+  padding: 0.2rem 0;
 }
 
-.calendar__day {
-  min-height: 4.4rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  padding: 0.4rem 0.35rem;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--ivory);
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
+.spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  border: 2px solid rgba(92, 24, 36, 0.18);
+  border-top-color: var(--wine);
+  border-radius: 50%;
+  animation: spin 620ms linear infinite;
 }
 
-.calendar__day--available {
-  background: #eef6ea;
-  border-color: #c5d9b8;
-}
-
-.calendar__day--unavailable {
-  background: #f8ecec;
-  border-color: #e3c0c0;
-}
-
-.calendar__day--today {
-  box-shadow: inset 0 0 0 2px var(--gold);
-}
-
-.calendar__day--selected {
-  outline: 2px solid var(--wine);
-  outline-offset: 1px;
-}
-
-.calendar__day-num {
-  font-family: var(--serif);
-  font-size: 1.15rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.calendar__day-label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1.15;
-}
-
-.calendar__day--available .calendar__day-label {
-  color: #355a28;
-}
-
-.calendar__day--unavailable .calendar__day-label {
-  color: var(--wine);
-}
-
-@media (max-width: 759px) {
-  .calendar__day-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-  }
-
-  .calendar__day,
-  .calendar__pad {
-    min-height: 2.75rem;
-    align-items: center;
-    justify-content: center;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.calendar__detail {
-  margin-top: 1rem;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--line);
+/* A placeholder for a row of text that has not arrived. Not yet used by any page —
+   documented in css_inventory.md so the next list page can reach for it instead of
+   inventing one. */
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(36, 28, 24, 0.06), rgba(36, 28, 24, 0.12), rgba(36, 28, 24, 0.06));
+  background-size: 200% 100%;
+  animation: skeleton 1.25s ease-in-out infinite;
+  color: transparent;
 }
 
-.calendar__detail-date {
+@keyframes skeleton {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* --- empty ------------------------------------------------------------- */
+
+.empty-card__title {
   margin: 0;
   font-family: var(--serif);
-  font-size: 1.35rem;
+  font-size: 1.25rem;
+  color: var(--ink);
 }
 
-.calendar__detail-status {
-  margin: 0.15rem 0 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+/* Motion preferences again, for the pieces added above. The global rule at the top of
+   this section collapses transitions; these are animations, which need stopping too —
+   a spinner that never stops is the one exception, so it keeps turning, slowly. */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-overlay > .modal {
+    animation: none;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+
+  .spinner {
+    animation-duration: 2s;
+  }
 }
 
-.calendar__detail--available .calendar__detail-status {
-  color: #355a28;
+/* The suggested priest. A quiet panel rather than a banner: it is advice, and the manager
+   is free to ignore it - the dropdown below keeps its own default and its own order. */
+.suggestion {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
 }
 
-.calendar__detail--unavailable .calendar__detail-status {
-  color: var(--wine);
+.suggestion__lead {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
 }
 
+.suggestion__why,
+.suggestion__done {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Not an error: "nobody is free" is a true answer to the question, and the three checks
+   will say the same thing on save. Solid border to separate it from the advisory case. */
+.suggestion--none {
+  border-style: solid;
+  color: var(--muted);
+  font-size: 0.88rem;
+}

@@ -1,20 +1,26 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useParish } from '../context/ParishContext.jsx'
 import { clearSession, getSession } from '../lib/session.js'
+import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
+import Tabs from './Tabs.jsx'
 
 const MANAGER_LINKS = [
   { to: '/manager', label: 'Dashboard', end: true },
   { to: '/manager/schedule', label: 'Event scheduling', also: ['/manager/events'] },
-  { to: '/manager/applications', label: 'Sacrament applications' },
+  { to: '/manager/roster', label: 'Event rosters' },
   { to: '/manager/records', label: 'Sacramental records' },
   { to: '/manager/documents', label: 'Document requests' },
   { to: '/manager/announcements', label: 'Announcements' },
+  { to: '/manager/parish', label: 'Parish profile' },
 ]
 
 const PRIEST_LINKS = [
   { to: '/priest', label: 'My calendar', end: true },
-  { to: '/priest/approvals', label: 'Pending approvals' },
+  { to: '/priest/approvals', label: 'Pending approvals', badge: 'events' },
+  { to: '/priest/documents', label: 'Document approvals', badge: 'documents' },
+  { to: '/priest/announcements', label: 'Announcements', badge: 'announcements' },
+  { to: '/priest/managers', label: 'Parish managers' },
+  { to: '/priest/parish', label: 'Parish profile' },
 ]
 
 function isCurrent(item, pathname) {
@@ -51,19 +57,17 @@ function ManagerNav() {
         </NavLink>
 
         <div className="topbar__user">
-          <div className="avatar" aria-hidden="true">
-            {initial}
-          </div>
-          <div className="topbar__meta">
+          <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
+          <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || session?.email || 'Parish office'}</p>
             <p className="topbar__role">Parish manager</p>
-          </div>
+          </NavLink>
           <SignOut />
         </div>
       </div>
 
       <div className="topbar__tabs">
-        <nav className="tabs" aria-label="Parish manager">
+        <Tabs label="Parish manager">
           {MANAGER_LINKS.map((item) => {
             const current = isCurrent(item, pathname)
             return (
@@ -78,16 +82,27 @@ function ManagerNav() {
               </NavLink>
             )
           })}
-        </nav>
+        </Tabs>
       </div>
     </header>
   )
 }
 
-function PriestNav() {
+// The count is read by name off the layout's counts object, so adding a badge to
+// another tab is one key in PRIEST_LINKS and one count in PriestLayout.
+function Badge({ waiting }) {
+  if (!waiting || waiting.count === 0) return null
+  const shown = waiting.more ? `${waiting.count}+` : String(waiting.count)
+  return (
+    <span className="notif" aria-label={`${shown} waiting`}>
+      {shown}
+    </span>
+  )
+}
+
+function PriestNav({ counts }) {
   const { pathname } = useLocation()
   const session = getSession()
-  const { pendingCount } = useParish()
   const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
 
   return (
@@ -98,19 +113,17 @@ function PriestNav() {
         </NavLink>
 
         <div className="topbar__user">
-          <div className="avatar" aria-hidden="true">
-            {initial}
-          </div>
-          <div className="topbar__meta">
+          <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
+          <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || 'Parish priest'}</p>
             <p className="topbar__role">Parish priest</p>
-          </div>
+          </NavLink>
           <SignOut />
         </div>
       </div>
 
       <div className="topbar__tabs">
-        <nav className="tabs" aria-label="Parish priest">
+        <Tabs label="Parish priest">
           {PRIEST_LINKS.map((item) => {
             const current = isCurrent(item, pathname)
             return (
@@ -121,16 +134,12 @@ function PriestNav() {
                 className={`tabs__link ${current ? 'is-active' : ''}`}
                 aria-current={current ? 'page' : undefined}
               >
-                {item.to === '/priest/approvals' && pendingCount > 0 && (
-                  <span className="notif" aria-label={`${pendingCount} pending`}>
-                    {pendingCount}
-                  </span>
-                )}
+                <Badge waiting={item.badge ? counts[item.badge] : null} />
                 {item.label}
               </NavLink>
             )
           })}
-        </nav>
+        </Tabs>
       </div>
     </header>
   )
@@ -150,13 +159,11 @@ function AdminNav() {
         <p className="topbar__section">Registered parishes</p>
 
         <div className="topbar__user">
-          <div className="avatar" aria-hidden="true">
-            {initial}
-          </div>
-          <div className="topbar__meta">
+          <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
+          <NavLink to="/account" className="topbar__meta" aria-label="Your account">
             <p className="topbar__name">{session?.name || 'System admin'}</p>
             <p className="topbar__role">System admin</p>
-          </div>
+          </NavLink>
           <SignOut />
         </div>
       </div>
@@ -168,8 +175,8 @@ function UserNav() {
   const { pathname } = useLocation()
   const session = getSession()
   const onParishes = pathname === '/user' || pathname.startsWith('/user/parish')
-  const onVerify = pathname === '/verify'
   const onRequests = pathname.startsWith('/user/requests')
+  const onFeed = pathname === '/feed'
   const initial = (session?.name || 'P').slice(0, 1).toUpperCase()
 
   return (
@@ -179,30 +186,14 @@ function UserNav() {
           <Logo compact />
         </NavLink>
 
-        <nav className="tabs" aria-label="Parishioner">
-          <NavLink to="/user" end className={`tabs__link ${onParishes ? 'is-active' : ''}`}>
-            Parishes
-          </NavLink>
-          {session && (
-            <NavLink to="/user/requests" className={`tabs__link ${onRequests ? 'is-active' : ''}`}>
-              My requests
-            </NavLink>
-          )}
-          <NavLink to="/verify" className={`tabs__link ${onVerify ? 'is-active' : ''}`}>
-            Verify document
-          </NavLink>
-        </nav>
-
         <div className="topbar__user">
           {session ? (
             <>
-              <div className="avatar" aria-hidden="true">
-                {initial}
-              </div>
-              <div className="topbar__meta">
+              <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
+              <NavLink to="/account" className="topbar__meta" aria-label="Your account">
                 <p className="topbar__name">{session.name || 'Parishioner'}</p>
                 <p className="topbar__role">Parishioner</p>
-              </div>
+              </NavLink>
               <SignOut />
             </>
           ) : (
@@ -212,13 +203,29 @@ function UserNav() {
           )}
         </div>
       </div>
+
+      <div className="topbar__tabs">
+        <Tabs label="Parishioner">
+          <NavLink to="/user" end className={`tabs__link ${onParishes ? 'is-active' : ''}`}>
+            Parishes
+          </NavLink>
+          {session && (
+            <NavLink to="/user/requests" className={`tabs__link ${onRequests ? 'is-active' : ''}`}>
+              My requests
+            </NavLink>
+          )}
+          <NavLink to="/feed" className={`tabs__link ${onFeed ? 'is-active' : ''}`}>
+            Announcements
+          </NavLink>
+        </Tabs>
+      </div>
     </header>
   )
 }
 
-export default function TopNav() {
+export default function TopNav({ counts = {} }) {
   const session = getSession()
-  if (session?.role === 'priest') return <PriestNav />
+  if (session?.role === 'priest') return <PriestNav counts={counts} />
   if (session?.role === 'sysadmin') return <AdminNav />
   if (session?.role === 'manager') return <ManagerNav />
   return <UserNav />
