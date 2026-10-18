@@ -16,6 +16,7 @@ import {
   timeRange,
 } from '../lib/schedule.js'
 import Modal from './Modal.jsx'
+import PriestSuggestion from './PriestSuggestion.jsx'
 
 function messageOf(result) {
   return CHECK_MESSAGES[result.json?.code] ?? messageFor(result)
@@ -189,6 +190,22 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
               onChange={(e) => setForm((c) => ({ ...c, endTime: e.target.value }))}
             />
           </label>
+          {/* The reassign path. excludeEventId is load-bearing: without it this event
+              counts as its own schedule conflict and every priest already on it reads as
+              busy. editEvent passes the same exclusion to runChecks on save. */}
+          {isSacramental && (
+            <div className="field field--full">
+              <PriestSuggestion
+                eventDate={form.eventDate}
+                startTime={form.startTime}
+                endTime={form.endTime}
+                excludeEventId={event.eventId}
+                selectedId={form.assignedPriestId}
+                onPick={(userId) => setForm((c) => ({ ...c, assignedPriestId: userId }))}
+              />
+            </div>
+          )}
+
           <label className="field">
             <span>Assigned priest</span>
             <select

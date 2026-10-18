@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
+import Loading from '../../components/Loading.jsx'
+import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { STATUS_HINT, STATUS_LABEL, canArchive, statusPill } from '../../lib/announcements.js'
 import { formatStamp } from '../../lib/documents.js'
@@ -195,7 +197,7 @@ export default function AnnouncementApprovals() {
         </form>
       )}
 
-      <div className="seg" role="group" aria-label="Announcement status">
+      <Seg label="Announcement status">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -210,10 +212,10 @@ export default function AnnouncementApprovals() {
             {STATUS_LABEL[tab]}
           </button>
         ))}
-      </div>
+      </Seg>
 
       {announcements === null ? (
-        <p className="empty">Loading announcements…</p>
+        <Loading label="Loading announcements…" />
       ) : rows.length === 0 ? (
         <p className="empty">
           {status === 'pending'

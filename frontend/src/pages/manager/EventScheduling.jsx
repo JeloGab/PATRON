@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import EventModal from '../../components/EventModal.jsx'
 import EventTable from '../../components/EventTable.jsx'
+import Loading from '../../components/Loading.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatMonth, formatWeekdayDate, todayISO } from '../../lib/dates.js'
@@ -195,7 +196,7 @@ export default function EventScheduling() {
         </div>
 
         {events === null ? (
-          <p className="empty">Loading the month…</p>
+          <Loading label="Loading the month…" />
         ) : (
           <MonthGrid
             year={cursor.year}

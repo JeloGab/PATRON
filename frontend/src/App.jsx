@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import ManagerLayout from './layouts/ManagerLayout.jsx'
 import PriestLayout from './layouts/PriestLayout.jsx'
@@ -53,7 +53,6 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/feed" element={<Feed />} />
       <Route path="/verify" element={<Verify />} />
       <Route path="/verify/:code" element={<Verify />} />
 
@@ -110,18 +109,29 @@ export default function App() {
         <Route path="parish" element={<ParishProfile />} />
       </Route>
 
-      <Route
-        path="/user"
-        element={
-          <RequireRole role="parishioner">
-            <UserLayout />
-          </RequireRole>
-        }
-      >
-        <Route index element={<ParishDirectory />} />
-        <Route path="parish/:id" element={<ChurchDetail />} />
-        <Route path="parish/:id/request" element={<RequestDocument />} />
-        <Route path="requests" element={<MyRequests />} />
+      {/* One pathless layout route, so /feed and /user/* render inside the SAME mounted
+          UserLayout — and therefore the same TopNav. Two sibling routes each rendering
+          their own UserLayout would sit at different positions in the element tree, so
+          React would unmount the nav and mount a fresh one on every move between them;
+          that is what stopped the nav's sliding pill animating on the way to
+          Announcements. The guard stays on /user alone: /feed is public and UserNav
+          already handles having no session. */}
+      <Route element={<UserLayout />}>
+        <Route path="/feed" element={<Feed />} />
+
+        <Route
+          path="/user"
+          element={
+            <RequireRole role="parishioner">
+              <Outlet />
+            </RequireRole>
+          }
+        >
+          <Route index element={<ParishDirectory />} />
+          <Route path="parish/:id" element={<ChurchDetail />} />
+          <Route path="parish/:id/request" element={<RequestDocument />} />
+          <Route path="requests" element={<MyRequests />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<HomeRedirect />} />

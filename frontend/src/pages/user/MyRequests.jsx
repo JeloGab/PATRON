@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import Loading from '../../components/Loading.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
   RELATIONSHIP_LABEL,
@@ -132,7 +133,7 @@ export default function MyRequests() {
       )}
 
       {requests === null ? (
-        <p className="empty">Loading your requests…</p>
+        <Loading label="Loading your requests…" />
       ) : requests.length === 0 ? (
         <div className="card empty-card">
           <p className="empty">You have not requested any documents yet.</p>

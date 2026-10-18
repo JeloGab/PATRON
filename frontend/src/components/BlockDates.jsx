@@ -1,6 +1,7 @@
 // Blocked dates: 'parish' closes the day for all, 'priest' for one. Saving warns.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Loading from './Loading.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { formatLongDate, formatWeekdayDate, isoOffset, todayISO } from '../lib/dates.js'
 import { messageFor } from '../lib/errors.js'
@@ -275,7 +276,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
         </div>
 
         {shown === null ? (
-          <p className="empty">Loading…</p>
+          <Loading label="Loading…" />
         ) : shown.length === 0 ? (
           <p className="empty">
             {isParishScope

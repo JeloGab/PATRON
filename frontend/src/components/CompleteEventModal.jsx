@@ -27,6 +27,7 @@ export default function CompleteEventModal({ event, participants, signatory, onC
   const signatoryBlocked = sacramental && signatory?.hasSignature === false
 
   const [registry, setRegistry] = useState({ bookNo: '', pageNo: '' })
+  const [officiant, setOfficiant] = useState('')
   const [details, setDetails] = useState(() =>
     Object.fromEntries(cleared.map((person) => [person.participantId, emptyDetail()])),
   )
@@ -55,6 +56,7 @@ export default function CompleteEventModal({ event, participants, signatory, onC
     if (sacramental) {
       body.bookNo = registry.bookNo.trim()
       body.pageNo = registry.pageNo.trim()
+      if (officiant.trim()) body.officiantName = officiant.trim()
 
       body.participants = cleared.map((person) => {
         const detail = details[person.participantId] ?? emptyDetail()
@@ -208,6 +210,30 @@ export default function CompleteEventModal({ event, participants, signatory, onC
                 Typed once for the whole ceremony. Each entry number is assigned by the system as
                 the next number in this register.
               </p>
+
+              {/* Optional, and left out of the request when blank so the server applies
+                  its own default. Confirmation is the case this exists for - its
+                  ordinary minister is the bishop, who is not a user of this system - but
+                  it is offered for every sacramental type, because a visiting priest at
+                  a wedding or a guest at a funeral is the same situation. */}
+              <label className="field field--full">
+                <span>Officiating minister</span>
+                <input
+                  value={officiant}
+                  onChange={(changed) => setOfficiant(changed.target.value)}
+                  placeholder={
+                    signatory?.fullName
+                      ? `Leave blank if ${signatory.fullName} officiated`
+                      : 'Leave blank if the assigned priest officiated'
+                  }
+                  maxLength={100}
+                />
+                <span className="form-hint">
+                  {event.sacramentType === 'confirmation'
+                    ? 'Confirmation is ordinarily given by the bishop — type his name here. He does not need an account, and the certificate is still signed by the parish priest, who certifies that it matches the register.'
+                    : 'Only if someone other than the assigned priest celebrated. The certificate is signed by the parish priest either way, as the one certifying the register entry.'}
+                </span>
+              </label>
 
               <h3 className="eyebrow">
                 {cleared.length} cleared participant{cleared.length === 1 ? '' : 's'}

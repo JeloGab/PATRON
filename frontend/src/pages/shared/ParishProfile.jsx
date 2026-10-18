@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
+import Loading from '../../components/Loading.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import StaffPhoto from '../../components/StaffPhoto.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -209,7 +210,7 @@ export default function ParishProfile() {
   if (!parish || !form) {
     return (
       <div className="page">
-        <p className="empty">Loading your parish…</p>
+        <Loading label="Loading your parish…" />
       </div>
     )
   }
@@ -240,135 +241,160 @@ export default function ParishProfile() {
       )}
 
       <div className="detail__grid">
-        {editing ? (
-          <form className="card form-card" onSubmit={save}>
-            <p className="eyebrow">Edit details</p>
-            <div className="form-grid">
-              <label className="field field--full">
-                <span>Parish name</span>
-                <input value={form.name} onChange={update('name')} />
-                <span className="form-hint">3 to 50 characters.</span>
-              </label>
-              <label className="field field--full">
-                <span>Address</span>
-                <input value={form.address} onChange={update('address')} />
-                <span className="form-hint">
-                  At least 5 characters. The directory derives the municipality from the last part
-                  of this address, so end it with the town and province.
-                </span>
-              </label>
-              <label className="field">
-                <span>Contact number</span>
-                <input
-                  value={form.contactNo}
-                  onChange={update('contactNo')}
-                  placeholder="09171234567"
-                />
-                <span className="form-hint">PH mobile only — a landline is refused.</span>
-              </label>
-              <label className="field">
-                <span>Email</span>
-                <input type="email" value={form.email} onChange={update('email')} />
-                <span className="form-hint">Optional. Clear it to remove it.</span>
-              </label>
-              <label className="field field--full">
-                <span>Facebook page ID</span>
-                <input value={form.facebookPageId} onChange={update('facebookPageId')} />
-                <span className="form-hint">
-                  Optional, and unvalidated. It is where announcements would be mirrored once the
-                  page sync is built.
-                </span>
-              </label>
+        {/* The left column is a stack of its own now, so Public details and Schedule read
+            as two cards down one side rather than one tall card beside three short ones.
+            It also lets Schedule finish roughly level with Registry at the foot of the
+            aside, instead of the page ending on a full-width band. */}
+        <div className="stack">
+          {editing ? (
+            <form className="card form-card" onSubmit={save}>
+              <p className="eyebrow">Edit details</p>
+              <div className="form-grid">
+                <label className="field field--full">
+                  <span>Parish name</span>
+                  <input value={form.name} onChange={update('name')} />
+                  <span className="form-hint">3 to 50 characters.</span>
+                </label>
+                <label className="field field--full">
+                  <span>Address</span>
+                  <input value={form.address} onChange={update('address')} />
+                  <span className="form-hint">
+                    At least 5 characters. The directory derives the municipality from the last part
+                    of this address, so end it with the town and province.
+                  </span>
+                </label>
+                <label className="field">
+                  <span>Contact number</span>
+                  <input
+                    value={form.contactNo}
+                    onChange={update('contactNo')}
+                    placeholder="09171234567"
+                  />
+                  <span className="form-hint">PH mobile only — a landline is refused.</span>
+                </label>
+                <label className="field">
+                  <span>Email</span>
+                  <input type="email" value={form.email} onChange={update('email')} />
+                  <span className="form-hint">Optional. Clear it to remove it.</span>
+                </label>
+                <label className="field field--full">
+                  <span>Facebook page ID</span>
+                  <input value={form.facebookPageId} onChange={update('facebookPageId')} />
+                  <span className="form-hint">
+                    Optional, and unvalidated. It is where announcements would be mirrored once the
+                    page sync is built.
+                  </span>
+                </label>
 
-              <h3 className="eyebrow field--full">Shown to the public</h3>
+                <h3 className="eyebrow field--full">Shown to the public</h3>
 
-              <label className="field field--full">
-                <span>Office hours</span>
-                <textarea
-                  rows={3}
-                  value={form.officeHours}
-                  onChange={update('officeHours')}
-                  maxLength={LIMITS.officeHours.max}
-                  placeholder={'Monday to Friday, 8:00 AM - 5:00 PM\nSaturday, 8:00 AM - 12:00 NN\nClosed Sunday'}
-                />
-                <span className="form-hint">
-                  Optional. One line each — the line breaks are kept exactly as you type them.
-                  Up to {LIMITS.officeHours.max} characters. Clear it to remove it.
-                </span>
-              </label>
+                <label className="field field--full">
+                  <span>Office hours</span>
+                  <textarea
+                    rows={3}
+                    value={form.officeHours}
+                    onChange={update('officeHours')}
+                    maxLength={LIMITS.officeHours.max}
+                    placeholder={'Monday to Friday, 8:00 AM - 5:00 PM\nSaturday, 8:00 AM - 12:00 NN\nClosed Sunday'}
+                  />
+                  <span className="form-hint">
+                    Optional. One line each — the line breaks are kept exactly as you type them.
+                    Up to {LIMITS.officeHours.max} characters. Clear it to remove it.
+                  </span>
+                </label>
 
-              <label className="field field--full">
-                <span>Mass schedule</span>
-                <textarea
-                  rows={5}
-                  value={form.massSchedule}
-                  onChange={update('massSchedule')}
-                  maxLength={LIMITS.massSchedule.max}
-                  placeholder={'Sunday, 6:00 / 8:00 / 10:00 AM and 5:00 PM\nWeekdays, 6:00 AM\nFirst Friday, 6:00 PM'}
-                />
-                <span className="form-hint">
-                  Optional, and typed however your parish writes it — first Fridays, novenas and
-                  anything else. Up to {LIMITS.massSchedule.max} characters.
-                </span>
-              </label>
-            </div>
+                <label className="field field--full">
+                  <span>Mass schedule</span>
+                  <textarea
+                    rows={5}
+                    value={form.massSchedule}
+                    onChange={update('massSchedule')}
+                    maxLength={LIMITS.massSchedule.max}
+                    placeholder={'Sunday, 6:00 / 8:00 / 10:00 AM and 5:00 PM\nWeekdays, 6:00 AM\nFirst Friday, 6:00 PM'}
+                  />
+                  <span className="form-hint">
+                    Optional, and typed however your parish writes it — first Fridays, novenas and
+                    anything else. Up to {LIMITS.massSchedule.max} characters.
+                  </span>
+                </label>
+              </div>
 
-            <div className="form-actions">
-              <p className="muted form-hint">
-                Only the fields you changed are sent. Nothing else about the parish is touched.
-              </p>
+              <div className="form-actions">
+                <p className="muted form-hint">
+                  Only the fields you changed are sent. Nothing else about the parish is touched.
+                </p>
+                <div className="form-actions__buttons">
+                  <button type="button" className="btn btn--ghost" onClick={cancel}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn--gold" disabled={pending}>
+                    {pending ? 'Saving…' : 'Save changes'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <section className="card">
+              <p className="eyebrow">Public details</p>
+              <dl className="facts">
+                <div>
+                  <dt>Parish name</dt>
+                  <dd>{parish.name}</dd>
+                </div>
+                <div>
+                  <dt>Address</dt>
+                  <dd>{parish.address}</dd>
+                </div>
+                <div>
+                  <dt>Municipality</dt>
+                  <dd>{municipalityFromAddress(parish.address) || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Contact number</dt>
+                  <dd>{parish.contactNo || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{parish.email || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Facebook page ID</dt>
+                  <dd>{parish.facebookPageId || 'Not set'}</dd>
+                </div>
+              </dl>
+              {/* The same right-aligned action row the edit form and every other card in
+                  the app uses, rather than a bare button hanging off the left margin. */}
               <div className="form-actions__buttons">
-                <button type="button" className="btn btn--ghost" onClick={cancel}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn--gold" disabled={pending}>
-                  {pending ? 'Saving…' : 'Save changes'}
+                <button type="button" className="btn btn--gold" onClick={() => setEditing(true)}>
+                  Edit details
                 </button>
               </div>
-            </div>
-          </form>
-        ) : (
-          <section className="card">
-            <p className="eyebrow">Public details</p>
-            <dl className="facts">
-              <div>
-                <dt>Parish name</dt>
-                <dd>{parish.name}</dd>
-              </div>
-              <div>
-                <dt>Address</dt>
-                <dd>{parish.address}</dd>
-              </div>
-              <div>
-                <dt>Municipality</dt>
-                <dd>{municipalityFromAddress(parish.address) || '—'}</dd>
-              </div>
-              <div>
-                <dt>Contact number</dt>
-                <dd>{parish.contactNo || '—'}</dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd>{parish.email || '—'}</dd>
-              </div>
-              <div>
-                <dt>Facebook page ID</dt>
-                <dd>{parish.facebookPageId || 'Not set'}</dd>
-              </div>
-              <div>
-                <dt>Office hours</dt>
-                <dd className="schedule-text">{parish.officeHours || 'Not set'}</dd>
-              </div>
-              <div>
-                <dt>Mass schedule</dt>
-                <dd className="schedule-text">{parish.massSchedule || 'Not set'}</dd>
-              </div>
-            </dl>
-            <button type="button" className="btn btn--gold" onClick={() => setEditing(true)}>
-              Edit details
-            </button>
-          </section>
-        )}
+            </section>
+          )}
+
+          {/* Office hours and the Mass schedule left the Public details list for a card
+              of their own: they are the page's only multi-line values, and a <dd> in a
+              two-column facts grid wrapped every line of them. facts--stacked keeps this
+              card one column at every width for the same reason. Office hours first, as
+              decided. Hidden while editing — the form above it holds both textareas, and
+              the saved value sitting directly beneath the field being changed reads as a
+              second, stale copy. */}
+          {!editing && (
+            <section className="card">
+              <p className="eyebrow">Schedule</p>
+              <dl className="facts facts--stacked">
+                <div>
+                  <dt>Office hours</dt>
+                  <dd className="schedule-text">{parish.officeHours || 'Not set'}</dd>
+                </div>
+                <div>
+                  <dt>Mass schedule</dt>
+                  <dd className="schedule-text">{parish.massSchedule || 'Not set'}</dd>
+                </div>
+              </dl>
+            </section>
+          )}
+        </div>
 
         <aside className="stack">
           <section className="card">

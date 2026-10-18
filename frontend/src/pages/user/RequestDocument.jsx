@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import Loading from '../../components/Loading.jsx'
 import { authed, call, isSessionError } from '../../lib/api.js'
 import {
   EARLIEST_SACRAMENT_YEAR,
@@ -80,7 +81,7 @@ export default function RequestDocument() {
   if (loading) {
     return (
       <div className="page">
-        <p className="empty">Loading the request form…</p>
+        <Loading label="Loading the request form…" />
       </div>
     )
   }

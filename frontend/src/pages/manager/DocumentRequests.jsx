@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ApplicationModal from '../../components/ApplicationModal.jsx'
+import Loading from '../../components/Loading.jsx'
+import Seg from '../../components/Seg.jsx'
 import { authed, call, isSessionError } from '../../lib/api.js'
 import {
   EARLIEST_SACRAMENT_YEAR,
@@ -288,7 +290,7 @@ export default function DocumentRequests() {
         </form>
       )}
 
-      <div className="seg" role="group" aria-label="Request status">
+      <Seg label="Request status">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -300,10 +302,10 @@ export default function DocumentRequests() {
             {STATUS_LABEL[tab]}
           </button>
         ))}
-      </div>
+      </Seg>
 
       {requests === null ? (
-        <p className="empty">Loading requests…</p>
+        <Loading label="Loading requests…" />
       ) : requests.length === 0 ? (
         <p className="empty">
           {status === 'pending'

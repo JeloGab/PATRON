@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getSession } from '../lib/session.js'
 import Avatar from './Avatar.jsx'
 import Logo from './Logo.jsx'
+import Tabs from './Tabs.jsx'
 
 const MANAGER_LINKS = [
   { to: '/manager', label: 'Dashboard', end: true },
@@ -66,7 +67,7 @@ function ManagerNav() {
       </div>
 
       <div className="topbar__tabs">
-        <nav className="tabs" aria-label="Parish manager">
+        <Tabs label="Parish manager">
           {MANAGER_LINKS.map((item) => {
             const current = isCurrent(item, pathname)
             return (
@@ -81,7 +82,7 @@ function ManagerNav() {
               </NavLink>
             )
           })}
-        </nav>
+        </Tabs>
       </div>
     </header>
   )
@@ -122,7 +123,7 @@ function PriestNav({ counts }) {
       </div>
 
       <div className="topbar__tabs">
-        <nav className="tabs" aria-label="Parish priest">
+        <Tabs label="Parish priest">
           {PRIEST_LINKS.map((item) => {
             const current = isCurrent(item, pathname)
             return (
@@ -138,7 +139,7 @@ function PriestNav({ counts }) {
               </NavLink>
             )
           })}
-        </nav>
+        </Tabs>
       </div>
     </header>
   )
@@ -204,7 +205,7 @@ function UserNav() {
       </div>
 
       <div className="topbar__tabs">
-        <nav className="tabs" aria-label="Parishioner">
+        <Tabs label="Parishioner">
           <NavLink to="/user" end className={`tabs__link ${onParishes ? 'is-active' : ''}`}>
             Parishes
           </NavLink>
@@ -216,7 +217,7 @@ function UserNav() {
           <NavLink to="/feed" className={`tabs__link ${onFeed ? 'is-active' : ''}`}>
             Announcements
           </NavLink>
-        </nav>
+        </Tabs>
       </div>
     </header>
   )

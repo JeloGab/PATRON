@@ -14,6 +14,7 @@ import {
 } from '../lib/documents.js'
 import { certificateFileName, downloadPdf } from '../lib/download.js'
 import { messageFor } from '../lib/errors.js'
+import Loading from './Loading.jsx'
 import Modal from './Modal.jsx'
 
 const OPEN_STATUSES = ['pending', 'verified']
@@ -278,7 +279,7 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
               </a>
             )
           ) : (
-            <p className="muted">Loading the ID…</p>
+            <Loading label="Loading the ID…" inline />
           )}
           <p className="form-hint">
             {request.idFileName}. Attached by the requestor as proof of the relationship they

@@ -89,8 +89,6 @@ export async function buildCertificatePdf({ certificate, signature = null, verif
     .text(certificate.verificationCode, 176, qrTop + 14, { characterSpacing: 2 })
   doc.font('Helvetica').fontSize(8).fillColor(MUTED).text(verifyUrl, 176, qrTop + 38, { width: 320 })
 
-  // fit, not width: a tall or wide drawing is scaled inside a fixed box and cannot
-  // push the name off the page. pdfkit takes a Buffer directly, as the QR above does.
   if (signature) {
     doc.image(signature, 176, qrTop + 48, { fit: [200, 34] })
   }

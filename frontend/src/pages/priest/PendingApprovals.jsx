@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import EventModal from '../../components/EventModal.jsx'
+import Loading from '../../components/Loading.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
+import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatWeekdayDate, isoOffset, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -101,7 +103,7 @@ export default function PendingApprovals() {
         </p>
       )}
 
-      <div className="seg" role="group" aria-label="Approval status">
+      <Seg label="Approval status">
         {FILTERS.map((item) => (
           <button
             key={item.id}
@@ -113,10 +115,10 @@ export default function PendingApprovals() {
             {item.label}
           </button>
         ))}
-      </div>
+      </Seg>
 
       {events === null ? (
-        <p className="empty">Loading your events…</p>
+        <Loading label="Loading your events…" />
       ) : rows.length === 0 ? (
         <p className="empty">
           {filter === 'pending'

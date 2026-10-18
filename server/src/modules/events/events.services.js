@@ -1,12 +1,12 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish, requireRegistryPart, optionalSubjectName, optionalPlaceOfBirth, optionalPastDate } from '../../lib/validators.js'
-import { findActivePriest } from '../parish/parish.queries.js'
+import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish, requireRegistryPart, optionalSubjectName, optionalPlaceOfBirth, optionalPastDate, requireOfficiant } from '../../lib/validators.js'
+import { findActivePriest, listActivePriests } from '../parish/parish.queries.js'
 import { mintVerificationCode } from '../../lib/verificationCode.js'
 import { buildSnapshot, renderCertificatePdf } from '../documents/documents.services.js'
 import { findEventCertificates, findEventCertificate, findCertificateSignature } from '../documents/documents.queries.js'
 import { roleFor, checkDates } from '../records/records.services.js'
-import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict } from './events.queries.js'
+import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, countPriestEventsInMonth } from './events.queries.js'
 import { findUnclearedParticipants } from '../participants/participants.queries.js'
 import {completeEventAndIssue} from './events.issuance.js'
 const MAX_WINDOW_DAYS = 92
@@ -306,12 +306,17 @@ export async function completeEvent(actor, eventId, body = {}) {
     : null
   const details = sacramental ? requireDetails(body.participants) : new Map()
 
+  const officiantName = sacramental && clean(body.officiantName)
+    ? requireOfficiant(body.officiantName)
+    : null
+
   for (let attempt = 1; attempt <= MAX_ISSUE_ATTEMPTS; attempt += 1) {
     try {
       const issued = await completeEventAndIssue(actor, {
         eventId: current.eventId,
         registry,
         details,
+        officiantName,
         planRecords,
         buildSnapshot,
         mintCode: mintVerificationCode,
@@ -346,4 +351,50 @@ export async function getEventCertificatePdf(actor, { eventId, certificateId }) 
 
   const signature = await findCertificateSignature(actor, certificate.certificateId)
   return renderCertificatePdf(certificate, signature)
+}
+
+export async function suggestPriest(actor, query) {
+  const slot = {
+    eventDate: requireUpcomingDate(query.eventDate, 'INVALID_EVENT_DATE'),
+    startTime: requireTime(query.startTime, 'INVALID_TIME_RANGE'),
+    endTime: requireTime(query.endTime, 'INVALID_TIME_RANGE'),
+    excludeEventId: clean(query.excludeEventId)
+      ? requireId(query.excludeEventId, 'INVALID_EVENT_ID')
+      : null,
+  }
+  requireSlotTimes(slot.startTime, slot.endTime)
+
+  const parishBlock = await findBlockConflict(actor, { ...slot, priestId: null })
+  if (parishBlock === 'parish') {
+    return { parishBlocked: true, suggestedPriestId: null, candidates: [] }
+  }
+
+  const priests = await listActivePriests(actor)
+  const counts = await countPriestEventsInMonth(actor, slot)
+  const candidates = []
+
+  for (const priest of priests) {
+    const blocked = await findBlockConflict(actor, { ...slot, priestId: priest.userId })
+    
+    const clash = blocked ? null : await findScheduleConflict(actor, { ...slot, priestId: priest.userId })
+
+    candidates.push({
+      userId: priest.userId,
+      fullName: priest.fullName,
+      hasSignature: priest.hasSignature,
+      monthCount: counts.get(priest.userId) ?? 0,
+      available: !blocked && !clash,
+      unavailableReason: blocked ? 'unavailable' : clash ? 'conflict' : null,
+    })
+  }
+
+  const suggestable = candidates
+    .filter((candidate) => candidate.available && candidate.hasSignature)
+    .sort((a, b) => a.monthCount - b.monthCount || a.fullName.localeCompare(b.fullName))
+
+  return {
+    parishBlocked: false,
+    suggestedPriestId: suggestable.length > 0 ? suggestable[0].userId : null,
+    candidates,
+  }
 }

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import EventModal from '../../components/EventModal.jsx'
 import EventTable from '../../components/EventTable.jsx'
+import Loading from '../../components/Loading.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
+import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatMonth, formatWeekdayDate, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -134,7 +136,7 @@ export default function MyCalendar() {
         </p>
       )}
 
-      <div className="seg" role="group" aria-label="Whose events">
+      <Seg label="Whose events">
         <button
           type="button"
           className={`seg__btn ${mineOnly ? 'is-active' : ''}`}
@@ -151,7 +153,7 @@ export default function MyCalendar() {
         >
           Whole parish
         </button>
-      </div>
+      </Seg>
 
       <section className="panel" aria-labelledby="calendar-heading">
         <div className="panel__head">
@@ -178,7 +180,7 @@ export default function MyCalendar() {
         </div>
 
         {events === null ? (
-          <p className="empty">Loading the month…</p>
+          <Loading label="Loading the month…" />
         ) : (
           <MonthGrid
             year={cursor.year}

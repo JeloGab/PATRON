@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
+import Loading from '../../components/Loading.jsx'
+import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
   STATUSES,
@@ -216,7 +218,7 @@ export default function Announcements() {
         </form>
       )}
 
-      <div className="seg" role="group" aria-label="Announcement status">
+      <Seg label="Announcement status">
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -232,10 +234,10 @@ export default function Announcements() {
             {announcements && counts[tab] > 0 ? ` (${counts[tab]})` : ''}
           </button>
         ))}
-      </div>
+      </Seg>
 
       {announcements === null ? (
-        <p className="empty">Loading announcements…</p>
+        <Loading label="Loading announcements…" />
       ) : rows.length === 0 ? (
         <p className="empty">No {STATUS_LABEL[status].toLowerCase()} announcement.</p>
       ) : (

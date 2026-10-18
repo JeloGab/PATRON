@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import Loading from '../../components/Loading.jsx'
 import Logo from '../../components/Logo.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import SignaturePad from '../../components/SignaturePad.jsx'
@@ -50,10 +51,6 @@ export default function Account() {
     setSignatureState('present')
   }, [])
 
-  // Unlike the signature, every role may hold a photo, so this runs for everyone.
-  // 'none' covers both "no photo on file" and "these routes are not deployed yet",
-  // because IMAGE_NOT_FOUND and a 404 from an absent route are indistinguishable here
-  // — and both mean the same thing to the page: show the empty state.
   const loadPhoto = useCallback(async () => {
     const r = await authed({ path: '/api/auth/photo', as: 'blob' })
     if (!r.ok) {
@@ -302,7 +299,7 @@ export default function Account() {
           {notice && <p className="notice">{notice}</p>}
 
           {!me && !error ? (
-            <p className="empty">Loading your account…</p>
+            <Loading label="Loading your account…" />
           ) : (
             <dl className="facts">
               <div>
@@ -340,7 +337,7 @@ export default function Account() {
           </p>
 
           {photoState === 'loading' ? (
-            <p className="empty">Loading your photo…</p>
+            <Loading label="Loading your photo…" />
           ) : photoState === 'present' ? (
             <div className="account-photo">
               <img className="account-photo__img" src={photoUrl} alt="Your photo" />
@@ -385,7 +382,7 @@ export default function Account() {
               </p>
 
               {signatureState === 'loading' ? (
-                <p className="empty">Loading your signature…</p>
+                <Loading label="Loading your signature…" />
               ) : signatureState === 'present' ? (
                 <>
                   <img className="signature__preview" src={signatureUrl} alt="Your signature" />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
+import Seg from '../../components/Seg.jsx'
 import { call } from '../../lib/api.js'
 import { clearEmailConfirmed, peekEmailConfirmed } from '../../lib/authFragment.js'
 import { getSession, landingFor, setSession } from '../../lib/session.js'
@@ -128,7 +129,7 @@ export default function Login() {
           <p className="eyebrow">Account</p>
           <h1>Sign in</h1>
 
-          <div className="seg" role="group" aria-label="Account type">
+          <Seg label="Account type">
             {Object.values(MODES).map((item) => (
               <button
                 key={item.key}
@@ -140,7 +141,7 @@ export default function Login() {
                 {item.label}
               </button>
             ))}
-          </div>
+          </Seg>
 
           {confirmed && !error && (
             <p className="notice">

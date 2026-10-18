@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Loading from '../../components/Loading.jsx'
 import StaffProvisionModal from '../../components/StaffProvisionModal.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
@@ -145,7 +146,7 @@ export default function Managers() {
       </div>
 
       {loading && managers.length === 0 ? (
-        <p className="empty">Loading managers…</p>
+        <Loading label="Loading managers…" />
       ) : managers.length === 0 ? (
         <p className="empty">
           No managers yet. Provision one so the parish office can encode records and process

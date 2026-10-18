@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
+import Loading from '../../components/Loading.jsx'
 import PriestPhoto from '../../components/PriestPhoto.jsx'
 import { BASE, call } from '../../lib/api.js'
 import { formatLongDate } from '../../lib/dates.js'
@@ -46,7 +47,7 @@ export default function ChurchDetail() {
   if (loading) {
     return (
       <div className="page">
-        <p className="empty">Loading parish…</p>
+        <Loading label="Loading parish…" />
       </div>
     )
   }
@@ -93,49 +94,65 @@ export default function ChurchDetail() {
         </ChurchMedia>
 
         <div className="detail__grid">
-          <section className="card">
-            <p className="eyebrow">Parish office</p>
-            <dl className="facts">
-              <div>
-                <dt>Address</dt>
-                <dd>{parish.address}</dd>
-              </div>
-              <div>
-                <dt>Contact number</dt>
-                <dd>
-                  {parish.contactNo ? (
-                    <a href={`tel:${parish.contactNo}`}>{parish.contactNo}</a>
-                  ) : (
-                    <span className="muted">Not listed</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd>
-                  {parish.email ? (
-                    <a href={`mailto:${parish.email}`}>{parish.email}</a>
-                  ) : (
-                    <span className="muted">Not listed</span>
-                  )}
-                </dd>
-              </div>
-              {/* Both are nullable and each renders only when present, so a parish that
-                  has typed neither looks exactly as this page does today. */}
-              {parish.officeHours && (
+          {/* A stack, so Schedule sits under Parish office down the left side and finishes
+              level with the aside, matching the staff profile. */}
+          <div className="stack">
+            <section className="card">
+              <p className="eyebrow">Parish office</p>
+              <dl className="facts">
                 <div>
-                  <dt>Office hours</dt>
-                  <dd className="schedule-text">{parish.officeHours}</dd>
+                  <dt>Address</dt>
+                  <dd>{parish.address}</dd>
                 </div>
-              )}
-              {parish.massSchedule && (
                 <div>
-                  <dt>Mass schedule</dt>
-                  <dd className="schedule-text">{parish.massSchedule}</dd>
+                  <dt>Contact number</dt>
+                  <dd>
+                    {parish.contactNo ? (
+                      <a href={`tel:${parish.contactNo}`}>{parish.contactNo}</a>
+                    ) : (
+                      <span className="muted">Not listed</span>
+                    )}
+                  </dd>
                 </div>
-              )}
-            </dl>
-          </section>
+                <div>
+                  <dt>Email</dt>
+                  <dd>
+                    {parish.email ? (
+                      <a href={`mailto:${parish.email}`}>{parish.email}</a>
+                    ) : (
+                      <span className="muted">Not listed</span>
+                    )}
+                  </dd>
+                </div>
+                {/* Office hours and the Mass schedule left this list for the Schedule card
+                    directly below, matching the staff profile. */}
+              </dl>
+            </section>
+
+            {/* Both nullable, so the card appears only when the parish has typed at least
+                one of them and each row renders only when present — a parish that has
+                typed neither sees this page exactly as it was. facts--stacked keeps the
+                card one column, because these are the page's only multi-line values. */}
+            {(parish.officeHours || parish.massSchedule) && (
+              <section className="card">
+                <p className="eyebrow">Schedule</p>
+                <dl className="facts facts--stacked">
+                  {parish.officeHours && (
+                    <div>
+                      <dt>Office hours</dt>
+                      <dd className="schedule-text">{parish.officeHours}</dd>
+                    </div>
+                  )}
+                  {parish.massSchedule && (
+                    <div>
+                      <dt>Mass schedule</dt>
+                      <dd className="schedule-text">{parish.massSchedule}</dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+            )}
+          </div>
 
           <aside className="stack">
             <section className="card cta-card">

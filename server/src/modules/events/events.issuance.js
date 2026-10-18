@@ -80,7 +80,7 @@ async function lastEntryNumber(client, recordType) {
 
 export async function completeEventAndIssue(
   actor,
-  { eventId, registry, details, planRecords, buildSnapshot, mintCode }
+  { eventId, registry, details, officiantName, planRecords, buildSnapshot, mintCode }
 ) {
   return withActor(actor, async (client) => {
     try {
@@ -104,9 +104,7 @@ export async function completeEventAndIssue(
         recordType,
         priestId: event.assigned_priest_id,
       })
-      // The event update above has already run in this transaction, so throwing here
-      // rolls it back: the event stays approved and nothing is written. The manager
-      // completes again once the priest has drawn his signature.
+      
       if (!context.signatory_signature) throw new AppError('SIGNATURE_REQUIRED', 409)
 
       const roster = await selectRoster(client, eventId)
@@ -114,7 +112,7 @@ export async function completeEventAndIssue(
       const { drafts, warnings } = planRecords({
         recordType,
         eventDate: event.event_date,
-        officiantName: context.signatory_name,
+        officiantName: officiantName ?? context.signatory_name,
         registry,
         details,
         roster,
@@ -122,7 +120,11 @@ export async function completeEventAndIssue(
 
       if (context.signatory_status !== 'active') {
         warnings.push(
-          `${context.signatory_name} is no longer active — recorded as officiant and signatory anyway`
+          // The two roles can now differ, so the warning must not claim he was recorded
+          // as the officiant when someone else was named.
+          officiantName
+            ? `${context.signatory_name} is no longer active — recorded as signatory anyway`
+            : `${context.signatory_name} is no longer active — recorded as officiant and signatory anyway`
         )
       }
       if (drafts.length === 0) return { records: 0, certificates: 0, warnings }

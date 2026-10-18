@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
+import Loading from '../../components/Loading.jsx'
 import { call } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
 import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
@@ -75,7 +76,7 @@ export default function ParishDirectory() {
       </div>
 
       {parishes === null ? (
-        <p className="empty">Loading parishes…</p>
+        <Loading label="Loading parishes…" />
       ) : list.length === 0 ? (
         <p className="empty">
           {parishes.length === 0

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import CompleteEventModal from '../../components/CompleteEventModal.jsx'
 import EventCertificates from '../../components/EventCertificates.jsx'
+import Loading from '../../components/Loading.jsx'
 import RequirementChecklist from '../../components/RequirementChecklist.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatLongDate, isoOffset, todayISO } from '../../lib/dates.js'
@@ -398,7 +399,7 @@ export default function EventRoster() {
             )}
 
             {participants === null ? (
-              <p className="empty">Loading the roster…</p>
+              <Loading label="Loading the roster…" />
             ) : participants.length === 0 ? (
               <p className="empty">No participant on this roster yet.</p>
             ) : (

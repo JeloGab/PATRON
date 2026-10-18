@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import PriestSuggestion from '../../components/PriestSuggestion.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -201,6 +202,21 @@ export default function CreateEvent() {
             <span>End *</span>
             <input type="time" value={form.endTime} onChange={update('endTime')} />
           </label>
+
+          {/* Sacramental only, by decision: a general or seminar event may have no priest
+              at all, so a suggestion there would nudge toward assigning one. field--full
+              so the sentence is not squeezed into one column of the form grid. */}
+          {sacramental && (
+            <div className="field field--full">
+              <PriestSuggestion
+                eventDate={form.eventDate}
+                startTime={form.startTime}
+                endTime={form.endTime}
+                selectedId={form.assignedPriestId}
+                onPick={(userId) => setForm((current) => ({ ...current, assignedPriestId: userId }))}
+              />
+            </div>
+          )}
 
           <label className="field">
             <span>Assigned priest {sacramental ? '*' : ''}</span>
