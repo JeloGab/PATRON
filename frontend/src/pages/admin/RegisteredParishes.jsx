@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
 import Loading from '../../components/Loading.jsx'
+import Modal from '../../components/Modal.jsx'
 import RegisterParishModal from '../../components/RegisterParishModal.jsx'
 import StaffProvisionModal from '../../components/StaffProvisionModal.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -230,9 +231,7 @@ export default function RegisteredParishes() {
                 <button
                   type="button"
                   className="parish-card admin-parish-card parish-card--button"
-                  onClick={() =>
-                    setSelectedId(selectedId === parish.parishId ? null : parish.parishId)
-                  }
+                  onClick={() => setSelectedId(parish.parishId)}
                 >
                   <ChurchMedia
                     id={parish.parishId}
@@ -273,17 +272,79 @@ export default function RegisteredParishes() {
         </ul>
       )}
 
-      {selected && (
-        <section className="panel panel--spaced" aria-labelledby="parish-detail-heading">
-          <div className="panel__head">
-            <div>
-              <h2 id="parish-detail-heading">{selected.name}</h2>
-              <p className="muted panel__note">
-                {selected.address}
-                {selected.email ? ` · ${selected.email}` : ''}
+      {/* The priest list was a panel below the grid, which pushed the parish you had just
+          clicked off the top of the screen on a long registry. A modal keeps the choice
+          and its consequence in one place. Modal supplies the heading, the × and Escape,
+          so the old panel head and its Close button are gone. */}
+      <Modal title={selected?.name ?? ''} open={Boolean(selected)} onClose={() => setSelectedId(null)}>
+        {selected && (
+          <>
+            <p className="muted modal__meta">
+              {selected.address}
+              {selected.email ? ` · ${selected.email}` : ''}
+            </p>
+
+            {selected.status !== 'active' && (
+              <p className="notice">
+                This parish is deactivated, so staff cannot be provisioned into it — the server
+                answers PARISH_INACTIVE.
               </p>
-            </div>
-            <div className="panel__actions">
+            )}
+
+            {selectedPriests.length === 0 ? (
+              <p className="empty">
+                No priests yet. A parish with no priest cannot do anything, since only priests
+                provision managers.
+              </p>
+            ) : (
+              <ul className="priest-list">
+                {selectedPriests.map((priest) => (
+                  <li key={priest.userId} className="priest-list__row">
+                    <div>
+                      <strong>{priest.fullName}</strong>
+                      <p className="muted">
+                        <span className="mono">{priest.username}</span>
+                        {priest.mustChangePassword ? ' · temporary password not yet changed' : ''}
+                      </p>
+                    </div>
+                    <div className="form-actions__buttons">
+                      <StatusPill status={priest.status} />
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => priestAction(priest, 'reset-password')}
+                        disabled={busyUserId === priest.userId}
+                      >
+                        Reset password
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--ghost priest-list__remove"
+                        onClick={() =>
+                          priestAction(
+                            priest,
+                            priest.status === 'active' ? 'deactivate' : 'reactivate',
+                          )
+                        }
+                        disabled={busyUserId === priest.userId}
+                      >
+                        {priest.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <p className="form-hint muted">
+              Accounts are never deleted — deactivating preserves the audit trail, so past
+              approvals keep their signatory.
+            </p>
+
+            {/* Opens a second modal over this one. Modal's stack keeps Escape and the scroll
+                lock correct; this modal stays open underneath, so the new priest is already
+                in the list when the provisioning one closes. */}
+            <div className="form-actions__buttons">
               <button
                 type="button"
                 className="btn btn--gold"
@@ -292,69 +353,10 @@ export default function RegisteredParishes() {
               >
                 Provision priest
               </button>
-              <button type="button" className="btn btn--ghost" onClick={() => setSelectedId(null)}>
-                Close
-              </button>
             </div>
-          </div>
-
-          {selected.status !== 'active' && (
-            <p className="notice">
-              This parish is deactivated, so staff cannot be provisioned into it — the server
-              answers PARISH_INACTIVE.
-            </p>
-          )}
-
-          {selectedPriests.length === 0 ? (
-            <p className="empty">
-              No priests yet. A parish with no priest cannot do anything, since only priests
-              provision managers.
-            </p>
-          ) : (
-            <ul className="priest-list">
-              {selectedPriests.map((priest) => (
-                <li key={priest.userId} className="priest-list__row">
-                  <div>
-                    <strong>{priest.fullName}</strong>
-                    <p className="muted">
-                      <span className="mono">{priest.username}</span>
-                      {priest.mustChangePassword ? ' · temporary password not yet changed' : ''}
-                    </p>
-                  </div>
-                  <div className="form-actions__buttons">
-                    <StatusPill status={priest.status} />
-                    <button
-                      type="button"
-                      className="btn btn--ghost"
-                      onClick={() => priestAction(priest, 'reset-password')}
-                      disabled={busyUserId === priest.userId}
-                    >
-                      Reset password
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--ghost priest-list__remove"
-                      onClick={() =>
-                        priestAction(
-                          priest,
-                          priest.status === 'active' ? 'deactivate' : 'reactivate',
-                        )
-                      }
-                      disabled={busyUserId === priest.userId}
-                    >
-                      {priest.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="form-hint muted">
-            Accounts are never deleted — deactivating preserves the audit trail, so past approvals
-            keep their signatory.
-          </p>
-        </section>
-      )}
+          </>
+        )}
+      </Modal>
 
       <RegisterParishModal
         open={registerOpen}
