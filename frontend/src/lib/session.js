@@ -25,9 +25,6 @@ export function setSession({ token, user }) {
     role: user.role,
     parishId: user.parishId ?? null,
     mustChangePassword: Boolean(user.mustChangePassword),
-    // Only /api/auth/me reports this, so it is false after a login that did not and is
-    // corrected the first time the account page or a layout reads /me. False means the
-    // top bar shows the initial, which is the empty state anyway — never a broken image.
     hasPhoto: Boolean(user.hasPhoto),
   }
   try {

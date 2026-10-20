@@ -1,3 +1,5 @@
+// The hook behind the sliding pill: measures the active item and moves the thumb.
+
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 
 export default function useSlidingThumb() {

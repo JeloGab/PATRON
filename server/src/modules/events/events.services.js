@@ -6,7 +6,7 @@ import { mintVerificationCode } from '../../lib/verificationCode.js'
 import { buildSnapshot, renderCertificatePdf } from '../documents/documents.services.js'
 import { findEventCertificates, findEventCertificate, findCertificateSignature } from '../documents/documents.queries.js'
 import { roleFor, checkDates } from '../records/records.services.js'
-import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, countPriestEventsInMonth } from './events.queries.js'
+import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, countPriestEventsInMonth, findCalendarEvents, findReservedDates, findParishBlockDates } from './events.queries.js'
 import { findUnclearedParticipants } from '../participants/participants.queries.js'
 import {completeEventAndIssue} from './events.issuance.js'
 const MAX_WINDOW_DAYS = 92
@@ -397,4 +397,21 @@ export async function suggestPriest(actor, query) {
     suggestedPriestId: suggestable.length > 0 ? suggestable[0].userId : null,
     candidates,
   }
+}
+
+export async function getParishCalendar(query) {
+  const parishId = requireId(query.parishId, 'INVALID_PARISH_ID')
+  const from = requireIsoDate(query.from, 'INVALID_DATE_RANGE')
+  const to = requireIsoDate(query.to, 'INVALID_DATE_RANGE')
+  if (to < from) throw new AppError('INVALID_DATE_RANGE', 400)
+  if (spanInDays(from, to) > MAX_WINDOW_DAYS) throw new AppError('INVALID_DATE_RANGE', 400)
+
+  
+  const [events, reservedDates, blockedDates] = await Promise.all([
+    findCalendarEvents({ parishId, from, to }),
+    findReservedDates({ parishId, from, to }),
+    findParishBlockDates({ parishId, from, to }),
+  ])
+
+  return { events, reservedDates, blockedDates }
 }

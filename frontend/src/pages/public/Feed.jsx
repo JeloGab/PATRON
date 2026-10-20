@@ -1,5 +1,4 @@
-// The public announcement feed: GET /api/feed, no account, approved announcements from
-// every parish. Its images are public bytes, so they are ordinary <img> elements.
+// The public announcement feed: GET /api/feed, approved announcements, every parish.
 
 import { useCallback, useEffect, useState } from 'react'
 import Loading from '../../components/Loading.jsx'
@@ -29,13 +28,6 @@ export default function Feed() {
     load()
   }, [load])
 
-  // No shell, no TopNav, no footer of its own: this page renders inside UserLayout, the
-  // same layout /user and /user/requests render inside. That is deliberate and it is
-  // what makes the nav's sliding pill work — a page that built its own TopNav would
-  // unmount the nav on the way in and mount a fresh one, and a brand-new pill has
-  // nowhere to travel from. UserNav already carries the /feed tab, its own active state,
-  // and the signed-out case: it shows Parishes + Announcements and a Sign in button, and
-  // adds My requests, the avatar and Sign out once there is a session.
   return (
     <div className="page">
       <header className="page__hero">

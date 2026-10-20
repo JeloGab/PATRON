@@ -1,3 +1,5 @@
+// The manager shell: top bar plus an <Outlet /> for the office routes.
+
 import { Outlet } from 'react-router-dom'
 import TopNav from '../components/TopNav.jsx'
 

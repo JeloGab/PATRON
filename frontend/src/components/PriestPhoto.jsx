@@ -1,9 +1,4 @@
-// A priest's photograph from GET /api/parishes/:parishId/priests/:userId/photo, or his
-// initial when he has none — or when that route does not exist yet.
-//
-// Three ways this falls back to the letter, all of them normal: the parish read said
-// hasPhoto is false, the route is not deployed, or the photo was cleared between that
-// read and this request. onError covers the last two, so the circle is never empty.
+// A priest's public photograph, or his initial when he has none.
 
 import { useState } from 'react'
 import { BASE } from '../lib/api.js'

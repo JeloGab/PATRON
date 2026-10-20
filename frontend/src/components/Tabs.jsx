@@ -1,5 +1,4 @@
-// The nav tab strip. Exists only to own the sliding pill — the links themselves stay
-// where they are, in TopNav, because each role's nav builds them differently.
+// The nav tab strip. Exists only to own the sliding pill; the links live in TopNav.
 
 import useSlidingThumb from '../lib/useSlidingThumb.js'
 

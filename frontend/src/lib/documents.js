@@ -48,8 +48,6 @@ export const EARLIEST_SACRAMENT_YEAR = 1800
 export const LIMITS = {
   subjectName: { min: 2, max: 100 },
   purpose: { min: 3, max: 200 },
-  // Mirrors LIMITS.invoiceNo in server/src/lib/validators.js. Required of a
-  // parishioner, who pays before filing; a walk-in's is always blank.
   invoiceNo: { min: 3, max: 40 },
 }
 

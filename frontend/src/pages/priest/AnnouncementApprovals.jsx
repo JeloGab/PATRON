@@ -1,5 +1,4 @@
-// The priest's announcements: approve or reject what the office wrote, or post his own
-// — which is born approved, and therefore cannot carry an image.
+// The priest's announcements: approve or reject the office's, or post his own.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'

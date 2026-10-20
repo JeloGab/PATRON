@@ -17,6 +17,7 @@ import documentTypes from './modules/documents/documents.public.router.js'
 import participants from './modules/participants/participants.router.js'
 import verification from './modules/verification/verification.public.router.js'
 import announcements from './modules/announcements/announcements.router.js'
+import calendar from './modules/events/events.calendar.router.js'
 import feed from './modules/announcements/announcements.public.router.js'
 import { notFound } from './middleware/notFound.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -37,6 +38,7 @@ app.use('/api/parishes', parishPublic)
 app.use('/api/records', records)
 app.use('/api/blocked-dates', blocks)
 app.use('/api/events', events)
+app.use('/api/calendar', calendar)
 app.use('/api/documents', documents)
 app.use('/api/requests', documentRequests)
 app.use('/api/document-types', documentTypes)

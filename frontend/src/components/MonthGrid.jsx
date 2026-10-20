@@ -16,6 +16,8 @@ export default function MonthGrid({
   eventsByDate,
   parishBlocksByDate,
   priestBlocksByDate,
+  reservedDates,
+  blockLabel = 'Parish blocked',
   legend = true,
 }) {
   const cells = buildMonthGrid(year, month)
@@ -45,6 +47,7 @@ export default function MonthGrid({
           const items = eventsByDate?.get(iso) ?? []
           const parishBlocks = parishBlocksByDate?.get(iso) ?? []
           const priestBlocks = priestBlocksByDate?.get(iso) ?? []
+          const reserved = reservedDates?.has(iso) ?? false
           const extra = Math.max(0, items.length - MAX_CHIPS)
 
           return (
@@ -61,7 +64,7 @@ export default function MonthGrid({
                 .join(' ')}
               role="gridcell"
             >
-              <button type="button" className="cal__date" onClick={() => onSelectDate(iso)}>
+              <button type="button" className="cal__date" onClick={() => onSelectDate?.(iso)}>
                 {date.getDate()}
               </button>
 
@@ -73,7 +76,7 @@ export default function MonthGrid({
                     selectedEventId === event.eventId ? 'is-selected' : ''
                   }`}
                   onClick={() => {
-                    onSelectDate(iso)
+                    onSelectDate?.(iso)
                     onSelectEvent?.(event)
                   }}
                 >
@@ -81,9 +84,14 @@ export default function MonthGrid({
                 </button>
               ))}
 
+              {/* The parishioner calendar's only word for a sacramental day. No
+                  title, no rite, no time — the view it comes from selects none of
+                  them. Staff calendars never pass reservedDates. */}
+              {reserved && <span className="cal__reserved">Reserved</span>}
+
               {parishBlocks.slice(0, 1).map((block) => (
                 <span key={block.blockedDateId} className="cal__block">
-                  {block.reason || 'Parish blocked'}
+                  {block.reason || blockLabel}
                 </span>
               ))}
               {priestBlocks.slice(0, 1).map((block) => (

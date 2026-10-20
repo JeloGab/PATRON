@@ -1,3 +1,5 @@
+// The PATRON wordmark, in its light, compact and tagged variants.
+
 export default function Logo({ light = false, compact = false, tag = 'Parish system' }) {
   return (
     <span className={`brand ${light ? 'brand--light' : ''} ${compact ? 'brand--compact' : ''}`}>

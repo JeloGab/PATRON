@@ -1,21 +1,38 @@
-// One parish publicly, plus its approved announcements.
+// One parish for a signed-in parishioner: office details, calendar, clergy and
+// approved announcements.
+//
+// The page sits behind RequireRole role="parishioner" (App.jsx), which is why the
+// calendar can live here with no guard of its own — every visitor already holds a
+// parishioner token. The parish and announcement routes it calls are public; the
+// calendar route is not.
 
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
 import Loading from '../../components/Loading.jsx'
+import MonthGrid from '../../components/MonthGrid.jsx'
 import PriestPhoto from '../../components/PriestPhoto.jsx'
-import { BASE, call } from '../../lib/api.js'
-import { formatLongDate } from '../../lib/dates.js'
+import { BASE, authed, call, isSessionError } from '../../lib/api.js'
+import { formatLongDate, formatMonth, formatWeekdayDate, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
 import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
+import { eventTypeLabel, groupByDate, monthWindow, timeRange } from '../../lib/schedule.js'
+import { clearSession } from '../../lib/session.js'
 
 export default function ChurchDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const now = new Date()
   const [parish, setParish] = useState(null)
   const [announcements, setAnnouncements] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+
+  // `month` is 0-indexed, because MonthGrid compares it against Date#getMonth().
+  const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() })
+  const [selectedDate, setSelectedDate] = useState(todayISO())
+  const [calendar, setCalendar] = useState(null)
+  const [calendarError, setCalendarError] = useState('')
 
   useEffect(() => {
     let live = true
@@ -44,6 +61,64 @@ export default function ChurchDetail() {
     }
   }, [id])
 
+  // The calendar is fetched on its own, not appended to the effect above, for two
+  // reasons: a slow month must not hold up the parish name, and month navigation
+  // refetches — reusing the page-level `loading` would blank the whole page on every
+  // flip. `monthWindow` returns the span of the rendered grid, not the calendar
+  // month, so the leading and trailing days of adjacent months are populated too.
+  const { from, to } = monthWindow(cursor.year, cursor.month)
+
+  useEffect(() => {
+    let live = true
+
+    async function loadCalendar() {
+      setCalendar(null)
+      setCalendarError('')
+
+      const r = await authed({
+        path: `/api/calendar?parishId=${encodeURIComponent(id)}&from=${from}&to=${to}`,
+      })
+      if (!live) return
+
+      // Only NO_TOKEN, INVALID_TOKEN and SESSION_REVOKED end a session — not every
+      // 401. This is the one authenticated call on the page, so it is the only one
+      // that can strand a signed-out parishioner here.
+      if (isSessionError(r)) {
+        clearSession()
+        navigate('/login', { replace: true })
+        return
+      }
+
+      if (!r.ok) {
+        setCalendarError(messageFor(r))
+        setCalendar({ events: [], reservedDates: [], blockedDates: [] })
+        return
+      }
+      setCalendar(r.json)
+    }
+
+    loadCalendar()
+    return () => {
+      live = false
+    }
+  }, [id, from, to, navigate])
+
+  const eventsByDate = useMemo(() => groupByDate(calendar?.events ?? [], 'eventDate'), [calendar])
+  const parishBlocksByDate = useMemo(
+    () => groupByDate(calendar?.blockedDates ?? [], 'date'),
+    [calendar]
+  )
+  const reservedDates = useMemo(() => new Set(calendar?.reservedDates ?? []), [calendar])
+
+  const dayEvents = eventsByDate.get(selectedDate) ?? []
+  const dayBlocks = parishBlocksByDate.get(selectedDate) ?? []
+  const dayReserved = reservedDates.has(selectedDate)
+
+  function shiftMonth(amount) {
+    const next = new Date(cursor.year, cursor.month + amount, 1)
+    setCursor({ year: next.getFullYear(), month: next.getMonth() })
+  }
+
   if (loading) {
     return (
       <div className="page">
@@ -68,8 +143,6 @@ export default function ChurchDetail() {
   const accent = accentFor(parish.parishId)
   const municipality = municipalityFromAddress(parish.address)
 
-  // Absent until the clergy views exist; empty for a parish with no active priest.
-  // Both render nothing rather than an empty card.
   const priests = Array.isArray(parish.priests) ? parish.priests : []
 
   return (
@@ -94,8 +167,6 @@ export default function ChurchDetail() {
         </ChurchMedia>
 
         <div className="detail__grid">
-          {/* A stack, so Schedule sits under Parish office down the left side and finishes
-              level with the aside, matching the staff profile. */}
           <div className="stack">
             <section className="card">
               <p className="eyebrow">Parish office</p>
@@ -124,15 +195,9 @@ export default function ChurchDetail() {
                     )}
                   </dd>
                 </div>
-                {/* Office hours and the Mass schedule left this list for the Schedule card
-                    directly below, matching the staff profile. */}
               </dl>
             </section>
 
-            {/* Both nullable, so the card appears only when the parish has typed at least
-                one of them and each row renders only when present — a parish that has
-                typed neither sees this page exactly as it was. facts--stacked keeps the
-                card one column, because these are the page's only multi-line values. */}
             {(parish.officeHours || parish.massSchedule) && (
               <section className="card">
                 <p className="eyebrow">Schedule</p>
@@ -183,6 +248,104 @@ export default function ChurchDetail() {
             </section>
           </aside>
         </div>
+
+        <section className="card" aria-labelledby="parish-calendar-heading">
+          <div className="panel__head">
+            <div>
+              <p className="eyebrow">Parish calendar</p>
+              <h2 id="parish-calendar-heading">{formatMonth(cursor.year, cursor.month)}</h2>
+            </div>
+            <div className="panel__actions">
+              <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(-1)}>
+                Previous
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={() => {
+                  const current = new Date()
+                  setCursor({ year: current.getFullYear(), month: current.getMonth() })
+                  setSelectedDate(todayISO())
+                }}
+              >
+                Today
+              </button>
+              <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
+                Next
+              </button>
+            </div>
+          </div>
+
+          <p className="muted">
+            Parish activities you can take part in, and the days the office is closed. A day
+            marked <strong>Reserved</strong> is already taken by a sacrament — those are
+            private, so no details are shown.
+          </p>
+
+          {/* legend={false} on the grid below: the staff legend names Sacramental as a
+              titled chip, which is exactly what must not appear here. */}
+          <div className="cal-legend">
+            <span className="cal-legend__item cal-legend__item--general">General</span>
+            <span className="cal-legend__item cal-legend__item--seminar">Seminar</span>
+            <span className="cal-legend__item cal-legend__item--reserved">Reserved</span>
+            <span className="cal-legend__item cal-legend__item--blocked">Unavailable</span>
+          </div>
+
+          {calendarError && <p className="empty">{calendarError}</p>}
+
+          {calendar === null ? (
+            <Loading label="Loading the month…" />
+          ) : (
+            <MonthGrid
+              year={cursor.year}
+              month={cursor.month}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              eventsByDate={eventsByDate}
+              parishBlocksByDate={parishBlocksByDate}
+              reservedDates={reservedDates}
+              blockLabel="Unavailable"
+              legend={false}
+            />
+          )}
+
+          <div className="day-detail">
+            <h3>{formatWeekdayDate(selectedDate)}</h3>
+            {dayEvents.length === 0 && dayBlocks.length === 0 && !dayReserved ? (
+              <p className="muted">Nothing on this day.</p>
+            ) : (
+              <ul className="day-detail__list">
+                {dayBlocks.map((block) => (
+                  <li key={block.blockedDateId}>
+                    <strong>{block.reason || 'Unavailable'}</strong>
+                    <span>
+                      {block.startTime
+                        ? `Office closed ${timeRange(block.startTime, block.endTime)}`
+                        : 'Office closed all day'}
+                    </span>
+                  </li>
+                ))}
+
+                {dayReserved && (
+                  <li>
+                    <strong>Reserved</strong>
+                    <span>A sacrament is scheduled on this day. Details are private.</span>
+                  </li>
+                )}
+
+                {dayEvents.map((event) => (
+                  <li key={event.eventId}>
+                    <strong>{event.title}</strong>
+                    <span>
+                      {eventTypeLabel(event)} · {timeRange(event.startTime, event.endTime)}
+                    </span>
+                    {event.description && <span>{event.description}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
 
         {priests.length > 0 && (
           <section className="card">

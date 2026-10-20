@@ -193,8 +193,6 @@ export default function Account() {
     setNotice('Your signature was removed. Certificates cannot be issued until you draw a new one.')
   }
 
-  // JPEG and PNG only, 1 MB, enforced again by the server from the magic bytes. The
-  // checks here are for a decent message, not for safety.
   async function savePhoto(files) {
     const file = files[0]
     if (!file) return
@@ -232,8 +230,6 @@ export default function Account() {
       return
     }
 
-    // The top bar reads hasPhoto from the session, so it would keep showing the letter
-    // until the next /api/auth/me without this.
     patchSession({ hasPhoto: true })
     setNotice('Your photo was saved.')
     loadPhoto()

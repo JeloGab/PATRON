@@ -1,13 +1,4 @@
 // Another staff member's photograph, for the lists a priest or manager sees.
-//
-// Not PriestPhoto: that one is the PUBLIC parish page, where the bytes are served
-// unauthenticated and a plain <img src> works. This read is authenticated — same-parish
-// staff only, enforced by app_user_parish_select rather than by anything here — and an
-// <img src> cannot send a Bearer header, so the bytes come through lib/api.js as a blob.
-//
-// hasPhoto comes from the list that named this person, so no request is made unless
-// there is something to fetch. A failed read falls back to the initial, which keeps the
-// list correct before the routes are deployed and if a photo is removed mid-session.
 
 import { useEffect, useState } from 'react'
 import { authed } from '../lib/api.js'

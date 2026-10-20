@@ -1,3 +1,5 @@
+// The four registers: search, encode, edit and ledger photos.
+
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Modal from '../../components/Modal.jsx'

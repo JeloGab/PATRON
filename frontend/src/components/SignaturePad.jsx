@@ -1,5 +1,4 @@
-// A draw-here box for the priest's signature. Pointer events, so a mouse, a finger and
-// a stylus all work from one handler; exported as a transparent PNG.
+// A draw-here box for the priest's signature; pointer events in, transparent PNG out.
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -12,9 +11,6 @@ export default function SignaturePad({ onSave, busy = false, saveLabel = 'Save s
   const lastPoint = useRef(null)
   const [hasInk, setHasInk] = useState(false)
 
-  // A canvas has two sizes: its CSS box and its bitmap. Without scaling the bitmap by
-  // devicePixelRatio the drawing is blurry on every phone and most laptops, and the
-  // coordinates drift from the cursor.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -45,8 +41,6 @@ export default function SignaturePad({ onSave, busy = false, saveLabel = 'Save s
   }
 
   function start(event) {
-    // setPointerCapture keeps the stroke alive when the pointer leaves the box, so a
-    // flourish that runs off the edge does not end the line mid-letter.
     canvasRef.current.setPointerCapture(event.pointerId)
     drawing.current = true
     lastPoint.current = pointOf(event)
@@ -70,14 +64,12 @@ export default function SignaturePad({ onSave, busy = false, saveLabel = 'Save s
     try {
       canvasRef.current.releasePointerCapture(event.pointerId)
     } catch {
-      // Already released, which happens when the pointer was lost rather than lifted.
     }
   }
 
   function clear() {
     const canvas = canvasRef.current
     const context = canvas.getContext('2d')
-    // Clearing in device pixels, since the context is scaled.
     context.save()
     context.setTransform(1, 0, 0, 1, 0, 0)
     context.clearRect(0, 0, canvas.width, canvas.height)
@@ -86,8 +78,6 @@ export default function SignaturePad({ onSave, busy = false, saveLabel = 'Save s
   }
 
   function save() {
-    // Transparent background, not white: the signature sits on the certificate rather
-    // than inside a pale rectangle over the gold rule.
     canvasRef.current.toBlob((blob) => {
       if (blob) onSave(blob)
     }, 'image/png')

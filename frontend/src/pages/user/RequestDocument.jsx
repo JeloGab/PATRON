@@ -38,8 +38,6 @@ export default function RequestDocument() {
   const [lookupError, setLookupError] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
-  // The ID is a second request by necessity — the row must exist before it can carry a
-  // file — so it is held here and uploaded right after the create succeeds.
   const [idFile, setIdFile] = useState(null)
 
   useEffect(() => {
@@ -180,9 +178,6 @@ export default function RequestDocument() {
 
     const applicationId = r.json.request.applicationId
 
-    // The request exists from here on. If the ID upload fails the request is still
-    // valid — it just has no file — so say so plainly rather than losing the request,
-    // and send them on to My requests where the office can be asked for it.
     if (idFile) {
       setPending(true)
       const upload = await authed({
