@@ -1,10 +1,7 @@
+// The shared modal shell; a stack, so Escape and scroll-lock still work when they nest.
+
 import { useEffect } from 'react'
 
-/* Modals can stack — the sysadmin registry opens a parish, then Provision priest on top
-   of it. Two things break if each open modal acts alone: the inner one's cleanup clears
-   body overflow while the outer is still up, letting the page scroll behind it; and
-   Escape fires every listener, closing both at once. One module-level stack fixes both:
-   only the topmost modal answers Escape, and the lock lifts when the last one leaves. */
 const stack = []
 
 export default function Modal({ title, open, onClose, children }) {

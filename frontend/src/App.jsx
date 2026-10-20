@@ -1,3 +1,5 @@
+// Every route in the app, and the role gate each one sits behind.
+
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import ManagerLayout from './layouts/ManagerLayout.jsx'
@@ -109,13 +111,6 @@ export default function App() {
         <Route path="parish" element={<ParishProfile />} />
       </Route>
 
-      {/* One pathless layout route, so /feed and /user/* render inside the SAME mounted
-          UserLayout — and therefore the same TopNav. Two sibling routes each rendering
-          their own UserLayout would sit at different positions in the element tree, so
-          React would unmount the nav and mount a fresh one on every move between them;
-          that is what stopped the nav's sliding pill animating on the way to
-          Announcements. The guard stays on /user alone: /feed is public and UserNav
-          already handles having no session. */}
       <Route element={<UserLayout />}>
         <Route path="/feed" element={<Feed />} />
 

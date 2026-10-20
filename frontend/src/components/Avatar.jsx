@@ -1,10 +1,4 @@
 // The signed-in account's own photograph in the top bar, or their initial.
-//
-// An <img src> cannot send an Authorization header, so the bytes are read through
-// lib/api.js as a blob and shown from an object URL. hasPhoto comes from the session,
-// which /api/auth/me fills, so the request is only made when there is something to
-// fetch — and the initial stays the empty state everywhere, which is why nothing here
-// needs a placeholder image or breaks before the routes are deployed.
 
 import { useEffect, useState } from 'react'
 import { authed } from '../lib/api.js'

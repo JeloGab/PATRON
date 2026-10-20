@@ -1,8 +1,5 @@
 // Parish helpers that compute rather than store.
 
-// Mirrors LIMITS in server/src/lib/validators.js for the two multi-line public fields.
-// maxLength on the textarea only stops a hopeless save; the server validates again from
-// the cleaned value, which is what actually counts.
 export const LIMITS = {
   officeHours: { max: 300 },
   massSchedule: { max: 600 },

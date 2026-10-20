@@ -241,10 +241,6 @@ export default function ParishProfile() {
       )}
 
       <div className="detail__grid">
-        {/* The left column is a stack of its own now, so Public details and Schedule read
-            as two cards down one side rather than one tall card beside three short ones.
-            It also lets Schedule finish roughly level with Registry at the foot of the
-            aside, instead of the page ending on a full-width band. */}
         <div className="stack">
           {editing ? (
             <form className="card form-card" onSubmit={save}>
@@ -362,8 +358,6 @@ export default function ParishProfile() {
                   <dd>{parish.facebookPageId || 'Not set'}</dd>
                 </div>
               </dl>
-              {/* The same right-aligned action row the edit form and every other card in
-                  the app uses, rather than a bare button hanging off the left margin. */}
               <div className="form-actions__buttons">
                 <button type="button" className="btn btn--gold" onClick={() => setEditing(true)}>
                   Edit details
@@ -372,13 +366,6 @@ export default function ParishProfile() {
             </section>
           )}
 
-          {/* Office hours and the Mass schedule left the Public details list for a card
-              of their own: they are the page's only multi-line values, and a <dd> in a
-              two-column facts grid wrapped every line of them. facts--stacked keeps this
-              card one column at every width for the same reason. Office hours first, as
-              decided. Hidden while editing — the form above it holds both textareas, and
-              the saved value sitting directly beneath the field being changed reads as a
-              second, stale copy. */}
           {!editing && (
             <section className="card">
               <p className="eyebrow">Schedule</p>

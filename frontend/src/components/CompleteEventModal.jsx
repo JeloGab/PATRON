@@ -211,11 +211,6 @@ export default function CompleteEventModal({ event, participants, signatory, onC
                 the next number in this register.
               </p>
 
-              {/* Optional, and left out of the request when blank so the server applies
-                  its own default. Confirmation is the case this exists for - its
-                  ordinary minister is the bishop, who is not a user of this system - but
-                  it is offered for every sacramental type, because a visiting priest at
-                  a wedding or a guest at a funeral is the same situation. */}
               <label className="field field--full">
                 <span>Officiating minister</span>
                 <input

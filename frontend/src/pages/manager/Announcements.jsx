@@ -1,5 +1,4 @@
-// The office's announcements: compose, edit and attach images while a priest has not
-// approved yet. Approved is final, so a correction is an archive plus a new one.
+// The office's announcements: compose, edit and attach images until a priest approves.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'

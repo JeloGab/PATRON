@@ -1,3 +1,5 @@
+// The sysadmin registry: parishes, and the priests provisioned at each.
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
@@ -272,10 +274,6 @@ export default function RegisteredParishes() {
         </ul>
       )}
 
-      {/* The priest list was a panel below the grid, which pushed the parish you had just
-          clicked off the top of the screen on a long registry. A modal keeps the choice
-          and its consequence in one place. Modal supplies the heading, the × and Escape,
-          so the old panel head and its Close button are gone. */}
       <Modal title={selected?.name ?? ''} open={Boolean(selected)} onClose={() => setSelectedId(null)}>
         {selected && (
           <>
@@ -341,9 +339,6 @@ export default function RegisteredParishes() {
               approvals keep their signatory.
             </p>
 
-            {/* Opens a second modal over this one. Modal's stack keeps Escape and the scroll
-                lock correct; this modal stays open underneath, so the new priest is already
-                in the list when the provisioning one closes. */}
             <div className="form-actions__buttons">
               <button
                 type="button"

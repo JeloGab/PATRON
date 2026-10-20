@@ -1,17 +1,9 @@
 // The suggested priest, as a sentence above the picker.
-//
-// It fetches for itself rather than taking the answer as a prop, because both CreateEvent
-// and the reassign path in EventModal need the identical question asked, and a rule
-// written twice will disagree with itself. The server decides WHO is suggested; this file
-// only decides how to say it.
 
 import { useEffect, useState } from 'react'
 import { authed } from '../lib/api.js'
 import { formatMonth } from '../lib/dates.js'
 
-// Reads the month off the ISO string rather than parsing a Date, because a 'YYYY-MM-DD'
-// parsed as UTC lands on the previous day in UTC+8 and would name the wrong month on the
-// first of the month.
 function monthOf(iso) {
   const year = Number(String(iso).slice(0, 4))
   const month = Number(String(iso).slice(5, 7))
@@ -30,8 +22,6 @@ export default function PriestSuggestion({
   const [data, setData] = useState(null)
 
   useEffect(() => {
-    // Availability cannot be computed without all three, so there is nothing to suggest
-    // until the manager has filled them in. The line simply is not there yet.
     if (!eventDate || !startTime || !endTime) {
       setData(null)
       return
@@ -44,8 +34,6 @@ export default function PriestSuggestion({
     async function load() {
       const r = await authed({ path: `/api/events/priest-suggestion?${params}` })
       if (!live) return
-      // A failed suggestion is silent. It is advice, and the three checks still refuse on
-      // save, so an error banner here would read as though the form itself were broken.
       setData(r.ok ? r.json : null)
     }
 
@@ -79,9 +67,6 @@ export default function PriestSuggestion({
     )
   }
 
-  // Named only when someone lighter was passed over for want of a signature. That is the
-  // one case where the suggestion is not simply "the fewest events", so leaving it
-  // unexplained would make the answer look arbitrary.
   const passedOver = data.candidates.find(
     (entry) =>
       entry.available && !entry.hasSignature && entry.monthCount < suggested.monthCount,

@@ -1,3 +1,5 @@
+// The office landing page, built from the list endpoints — there is no counters route.
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import EventTable from '../../components/EventTable.jsx'

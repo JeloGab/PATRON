@@ -1,3 +1,5 @@
+// The parishioner shell, also used signed-out by the directory and the feed.
+
 import { Outlet } from 'react-router-dom'
 import TopNav from '../components/TopNav.jsx'
 

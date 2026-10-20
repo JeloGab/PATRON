@@ -53,9 +53,6 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
     }
   }, [request.applicationId, request.status])
 
-  // An <img src> cannot send a Bearer header, so the ID is read as a blob and shown
-  // from an object URL — the same pattern as the ledger photos. Every createObjectURL
-  // gets its revokeObjectURL, or the bytes stay in memory for the life of the tab.
   useEffect(() => {
     let live = true
     let created = null

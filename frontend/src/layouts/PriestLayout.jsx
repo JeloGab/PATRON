@@ -1,5 +1,4 @@
-// Owns the priest's three tab badges: TopNav gets the counts as a prop, child routes
-// get refresh() through Outlet context, so no provider is needed.
+// Owns the priest's three tab badges: counts to TopNav, refresh() through Outlet context.
 
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
@@ -16,9 +15,6 @@ export default function PriestLayout() {
   const priestId = session?.userId ?? null
   const [counts, setCounts] = useState({ events: NONE, documents: NONE, announcements: NONE })
 
-  // One pass for all three badges, in parallel. A request that fails leaves its own
-  // count untouched rather than falling back to zero, which would read as "nothing is
-  // waiting" — the one thing a badge must never say wrongly.
   const refresh = useCallback(async () => {
     const [events, documents, announcements] = await Promise.all([
       authed({ path: `/api/events?from=${todayISO()}&to=${isoOffset(WINDOW_DAYS)}` }),
@@ -27,7 +23,6 @@ export default function PriestLayout() {
     ])
 
     setCounts((current) => ({
-      // Only a sacramental event assigned to this priest is his to approve.
       events: events.ok
         ? {
             count: events.json.events.filter(
@@ -40,9 +35,6 @@ export default function PriestLayout() {
           }
         : current.events,
 
-      // 'verified' is the only approvable status: the office attaches the register
-      // entry first, and that attachment IS the verification. This route is the one
-      // of the three that pages, so a full first page means "at least this many".
       documents: documents.ok
         ? { count: documents.json.requests.length, more: Boolean(documents.json.hasMore) }
         : current.documents,

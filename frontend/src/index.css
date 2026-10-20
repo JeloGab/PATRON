@@ -1,3 +1,4 @@
+/* Tokens */
 :root {
   --wine: #5c1824;
   --wine-deep: #341016;
@@ -12,10 +13,7 @@
   --serif: 'Cormorant Garamond', Georgia, serif;
   --sans: 'Source Sans 3', system-ui, sans-serif;
 
-  /* Interaction. One easing and one ring for the whole app, so every control
-     answers the pointer at the same speed and focus looks the same everywhere.
-     --wine-hover and --gold-hover are the only hover tints; nothing else
-     re-picks a hover colour by hand. */
+  /* Interaction tokens */
   --ease: 140ms cubic-bezier(0.2, 0, 0.2, 1);
   --ring: 0 0 0 3px rgba(196, 163, 90, 0.5);
   --wine-hover: #6d2432;
@@ -188,10 +186,7 @@ select {
   box-shadow: var(--shadow);
 }
 
-/* align-content: start is what keeps inputs the same height across a row. A .field is
-   a grid item stretched to its row, and its own rows then absorb the slack — so one
-   field carrying a hint made the plain field beside it grow a taller box. Packing the
-   rows to the top leaves the spare space at the bottom instead. */
+/* Form fields */
 .field {
   display: grid;
   gap: 0.35rem;
@@ -277,11 +272,7 @@ textarea:focus {
   padding-bottom: 0.85rem;
 }
 
-/* The strip hugs its own links and sits in the middle, rather than being a
-   1120px-wide pill with the links bunched at the left edge — the same shape as the
-   sign-in toggle, which spans its two choices and nothing more.
-   Scoped to .topbar__tabs so the parishioner navigation, whose .tabs is a flex item
-   beside the brand and the account block, keeps its own placement. */
+/* Top bar tab strip */
 .topbar__tabs .tabs {
   width: fit-content;
   max-width: 100%;
@@ -335,9 +326,7 @@ textarea:focus {
   color: var(--muted);
 }
 
-/* An <a> since slice A — the way to /account from every navigation. The display
-   rules at the two breakpoints below still apply; these only stop it looking like a
-   link until it is hovered. */
+/* Top bar account link */
 .topbar__meta {
   display: none;
   color: inherit;
@@ -428,13 +417,12 @@ textarea:focus {
   margin-bottom: 0.9rem;
 }
 
-/* The h2 is a flex item here, so its own bottom margin fights align-items: center and
-   makes the gap below the head unpredictable. The head owns the spacing instead. */
+/* Panel head heading */
 .panel__head h2 {
   margin: 0;
 }
 
-/* A panel with no __head: the bare heading needs the same room the head has. */
+/* Panel with no head */
 .panel > h2,
 .panel > h3 {
   margin-bottom: 0.9rem;
@@ -710,6 +698,28 @@ textarea:focus {
   white-space: nowrap;
 }
 
+/* The parishioner calendar's sacramental marker. Deliberately NOT .cal__unavailable
+   — that gold chip is the designed look for a priest's personal unavailability on the
+   staff calendars (backlog, 2026-10-17), and reusing it here would collide with that
+   fix when it lands. Muted rather than alarming: a reserved day is simply taken. */
+.cal__reserved {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  background: var(--muted);
+  color: white;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-legend__item--reserved::before {
+  background: var(--muted);
+}
+
 .cal__date,
 .cal__event {
   display: block;
@@ -786,10 +796,7 @@ textarea:focus {
 
 .seg {
   display: flex;
-  /* Hug the options instead of filling the parent. Inside a flex parent
-     (.panel__head) a .seg already sized to its content; in a plain block, such as
-     .login__card, it stretched the full width. Kept block-level rather than
-     inline-flex so it does not sit on a text baseline. */
+  /* Hug the options, not the parent */
   width: fit-content;
   gap: 0.25rem;
   padding: 0.2rem;
@@ -867,11 +874,7 @@ textarea:focus {
   color: #4d453f;
 }
 
-/* `document_application.status` has five values and the frontend now renders them by
-   name, so the two that had no style needed one. `verified` borrows the review tone:
-   it means a register entry is attached and a priest has yet to approve — work in
-   progress, not a conclusion. `cancelled` is quiet, since the requestor withdrew it
-   themselves and nobody needs to act. */
+/* Verified and rejected status pills */
 .status-pill--verified {
   background: #efe6f6;
   color: #5b3b78;
@@ -882,7 +885,7 @@ textarea:focus {
   color: #4d453f;
 }
 
-/* A flat marker, not a status: "fee marked paid", an attached register reference. */
+/* Quiet chip: a marker, not a status */
 .chip--quiet {
   background: var(--ivory);
   color: var(--muted);
@@ -1146,8 +1149,7 @@ textarea:focus {
   font-weight: 600;
 }
 
-/* Drop target for ledger photos. The file input inside it is .sr-only rather than
-   display:none, so it stays keyboard reachable and the label still opens the picker. */
+/* Ledger photo drop target */
 .dropzone {
   margin: 0.9rem 0 0;
   padding: 1.1rem 1rem;
@@ -1179,7 +1181,7 @@ textarea:focus {
   margin: 0.5rem 0 0;
 }
 
-/* A ledger photo fetched with the token and shown from a blob URL. */
+/* Ledger photo preview */
 .ledger-preview {
   margin: 0.9rem 0 0;
 }
@@ -1192,10 +1194,7 @@ textarea:focus {
   border-radius: 14px;
 }
 
-/* Subject groups in the record form. The fieldset carries the grouping for screen
-   readers — these inputs describe one person — but a browser's default inset border
-   has no place inside a card, so it is replaced with the same hairline rule
-   .login__accounts uses. */
+/* Record form subject groups */
 .subject-group {
   border: 0;
   margin: 0.4rem 0 0;
@@ -1255,12 +1254,7 @@ img {
   color: var(--muted);
 }
 
-/* One container width for everything that reads as a column: the brand row, the tab
-   strip under it, the page body and the footer.
-   `.topbar__tabs` was missing here while being present in the padding rule above,
-   so on the priest and manager navigations — the only two with a tab strip — the
-   brand row was centred inside 1120px and the tabs below it ran the full width of
-   the window, flush left and visibly out of line with everything else. */
+/* One container width */
 .topbar__inner,
 .topbar__tabs,
 .page,
@@ -1339,11 +1333,7 @@ img {
   background: #2c1b1e;
 }
 
-/* Shown when a parish has no photograph, which is the normal case: `parish` has no
-   image column, so a photo exists only if a file named after the parish uuid has been
-   placed in public/churches/. The gradient above already carries the parish accent —
-   this only puts its initial in the middle so the panel reads as deliberate rather
-   than as an image that failed to load. */
+/* Parish crest fallback */
 .church-media__crest {
   position: absolute;
   inset: 0;
@@ -1357,18 +1347,12 @@ img {
   user-select: none;
 }
 
-/* Office hours and the Mass schedule. pre-line is load-bearing, not cosmetic: the
-   validator keeps the line breaks the parish typed, and without this HTML collapses
-   them and the schedule renders as one run-on line. */
+/* Office hours and Mass schedule */
 .schedule-text {
   white-space: pre-line;
 }
 
-/* Office hours and the Mass schedule sit in a Schedule card in the side column of both
-   the staff profile and the public parish page. They are the only multi-line values in
-   the app, so they opt out of the two-column .facts grid the wide breakpoint applies —
-   side by side in a 0.8fr column, every line of Mass times wrapped. Doubled class rather
-   than source order, so it wins wherever this rule ends up in the file. */
+/* Stacked facts list */
 .facts.facts--stacked {
   grid-template-columns: 1fr;
 }
@@ -1377,8 +1361,7 @@ img {
   line-height: 1.6;
 }
 
-/* Staff photographs: one 64px circle, whether it holds an image or a letter, so a row
-   never reflows when the bytes arrive. */
+/* Staff photographs */
 .staff-photo {
   width: 64px;
   height: 64px;
@@ -1396,8 +1379,7 @@ img {
   font-weight: 700;
 }
 
-/* The clergy card on the parish profile: photo above the name, wrapping into as many
-   columns as fit. */
+/* Clergy cards */
 .clergy-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -1419,21 +1401,19 @@ img {
   line-height: 1.3;
 }
 
-/* A photograph in the top bar, sharing the .avatar box exactly so the row does not
-   reflow when the image loads. */
+/* Top bar photo avatar */
 .avatar--photo {
   object-fit: cover;
 }
 
-/* The photo card on the account page. Centred, unlike the signature preview, because a
-   round portrait reads as a subject rather than as a field value. */
+/* Account page photo card */
 .account-photo {
   display: grid;
   gap: 0.6rem;
   justify-items: center;
 }
 
-/* Overrides the shared left-aligned button row for this one block. */
+/* Account photo button row */
 .account-photo > .form-actions__buttons {
   justify-content: center;
 }
@@ -1446,8 +1426,7 @@ img {
   border: 1px solid var(--line);
 }
 
-/* The requestor's ID on a document request. Capped in height so a portrait scan does
-   not push the approval controls off the modal. */
+/* Requestor ID on a request */
 .id-file {
   display: grid;
   gap: 0.5rem;
@@ -1461,8 +1440,7 @@ img {
   border: 1px solid var(--line);
 }
 
-/* The active priests of a parish, on the public parish page. The photo and the letter
-   share one 44px box, so a row does not reflow when an image finishes loading. */
+/* Public clergy list */
 .clergy {
   list-style: none;
   margin: 0.6rem 0 0;
@@ -1498,8 +1476,7 @@ img {
   font-weight: 600;
 }
 
-/* The public announcement feed on a parish listing. Its images are public bytes, so
-   they are ordinary <img> elements — nothing here needs a token. */
+/* Public announcement feed */
 .feed {
   list-style: none;
   margin: 0.6rem 0 0;
@@ -1508,12 +1485,7 @@ img {
   gap: 1.4rem;
 }
 
-/* The hairline divider belongs to a feed rendered as rows inside ONE card, which is
-   what ChurchDetail does. Feed.jsx instead puts .card and .feed__item on the same
-   element: both are single-class selectors, so .feed__item won on file order and took
-   the last card's bottom padding and border away with it - content flush against a
-   borderless edge. :not(.card) keeps the divider for rows and leaves a card to its own
-   padding. */
+/* Feed rows inside one card */
 .feed__item:not(.card) {
   padding-bottom: 1.2rem;
   border-bottom: 1px solid var(--line);
@@ -1605,12 +1577,7 @@ img {
   background: linear-gradient(180deg, transparent, rgba(20, 10, 12, 0.82));
 }
 
-/* .detail carried no rule of its own, so the space between its sections came from each
-   child's own margin-bottom. That held only while .detail__grid was the one gapped
-   sibling: the Priests card put two bare .card children next to each other with nothing
-   between them, and their 1px borders read as one stitched box. The gap belongs to the
-   parent now. Scoped with > because ParishProfile also uses .detail__grid, is not inside
-   .detail, and still needs its own margin. */
+/* Detail page sections */
 .detail {
   display: grid;
   gap: 1.25rem;
@@ -1632,13 +1599,7 @@ img {
   gap: 1rem;
 }
 
-/* The same trap as .field above, one level up. A .stack is a grid item in .detail__grid,
-   so it is stretched to the height of the taller column; its own auto rows then absorb
-   that slack, and every card in it grows — which showed as dead space under the Edit
-   details button and under the Mass schedule. Packing the rows to the top leaves the
-   spare space at the foot of the short column, where it belongs, and each card ends at
-   its own content. Scoped to .detail__grid: a .stack elsewhere is not in a two-column
-   row and has no slack to misplace. */
+/* Stack inside the detail grid */
 .detail__grid > .stack {
   align-content: start;
 }
@@ -1884,8 +1845,7 @@ dd {
   padding: 0.85rem 1.4rem 1.4rem;
 }
 
-/* The pill row under a dialog title. Without a rule these were bare inline spans, and
-   JSX emits no whitespace between elements on separate lines, so they touched. */
+/* Dialog pill row */
 .modal__meta {
   display: flex;
   flex-wrap: wrap;
@@ -1912,8 +1872,7 @@ dd {
   padding-inline: 0.85rem;
 }
 
-/* The signature pad. The canvas sits above a ruled line, like a signature block on
-   paper, and touch-action: none stops a finger scrolling the page mid-stroke. */
+/* Signature pad */
 .signature {
   margin: 0.6rem 0 0;
 }
@@ -1954,7 +1913,7 @@ dd {
   pointer-events: none;
 }
 
-/* A stored signature, shown back to its owner. */
+/* Stored signature preview */
 .signature__preview {
   display: block;
   max-width: 320px;
@@ -1965,9 +1924,7 @@ dd {
   background: var(--paper);
 }
 
-/* A row that can expand: the checklist opens a decision form inside the row, and at
-   760px the row is `1fr auto`, so without this the form would be squeezed into the
-   first column with the button's column left empty beside it. */
+/* Expanding priest-list row */
 .priest-list__row--stack > .form-grid {
   grid-column: 1 / -1;
 }
@@ -1980,8 +1937,7 @@ dd {
   margin-top: 1.1rem;
 }
 
-/* ...except where the parent is already a gapped grid or flex row, which would then
-   space it twice. A grid item honours its margin on top of the gap. */
+/* Button row in an already-gapped parent */
 .form-grid > .form-actions__buttons,
 .form-actions > .form-actions__buttons,
 .priest-list__row > .form-actions__buttons,
@@ -2015,45 +1971,21 @@ dd {
   border-top: 1px solid var(--line);
 }
 
-/* ---------------------------------------------------------------------------
-   Spacing between blocks.
+/* Spacing between blocks */
 
-   The sheet gave each element its own margins and left the relationships
-   between them unstated, so anything whose neighbour happened to carry no
-   bottom margin ended up flush against it. These rules state the three
-   relationships that were missing.
-   --------------------------------------------------------------------------- */
-
-/* Two panels in a row had nothing between them — .panel carries no margin and
-   .panel--spaced was only remembered sometimes. A page is normal flow, so this
-   margin collapses with whatever the previous block already had: the result is
-   max(previous, 1.15rem), never the sum. */
+/* Panel following a panel */
 .page > * + .panel,
 .page > * + .card {
   margin-top: 1.15rem;
 }
 
-/* .eyebrow is a kicker above a title — no top margin, by design. As an h2 or h3 it
-   is a section heading inside a card, and then it needs to stand off the section
-   above it. :not(:first-child) keeps the one that opens a card tight to the edge. */
+/* Eyebrow as a section heading */
 h2.eyebrow:not(:first-child),
 h3.eyebrow:not(:first-child) {
   margin-top: 1.5rem;
 }
 
-/* The flow rule the sheet never had. Inside a normal-flow container, every child
-   after the first stands off the one above it.
-
-   Adjacent sibling margins COLLAPSE rather than add, so the gap each pair ends up
-   with is max(what the first already declared, 0.9rem) — never the sum. That is why
-   this can be stated once instead of per pair: a block that already asks for more
-   room keeps it, and a block that declared nothing stops touching its neighbour.
-
-   Scoped to containers that are genuinely normal flow. A gapped grid or flex row
-   (.form-grid, .stack, .seg, .verify-bar, .filters) spaces its own children, and a
-   margin there WOULD add to the gap — those are not listed, and the one bare <form>
-   in a dialog is matched by :not([class]) so a .verify-bar form is left alone. .modal is excluded for
-   the same reason in reverse: its two children carry the dialog's own padding. */
+/* Flow spacing inside containers */
 .card:not(.modal) > * + *,
 .panel > * + *,
 .modal__body > * + *,
@@ -2063,16 +1995,14 @@ h3.eyebrow:not(:first-child) {
   margin-top: 0.9rem;
 }
 
-/* One pairing the flow rule must not break: a kicker belongs to the title under it,
-   so the two stay as tight as .eyebrow's own bottom margin makes them. */
+/* Eyebrow stays tight to its title */
 .eyebrow + h1,
 .eyebrow + h2,
 .eyebrow + h3 {
   margin-top: 0;
 }
 
-/* A container's own padding is the bottom spacing; a trailing margin inside it only
-   pushes the padding further out and makes identical cards different heights. */
+/* No trailing margin inside a container */
 .card > :last-child,
 .panel > :last-child,
 .modal__body > :last-child,
@@ -2081,25 +2011,7 @@ h3.eyebrow:not(:first-child) {
   margin-bottom: 0;
 }
 
-/* ===========================================================================
-   Interaction layer — added 2026-10-17.
-
-   Everything below is *additive*: it adds :hover, :active and :focus-visible to
-   controls that had none, and it changes no layout, colour or size in the resting
-   state. Before this block the only elements that answered the pointer at all were
-   .metric and .parish-card; .btn, .tabs__link, .seg__btn and .text-btn had no hover,
-   no press and no focus ring, which is what made clickable things read as inert.
-
-   Three rules hold it together:
-     1. One easing (--ease) and one ring (--ring), so nothing feels out of step.
-     2. Hover lifts and tints, :active presses back down — the press is what sells
-        a button as a button.
-     3. Every hover is guarded with :not(:disabled), because a disabled button that
-        still lifts is telling the user it will work.
-
-   Kept at the bottom of the file on purpose: additions here cannot collide with the
-   other developer's edits above, so a merge from ui/* stays clean.
-   =========================================================================== */
+/* Interaction layer — added 2026-10-17 */
 
 .btn,
 .tabs__link,
@@ -2117,7 +2029,7 @@ h3.eyebrow:not(:first-child) {
     transform var(--ease);
 }
 
-/* --- buttons ------------------------------------------------------------- */
+/* Buttons */
 
 .btn:not(:disabled):hover {
   background-color: var(--wine-hover);
@@ -2135,8 +2047,7 @@ h3.eyebrow:not(:first-child) {
   color: var(--wine);
 }
 
-/* The press. translateY(0) cancels the hover lift rather than fighting it, so the
-   button returns to the surface under the finger instead of jumping. */
+/* The press */
 .btn:not(:disabled):active {
   transform: translateY(0) scale(0.985);
   box-shadow: none;
@@ -2146,7 +2057,7 @@ h3.eyebrow:not(:first-child) {
   color: var(--wine-deep);
 }
 
-/* --- tabs and segmented controls ---------------------------------------- */
+/* Tabs and segmented controls */
 
 .tabs__link:not(.is-active):hover {
   background: var(--hover-wash);
@@ -2163,14 +2074,14 @@ h3.eyebrow:not(:first-child) {
   color: var(--ink);
 }
 
-/* --- cards that already lifted: finish the gesture ---------------------- */
+/* Cards that already lifted */
 
 .metric:hover,
 .parish-card:hover {
   box-shadow: var(--lift);
 }
 
-/* --- rows and calendar cells -------------------------------------------- */
+/* Rows and calendar cells */
 
 .table tr.is-clickable {
   transition: background-color var(--ease);
@@ -2185,17 +2096,15 @@ h3.eyebrow:not(:first-child) {
   background: var(--hover-wash);
 }
 
-/* --- focus, once, for every control ------------------------------------- */
+/* Focus, once, for every control */
 
-/* :focus-visible, not :focus — a mouse click on a button should not leave a ring
-   behind, but a Tab to it must. :where() keeps specificity at zero so any
-   component rule can still override the ring. */
+/* :focus-visible, not :focus */
 :where(a, button, .btn, .tabs__link, .seg__btn, .text-btn, .cal__date, .cal__event, [tabindex]):focus-visible {
   outline: none;
   box-shadow: var(--ring);
 }
 
-/* --- motion is a preference --------------------------------------------- */
+/* Motion is a preference */
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -2213,12 +2122,9 @@ h3.eyebrow:not(:first-child) {
   }
 }
 
-/* --- the sliding pill on tab strips and segmented controls --------------- */
+/* The sliding pill */
 
-/* .has-thumb is added by lib/useSlidingThumb.js only after it has successfully
-   measured the active item. Everything here is therefore scoped to that class: a strip
-   that never got measured, or one that does not use the hook, keeps the plain look
-   below where .is-active paints its own background. */
+/* Scoped to .has-thumb */
 
 .tabs.has-thumb,
 .seg.has-thumb {
@@ -2238,8 +2144,7 @@ h3.eyebrow:not(:first-child) {
   background: var(--wine);
   opacity: var(--thumb-o, 0);
   transform: translate(var(--thumb-x, 0), var(--thumb-y, 0));
-  /* 240ms rather than --ease's 140ms: this one travels a visible distance, and the
-     slight overshoot in the curve is what makes it read as a physical slide. */
+  /* 240ms, not --ease */
   transition:
     transform 240ms cubic-bezier(0.3, 0.8, 0.2, 1),
     width 240ms cubic-bezier(0.3, 0.8, 0.2, 1),
@@ -2249,7 +2154,7 @@ h3.eyebrow:not(:first-child) {
   pointer-events: none;
 }
 
-/* The labels must sit above the pill, and the active one hands its background over. */
+/* Labels above the pill */
 .tabs.has-thumb .tabs__link,
 .seg.has-thumb .seg__btn {
   position: relative;
@@ -2263,18 +2168,15 @@ h3.eyebrow:not(:first-child) {
   background: transparent;
 }
 
-/* Hovering the active option tints the pill instead of the label, so the hover feedback
-   survives having handed the background away. */
+/* Hovering the active option */
 .tabs.has-thumb:has(.tabs__link.is-active:hover)::before,
 .seg.has-thumb:has(.seg__btn.is-active:hover)::before {
   background: var(--wine-hover);
 }
 
-/* --- modals arrive, rather than appearing ------------------------------- */
+/* Modals arrive */
 
-/* Entrance only. An exit animation needs the modal to stay mounted while it plays, and
-   Modal.jsx returns null the moment `open` goes false — adding that is a state machine
-   in the component, not a stylesheet change. */
+/* Entrance only */
 .modal-overlay {
   animation: overlay-in 140ms ease both;
 }
@@ -2303,7 +2205,7 @@ h3.eyebrow:not(:first-child) {
   }
 }
 
-/* --- loading ------------------------------------------------------------ */
+/* Loading */
 
 .loading {
   display: flex;
@@ -2335,9 +2237,7 @@ h3.eyebrow:not(:first-child) {
   }
 }
 
-/* A placeholder for a row of text that has not arrived. Not yet used by any page —
-   documented in css_inventory.md so the next list page can reach for it instead of
-   inventing one. */
+/* Skeleton row — not yet used by any page */
 .skeleton {
   border-radius: 8px;
   background: linear-gradient(90deg, rgba(36, 28, 24, 0.06), rgba(36, 28, 24, 0.12), rgba(36, 28, 24, 0.06));
@@ -2355,7 +2255,7 @@ h3.eyebrow:not(:first-child) {
   }
 }
 
-/* --- empty ------------------------------------------------------------- */
+/* Empty states */
 
 .empty-card__title {
   margin: 0;
@@ -2364,9 +2264,7 @@ h3.eyebrow:not(:first-child) {
   color: var(--ink);
 }
 
-/* Motion preferences again, for the pieces added above. The global rule at the top of
-   this section collapses transitions; these are animations, which need stopping too —
-   a spinner that never stops is the one exception, so it keeps turning, slowly. */
+/* Motion preferences, again */
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-overlay > .modal {
@@ -2382,8 +2280,7 @@ h3.eyebrow:not(:first-child) {
   }
 }
 
-/* The suggested priest. A quiet panel rather than a banner: it is advice, and the manager
-   is free to ignore it - the dropdown below keeps its own default and its own order. */
+/* Priest suggestion */
 .suggestion {
   margin: 0;
   padding: 0.85rem 1rem;
@@ -2408,8 +2305,7 @@ h3.eyebrow:not(:first-child) {
   font-size: 0.88rem;
 }
 
-/* Not an error: "nobody is free" is a true answer to the question, and the three checks
-   will say the same thing on save. Solid border to separate it from the advisory case. */
+/* No priest available */
 .suggestion--none {
   border-style: solid;
   color: var(--muted);

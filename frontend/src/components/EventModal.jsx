@@ -190,9 +190,6 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
               onChange={(e) => setForm((c) => ({ ...c, endTime: e.target.value }))}
             />
           </label>
-          {/* The reassign path. excludeEventId is load-bearing: without it this event
-              counts as its own schedule conflict and every priest already on it reads as
-              busy. editEvent passes the same exclusion to runChecks on save. */}
           {isSacramental && (
             <div className="field field--full">
               <PriestSuggestion

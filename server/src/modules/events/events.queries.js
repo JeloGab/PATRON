@@ -1,5 +1,6 @@
 import { withActor } from '../../db/withTenant.js'
 import { AppError } from '../../lib/appError.js'
+import { pool } from '../../db/pool.js'
 
 const COLUMNS = `e.event_id, e.title, e.description, e.event_type, e.sacrament_type,
                  e.event_date, e.start_time, e.end_time, e.assigned_priest_id,
@@ -11,6 +12,9 @@ const COLUMNS = `e.event_id, e.title, e.description, e.event_type, e.sacrament_t
 const SOURCE = `from public.parish_event e
                 left join public.app_user priest on priest.user_id = e.assigned_priest_id`
 
+const CALENDAR_COLUMNS = `event_id, title, description, event_type,
+                          event_date, start_time, end_time`
+
 const EDITABLE = [
   ['title', 'title'],
   ['description', 'description'],
@@ -19,6 +23,29 @@ const EDITABLE = [
   ['endTime', 'end_time'],
   ['assignedPriestId', 'assigned_priest_id'],
 ]
+
+
+function mapCalendarEvent(row) {
+  return {
+    eventId: row.event_id,
+    title: row.title,
+    description: row.description,
+    eventType: row.event_type,
+    eventDate: row.event_date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+  }
+}
+
+function mapCalendarBlock(row) {
+  return {
+    blockedDateId: row.blocked_date_id,
+    date: row.date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    reason: row.reason,
+  }
+}
 
 function mapEvent(row) {
   return {
@@ -212,4 +239,43 @@ export async function countPriestEventsInMonth(actor, { eventDate }) {
     )
     return new Map(rows.map((row) => [row.assigned_priest_id, row.month_count]))
   })
+}
+
+
+
+export async function findCalendarEvents({ parishId, from, to }) {
+  const { rows } = await pool.query(
+    `select ${CALENDAR_COLUMNS}
+       from public.parish_calendar_feed
+      where parish_id = $1
+        and event_date between $2 and $3
+      order by event_date, start_time`,
+    [parishId, from, to]
+  )
+  return rows.map(mapCalendarEvent)
+}
+
+
+export async function findReservedDates({ parishId, from, to }) {
+  const { rows } = await pool.query(
+    `select event_date
+       from public.parish_calendar_reserved
+      where parish_id = $1
+        and event_date between $2 and $3
+      order by event_date`,
+    [parishId, from, to]
+  )
+  return rows.map((row) => row.event_date)
+}
+
+export async function findParishBlockDates({ parishId, from, to }) {
+  const { rows } = await pool.query(
+    `select blocked_date_id, date, start_time, end_time, reason
+       from public.parish_calendar_blocked
+      where parish_id = $1
+        and date between $2 and $3
+      order by date, start_time nulls first`,
+    [parishId, from, to]
+  )
+  return rows.map(mapCalendarBlock)
 }

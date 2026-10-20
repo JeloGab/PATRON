@@ -48,9 +48,6 @@ export async function checkPhoto(file, alreadyHeld = 0) {
   return null
 }
 
-// The same checks for the one ID file on a document request. Separate from checkPhoto
-// because that one counts against MAX_PER_RECORD and words its errors for a ledger
-// page; a request holds exactly one file and the server replaces it rather than adding.
 export async function checkIdFile(file) {
   if (!file) return null
 

@@ -1,5 +1,4 @@
-// A parish photograph from GET /api/parishes/:id/photo, or an accent crest when the
-// parish has none — or when that route does not exist yet.
+// A parish photograph from GET /api/parishes/:id/photo, or a crest when there is none.
 
 import { useState } from 'react'
 import { BASE } from '../lib/api.js'

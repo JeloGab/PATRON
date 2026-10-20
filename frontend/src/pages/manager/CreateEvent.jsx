@@ -1,3 +1,5 @@
+// Scheduling an event; the three checks refuse on save, with no override.
+
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import PriestSuggestion from '../../components/PriestSuggestion.jsx'
@@ -203,9 +205,6 @@ export default function CreateEvent() {
             <input type="time" value={form.endTime} onChange={update('endTime')} />
           </label>
 
-          {/* Sacramental only, by decision: a general or seminar event may have no priest
-              at all, so a suggestion there would nudge toward assigning one. field--full
-              so the sentence is not squeezed into one column of the form grid. */}
           {sacramental && (
             <div className="field field--full">
               <PriestSuggestion

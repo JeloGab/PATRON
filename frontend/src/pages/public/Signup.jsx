@@ -96,7 +96,7 @@ export default function Signup() {
             <p className="eyebrow">Check your email</p>
             <h1>Confirm your address</h1>
             <p className="notice">
-              If <strong>{email.trim()}</strong> is not already registered, a confirmation link is
+              If <strong>{email.trim()}</strong> is not registered, a confirmation link is
               on its way to it. Open the link, then sign in — your account is set up on your first
               sign-in, not now.
             </p>

@@ -1,3 +1,5 @@
+// The office closes a parish date, or a priest's — Rule 1's first two checks.
+
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BlockDates from '../../components/BlockDates.jsx'

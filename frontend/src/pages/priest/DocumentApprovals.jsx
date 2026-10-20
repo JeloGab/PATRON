@@ -58,9 +58,6 @@ export default function DocumentApprovals() {
     let live = true
     async function checkSignature() {
       const r = await authed({ path: '/api/users/signature', as: 'blob' })
-      // A 404 means no signature on file. It also means the route is not deployed yet,
-      // in which case the old name-only behaviour still applies and the banner is
-      // merely premature - not wrong.
       if (live) setCanSign(r.ok)
     }
     checkSignature()

@@ -1,3 +1,5 @@
+// Date formatting and week/month arithmetic, on 'YYYY-MM-DD' strings.
+
 export function toISODate(date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')

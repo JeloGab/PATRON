@@ -31,14 +31,10 @@ export const IMAGE_ACCEPT = 'image/jpeg,image/png'
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 export const MAX_IMAGES = 4
 
-// Editing and attaching an image are both only legal while pending or rejected.
-// Approved is final: a correction is an archive plus a new announcement, never an edit.
 export function isOpen(announcement) {
   return announcement?.status === 'pending' || announcement?.status === 'rejected'
 }
 
-// Archiving is allowed from different statuses by role: a priest archives what he
-// approved, the office archives what has not been published.
 export function canArchive(announcement, role) {
   if (!announcement) return false
   if (role === 'priest') return announcement.status === 'approved'

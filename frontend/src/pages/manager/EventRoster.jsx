@@ -1,3 +1,5 @@
+// An event's participants and their frozen requirement checklists.
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import CompleteEventModal from '../../components/CompleteEventModal.jsx'

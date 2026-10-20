@@ -1,22 +1,8 @@
+// Registering a parish; provisioning its priests is a separate action, by decision.
+
 import { useState } from 'react'
 import Modal from './Modal.jsx'
 
-// Registering a parish and provisioning its priests were one form. They are now two
-// actions, because the API has no coupling between them:
-//
-//   POST /api/admin/parishes   { name, address, contactNo, email? }
-//   POST /api/admin/priests    { fullName, parishId }
-//
-// Combining them meant N+1 requests with no transaction, so "parish created, 2 of 3
-// priests provisioned" was a state the UI had to report. It also implied priests are
-// fixed at registration, which is the opposite of the reassignment rule — a priest
-// moving parish is deactivated at the old one and provisioned fresh at the new one,
-// so provisioning recurs over a parish's whole life.
-//
-// `onRegister` returns an error message to display, or nothing on success.
-
-// PH mobile only, the same rule `requireMobile` enforces server-side. Checked here so
-// a typo does not cost a round trip, but the server remains the authority.
 const MOBILE = /^09\d{9}$/
 
 export default function RegisterParishModal({ open, onClose, onRegister }) {

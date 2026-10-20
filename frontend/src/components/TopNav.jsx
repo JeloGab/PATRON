@@ -1,3 +1,5 @@
+// The top bar: one nav per role, plus the account menu and the sliding pill.
+
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getSession } from '../lib/session.js'
 import Avatar from './Avatar.jsx'
@@ -88,8 +90,6 @@ function ManagerNav() {
   )
 }
 
-// The count is read by name off the layout's counts object, so adding a badge to
-// another tab is one key in PRIEST_LINKS and one count in PriestLayout.
 function Badge({ waiting }) {
   if (!waiting || waiting.count === 0) return null
   const shown = waiting.more ? `${waiting.count}+` : String(waiting.count)

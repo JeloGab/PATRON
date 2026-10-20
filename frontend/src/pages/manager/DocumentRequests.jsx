@@ -1,3 +1,5 @@
+// The office's request queue, and the walk-in form; Path 1, second half.
+
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ApplicationModal from '../../components/ApplicationModal.jsx'
