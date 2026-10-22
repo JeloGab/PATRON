@@ -17,6 +17,7 @@ export async function findStaffByUsername(username) {
     parishId: row.parish_id,
     passwordHash: row.password_hash,
     mustChangePassword: row.must_change_password,
+    parishStatus: row.parish_status,
   }
 }
 
@@ -112,6 +113,7 @@ export async function checkSession(userId) {
     parishId: row.parish_id,
     mustChangePassword: row.must_change_password,
     passwordChangedAt: row.password_changed_at,
+    parishStatus: row.parish_status,
   }
 }
 

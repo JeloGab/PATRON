@@ -19,6 +19,7 @@ export async function loginStaff(username, password) {
 
   if (!staff || !ok) throw new AppError('INVALID_CREDENTIALS', 401)
   if (staff.status !== 'active') throw new AppError('ACCOUNT_INACTIVE', 403)
+  if (staff.parishStatus === 'inactive') throw new AppError('PARISH_DEACTIVATED', 403)
 
   const user = {
     userId: staff.userId,

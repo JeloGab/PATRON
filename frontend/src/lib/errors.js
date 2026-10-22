@@ -16,6 +16,10 @@ const MESSAGES = {
   INVALID_STATUS: 'That status is not valid.',
   PARISH_NOT_FOUND: 'That parish no longer exists. Refresh the registry.',
   PARISH_INACTIVE: 'That parish is deactivated — reactivate it before provisioning staff.',
+  PARISH_DEACTIVATED:
+    'This parish has been deactivated. Contact the system administrator to restore access.',
+  PARISH_HAS_OPEN_REQUESTS:
+    'This parish still has certificate requests waiting. Settle or reject them before deactivating it.',
   USERNAME_TAKEN: 'That username is already taken. Try a different name.',
   USER_NOT_FOUND: 'That account no longer exists. Refresh the list.',
   FORBIDDEN: 'You are not allowed to do that.',

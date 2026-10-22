@@ -111,6 +111,26 @@ export async function setUserStatus({ userId, role, status, actorId }) {
   return mapUser(rows[0])
 }
 
+export async function updateParishStatus({ parishId, status, actorId }) {
+  try {
+    const { rows } = await adminPool.query(
+      `update public.parish
+          set status = $1,
+              deactivated_at = case when $1 = 'inactive' then now() else null end,
+              deactivated_by = case when $1 = 'inactive' then $2::uuid else null end
+        where parish_id = $3
+        returning parish_id, name, address, contact_no, email, facebook_page_id,
+                  status, created_at`,
+      [status, actorId, parishId]
+    )
+    if (rows.length === 0) return null
+    return mapParish(rows[0])
+  } catch (err) {
+    if (err.code === 'PT001') throw new AppError('PARISH_HAS_OPEN_REQUESTS', 409)
+    throw err
+  }
+}
+
 export async function setStaffPassword({ userId, role, passwordHash }) {
   const { rows } = await adminPool.query(
     `update public.app_user
