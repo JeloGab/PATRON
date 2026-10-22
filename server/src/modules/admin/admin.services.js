@@ -1,7 +1,7 @@
 import { AppError } from '../../lib/appError.js'
 import { suggestUsername, isValidUsername, isUuid, createTempCredential, resolveUsername } from '../../lib/credentials.js'
 import { clean, requireFullName, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
-import { insertParish, listParishes, findParishById, insertStaff, listStaffByRole, setUserStatus, setStaffPassword } from './admin.queries.js'
+import { insertParish, listParishes, findParishById, insertStaff, listStaffByRole, setUserStatus, setStaffPassword, updateParishStatus } from './admin.queries.js'
 
 
 
@@ -51,6 +51,17 @@ export async function getPriests(parishId) {
   if (filter && !isUuid(filter)) throw new AppError('INVALID_PARISH_ID', 400)
 
   return listStaffByRole('priest', filter || null)
+}
+
+export async function setParishStatus({ parishId, status }, actor) {
+  const target = clean(parishId)
+  if (!isUuid(target)) throw new AppError('INVALID_PARISH_ID', 400)
+  if (status !== 'active' && status !== 'inactive') throw new AppError('INVALID_STATUS', 400)
+
+  const parish = await updateParishStatus({ parishId: target, status, actorId: actor.userId })
+  if (!parish) throw new AppError('PARISH_NOT_FOUND', 404)
+
+  return parish
 }
 
 export async function setPriestStatus({ userId, status }, actor) {

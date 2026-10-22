@@ -21,6 +21,10 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ ok: false, code: 'SESSION_REVOKED' })
   }
 
+  if (session.parishStatus === 'inactive') {
+    return res.status(401).json({ ok: false, code: 'SESSION_REVOKED' })
+  }
+
   if (
     session.passwordChangedAt &&
     claims.issuedAt < Math.floor(session.passwordChangedAt.getTime() / 1000)

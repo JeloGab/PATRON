@@ -29,10 +29,12 @@ export default function RegisteredParishes() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [registerOpen, setRegisterOpen] = useState(false)
   const [provisionFor, setProvisionFor] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [busyUserId, setBusyUserId] = useState(null)
+  const [busyParishId, setBusyParishId] = useState(null)
 
   function endSession() {
     clearSession()
@@ -89,7 +91,9 @@ export default function RegisteredParishes() {
 
   const list = parishes.filter((parish) => {
     const hay = `${parish.name} ${parish.address}`.toLowerCase()
-    return hay.includes(query.trim().toLowerCase())
+    const matchesQuery = hay.includes(query.trim().toLowerCase())
+    const matchesStatus = statusFilter === 'all' || parish.status === statusFilter
+    return matchesQuery && matchesStatus
   })
 
   const selected = parishes.find((parish) => parish.parishId === selectedId) || null
@@ -128,6 +132,38 @@ export default function RegisteredParishes() {
         tempPassword: result.json.tempPassword,
       },
     }
+  }
+
+  async function parishAction(parish, action) {
+    if (
+      action === 'deactivate' &&
+      !window.confirm(
+        `Deactivate ${parish.name}?\n\nIt disappears from the public directory, feed and calendar, and its priests and managers are signed out. Open certificate requests must be settled first.`,
+      )
+    ) {
+      return
+    }
+
+    setBusyParishId(parish.parishId)
+    const result = await authed({
+      method: 'POST',
+      path: `/api/admin/parishes/${parish.parishId}/${action}`,
+    })
+    setBusyParishId(null)
+
+    if (isSessionError(result)) {
+      endSession()
+      return
+    }
+    if (!result.ok) {
+      setError(messageFor(result))
+      return
+    }
+
+    await load()
+    showNotice(
+      `${parish.name} was ${action === 'deactivate' ? 'deactivated' : 'reactivated'}.`,
+    )
   }
 
   async function priestAction(priest, action) {
@@ -201,6 +237,14 @@ export default function RegisteredParishes() {
             placeholder="Search by name or address…"
           />
         </label>
+        <label className="select">
+          <span className="sr-only">Filter by status</span>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </label>
       </div>
 
       {loading && parishes.length === 0 ? (
@@ -228,7 +272,9 @@ export default function RegisteredParishes() {
                     accent={accentFor(parish.parishId)}
                     className="parish-card__media"
                     alt={parish.name}
-                  />
+                  >
+                    <StatusPill status={parish.status} />
+                  </ChurchMedia>
                   <div className="parish-card__body">
                     <h2>{parish.name}</h2>
                     <p className="muted">{municipalityFromAddress(parish.address)}</p>
@@ -244,6 +290,12 @@ export default function RegisteredParishes() {
                       <div>
                         <dt>Date registered</dt>
                         <dd>{formatRegisteredDate(parish.createdAt)}</dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>
+                          <StatusPill status={parish.status} />
+                        </dd>
                       </div>
                     </dl>
                   </div>
@@ -264,10 +316,24 @@ export default function RegisteredParishes() {
 
             {selected.status !== 'active' && (
               <p className="notice">
-                This parish is deactivated, so staff cannot be provisioned into it — the server
-                answers PARISH_INACTIVE.
+                This parish is deactivated. It is hidden from the public directory, feed and
+                calendar, its staff cannot sign in, and no one can be provisioned into it.
               </p>
             )}
+
+            <div className="form-actions__buttons">
+              <StatusPill status={selected.status} />
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={() =>
+                  parishAction(selected, selected.status === 'active' ? 'deactivate' : 'reactivate')
+                }
+                disabled={busyParishId === selected.parishId}
+              >
+                {selected.status === 'active' ? 'Deactivate parish' : 'Reactivate parish'}
+              </button>
+            </div>
 
             {selectedPriests.length === 0 ? (
               <p className="empty">

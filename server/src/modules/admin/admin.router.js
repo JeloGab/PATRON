@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { AppError } from '../../lib/appError.js'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { createParish, getParishes, provisionPriest, getPriests, setPriestStatus,resetPriestPassword,} from './admin.services.js'
+import { createParish, getParishes, setParishStatus, provisionPriest, getPriests, setPriestStatus,resetPriestPassword,} from './admin.services.js'
 
 const router = Router()
 
@@ -19,6 +19,20 @@ router.post('/parishes', async (req, res) => {
 
 router.get('/parishes', async (_req, res) => {
   res.json({ ok: true, parishes: await getParishes() })
+})
+
+router.post('/parishes/:parishId/deactivate', async (req, res) => {
+  res.json({
+    ok: true,
+    parish: await setParishStatus({ parishId: req.params.parishId, status: 'inactive' }, req.user),
+  })
+})
+
+router.post('/parishes/:parishId/reactivate', async (req, res) => {
+  res.json({
+    ok: true,
+    parish: await setParishStatus({ parishId: req.params.parishId, status: 'active' }, req.user),
+  })
 })
 
 router.post('/priests', async (req, res) => {
