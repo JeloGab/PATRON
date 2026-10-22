@@ -316,7 +316,7 @@ export default function Account() {
                   {parish?.name ??
                     (me?.parishId
                       ? 'Your parish'
-                      : 'None — a parishioner account is diocese-wide')}
+                      : 'None — a parishioner account is does not belong to a parish')}
                 </dd>
               </div>
             </dl>

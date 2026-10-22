@@ -32,7 +32,6 @@ const EMPTY_WALK_IN = {
   fatherName: '',
   motherName: '',
   sacramentYear: '',
-  notes: '',
 }
 
 export default function DocumentRequests() {
@@ -142,7 +141,6 @@ export default function DocumentRequests() {
     if (walkIn.fatherName.trim()) body.fatherName = walkIn.fatherName.trim()
     if (walkIn.motherName.trim()) body.motherName = walkIn.motherName.trim()
     if (walkIn.sacramentYear) body.sacramentYear = walkIn.sacramentYear
-    if (walkIn.notes.trim()) body.notes = walkIn.notes.trim()
 
     setPending(true)
     const r = await authed({ method: 'POST', path: '/api/documents/walk-in', body })
@@ -269,10 +267,6 @@ export default function DocumentRequests() {
             <label className="field field--full">
               <span>What is it for? *</span>
               <input value={walkIn.purpose} onChange={update('purpose')} />
-            </label>
-            <label className="field field--full">
-              <span>Notes</span>
-              <textarea rows={2} value={walkIn.notes} onChange={update('notes')} />
             </label>
           </div>
 

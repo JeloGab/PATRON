@@ -23,7 +23,6 @@ const EMPTY = {
   fatherName: '',
   motherName: '',
   sacramentYear: '',
-  notes: '',
   invoiceNo: '',
 }
 
@@ -160,7 +159,6 @@ export default function RequestDocument() {
     if (form.fatherName.trim()) body.fatherName = form.fatherName.trim()
     if (form.motherName.trim()) body.motherName = form.motherName.trim()
     if (form.sacramentYear) body.sacramentYear = form.sacramentYear
-    if (form.notes.trim()) body.notes = form.notes.trim()
 
     setPending(true)
     const r = await authed({ method: 'POST', path: '/api/requests', body })
@@ -308,16 +306,6 @@ export default function RequestDocument() {
               value={form.purpose}
               onChange={update('purpose')}
               placeholder="e.g. Marriage requirements, school enrolment, passport application"
-            />
-          </label>
-
-          <label className="field field--full">
-            <span>Anything else that would help</span>
-            <textarea
-              rows={3}
-              value={form.notes}
-              onChange={update('notes')}
-              placeholder="A former surname, the chapel where it took place, a sibling baptised the same day"
             />
           </label>
 

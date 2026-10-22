@@ -254,23 +254,3 @@ export async function clearParticipant(actor, participantId, eventDate) {
     return rowCount
   })
 }
-
-export async function findUnclearedParticipants(actor, eventId) {
-  return withActor(actor, async (client) => {
-    const { rows } = await client.query(
-      `select p.participant_name,
-              count(*) filter (where r.status = 'pending') as pending_count
-         from public.event_participant p
-         left join public.participant_requirement r on r.participant_id = p.participant_id
-        where p.event_id = $1
-          and p.status = 'pending'
-        group by p.participant_id, p.participant_name
-        order by p.participant_name`,
-      [eventId],
-    )
-    return rows.map((row) => ({
-      participantName: row.participant_name,
-      pendingCount: Number(row.pending_count),
-    }))
-  })
-}
