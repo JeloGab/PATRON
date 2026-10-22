@@ -130,12 +130,12 @@ export default function Signup() {
           <h1>Create a parishioner account</h1>
           <p className="lede">
             An account lets you request baptismal, confirmation, marriage and death certificates
-            from any parish in the diocese, and follow each request until it is ready.
+            from any registered parish, and follow each request until it is ready.
           </p>
           <ul className="login__points">
             <li>Request certificates without going to the office first</li>
             <li>Follow every request through to approval</li>
-            <li>No parish to choose — your account is diocese-wide</li>
+            <li>No parish to choose — one account works with every parish</li>
           </ul>
         </div>
       </aside>

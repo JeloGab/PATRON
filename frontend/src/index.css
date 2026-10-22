@@ -1212,6 +1212,13 @@ textarea:focus {
     grid-template-columns: 1.05fr 0.95fr;
   }
 
+  /* The confirmation and expired-link states render .login__main with no aside
+     beside it. Without this the card lands in column 1 and centres in the left
+     52.5% of the viewport rather than the whole of it. */
+  .login__main:only-child {
+    grid-column: 1 / -1;
+  }
+
   .login__aside {
     display: flex;
     flex-direction: column;

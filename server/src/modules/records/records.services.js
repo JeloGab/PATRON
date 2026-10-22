@@ -2,7 +2,7 @@ import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireRecordType, requireRegistryPart, requireOfficiant, requirePastDate, optionalPastDate, requireSubjectName, optionalSubjectName, requireGender, optionalPlaceOfBirth, optionalSponsorNames } from '../../lib/validators.js'
 import { findRecord, insertRecord, updateRecord, updateSubject, searchSubjects, insertAttachment, findAttachment, deleteAttachment } from './records.queries.js'
-import {sniffContentType, sanitizeFileName, ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES} from '../../lib/fileType.js'
+import {sniffContentType, sanitizeFileName, MAX_ATTACHMENT_BYTES} from '../../lib/fileType.js'
 import { countRecordDocuments } from '../documents/documents.queries.js'
 
 const PAGE_SIZE = 50

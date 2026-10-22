@@ -223,12 +223,6 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
             <dd>{[request.fatherName, request.motherName].filter(Boolean).join(' · ')}</dd>
           </div>
         )}
-        {request.notes && (
-          <div>
-            <dt>Notes from the requestor</dt>
-            <dd>{request.notes}</dd>
-          </div>
-        )}
         <div>
           <dt>Submitted</dt>
           <dd>{formatStamp(request.submittedAt)}</dd>

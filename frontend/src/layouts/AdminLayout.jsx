@@ -13,7 +13,7 @@ export default function AdminLayout() {
       </main>
 
       <footer className="foot">
-        <p>PATRON · Diocese-wide parish registry and staff provisioning</p>
+        <p>PATRON · Parish registry and staff provisioning</p>
       </footer>
     </div>
   )

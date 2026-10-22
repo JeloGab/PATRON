@@ -7,7 +7,6 @@ import { buildSnapshot, renderCertificatePdf } from '../documents/documents.serv
 import { findEventCertificates, findEventCertificate, findCertificateSignature } from '../documents/documents.queries.js'
 import { roleFor, checkDates } from '../records/records.services.js'
 import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, countPriestEventsInMonth, findCalendarEvents, findReservedDates, findParishBlockDates } from './events.queries.js'
-import { findUnclearedParticipants } from '../participants/participants.queries.js'
 import {completeEventAndIssue} from './events.issuance.js'
 const MAX_WINDOW_DAYS = 92
 const EDITABLE_STATUSES = ['pending', 'approved']

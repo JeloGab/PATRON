@@ -1,6 +1,6 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import {clean, optionalContact, optionalDescription, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requireInvoiceNo, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
+import {clean, optionalContact, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requireInvoiceNo, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
 import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate, findCertificateSignature, hasOwnSignature } from './documents.queries.js'
 import {mintVerificationCode} from '../../lib/verificationCode.js'
 import { buildCertificatePdf } from './documents.pdf.js'
@@ -34,7 +34,6 @@ function requestFields(body) {
     fatherName: optionalSubjectName(body.fatherName),
     motherName: optionalSubjectName(body.motherName),
     sacramentYear: optionalSacramentYear(body.sacramentYear),
-    notes: optionalDescription(body.notes),
   }
 }
 

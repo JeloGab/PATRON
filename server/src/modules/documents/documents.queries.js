@@ -5,7 +5,7 @@ import { AppError } from '../../lib/appError.js'
 const COLUMNS = `a.application_id, a.parish_id, a.record_id, a.applicant_id,
                  a.requestor_name, a.requestor_contact, a.relationship, a.purpose,
                  a.subject_name, a.subject_birth_date, a.father_name, a.mother_name,
-                 a.sacrament_year, a.notes, a.status, a.status_reason, a.is_paid,
+                 a.sacrament_year, a.status, a.status_reason, a.is_paid,
                  a.invoice_no, a.id_file_name, (a.id_file is not null) as has_id_file,
                  a.submitted_at, a.verified_at, a.approved_at,
                  coalesce(a.rejected_at, a.cancelled_at) as closed_at,
@@ -56,7 +56,6 @@ function mapApplication(row) {
     fatherName: row.father_name,
     motherName: row.mother_name,
     sacramentYear: row.sacrament_year,
-    notes: row.notes,
     status: row.status,
     statusReason: row.status_reason,
     isPaid: row.is_paid,
@@ -171,8 +170,8 @@ export async function insertApplication(actor, application) {
         `insert into public.document_application
            (parish_id, document_type_id, applicant_id, requestor_name, requestor_contact,
             relationship, purpose, subject_name, subject_birth_date, father_name,
-            mother_name, sacrament_year, notes, invoice_no, created_by)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            mother_name, sacrament_year, invoice_no, created_by)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          returning application_id`,
         [
           application.parishId,
@@ -187,7 +186,6 @@ export async function insertApplication(actor, application) {
           application.fatherName,
           application.motherName,
           application.sacramentYear,
-          application.notes,
           application.invoiceNo,
           application.createdBy,
         ]
@@ -221,7 +219,7 @@ export async function markPaid(actor, applicationId) {
   return withActor(actor, async (client) => {
     const { rowCount } = await client.query(
       `update public.document_application
-          set is_paid = true, paid_at = now()
+          set is_paid = true
         where application_id = $1
           and status in ('pending', 'verified')
           and is_paid = false`,

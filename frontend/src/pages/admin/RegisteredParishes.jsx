@@ -29,7 +29,6 @@ export default function RegisteredParishes() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [registerOpen, setRegisterOpen] = useState(false)
   const [provisionFor, setProvisionFor] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
@@ -90,9 +89,7 @@ export default function RegisteredParishes() {
 
   const list = parishes.filter((parish) => {
     const hay = `${parish.name} ${parish.address}`.toLowerCase()
-    const matchesQuery = hay.includes(query.trim().toLowerCase())
-    const matchesStatus = statusFilter === 'all' || parish.status === statusFilter
-    return matchesQuery && matchesStatus
+    return hay.includes(query.trim().toLowerCase())
   })
 
   const selected = parishes.find((parish) => parish.parishId === selectedId) || null
@@ -170,8 +167,7 @@ export default function RegisteredParishes() {
           <p className="eyebrow">Registry</p>
           <h1>Registered parishes</h1>
           <p className="lede">
-            Parishes onboarded to PATRON, their assigned priests, and registration status across the
-            Diocese of Libmanan.
+            Parishes onboarded to PATRON, their assigned priests, and registration status.
           </p>
         </div>
         <p className="stat">
@@ -205,14 +201,6 @@ export default function RegisteredParishes() {
             placeholder="Search by name or address…"
           />
         </label>
-        <label className="select">
-          <span className="sr-only">Filter by status</span>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </label>
       </div>
 
       {loading && parishes.length === 0 ? (
@@ -240,9 +228,7 @@ export default function RegisteredParishes() {
                     accent={accentFor(parish.parishId)}
                     className="parish-card__media"
                     alt={parish.name}
-                  >
-                    <StatusPill status={parish.status} />
-                  </ChurchMedia>
+                  />
                   <div className="parish-card__body">
                     <h2>{parish.name}</h2>
                     <p className="muted">{municipalityFromAddress(parish.address)}</p>
@@ -258,12 +244,6 @@ export default function RegisteredParishes() {
                       <div>
                         <dt>Date registered</dt>
                         <dd>{formatRegisteredDate(parish.createdAt)}</dd>
-                      </div>
-                      <div>
-                        <dt>Status</dt>
-                        <dd>
-                          <StatusPill status={parish.status} />
-                        </dd>
                       </div>
                     </dl>
                   </div>

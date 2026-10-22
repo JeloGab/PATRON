@@ -2,6 +2,7 @@ import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireSubjectName, requireGender, optionalContact, optionalPastDate, optionalSponsorNames, optionalReason } from '../../lib/validators.js'
 import { findEvent } from '../events/events.queries.js'
+import { findRecord } from '../records/records.queries.js'
 import { findParticipant, findParticipants, insertParticipant, updateParticipant, setParticipantStatus,  materialiseRequirements, findRequirements, findRequirement, updateRequirement,
   findMatchingRecordIds, clearParticipant, } from './participants.queries.js'
 
