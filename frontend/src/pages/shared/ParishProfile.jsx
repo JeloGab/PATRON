@@ -224,13 +224,9 @@ export default function ParishProfile() {
           <p className="lede">
             These are the details a parishioner sees in the public directory. Four of them —
             name, address, contact number and email — are the whole of that public listing, so a
-            change here is a change to what the diocese sees.
+            change here is a change to what the public sees.
           </p>
         </div>
-        <p className="stat">
-          <strong>{parish.status === 'active' ? 'Active' : parish.status}</strong>
-          parish status
-        </p>
       </header>
 
       {notice && <p className="notice">{notice}</p>}
@@ -442,10 +438,6 @@ export default function ParishProfile() {
               <div>
                 <dt>Registered</dt>
                 <dd>{parish.createdAt ? formatLongDate(parish.createdAt.slice(0, 10)) : '—'}</dd>
-              </div>
-              <div>
-                <dt>Status</dt>
-                <dd>{parish.status === 'active' ? 'Active' : parish.status}</dd>
               </div>
               <div>
                 <dt>Your role here</dt>
