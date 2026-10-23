@@ -1,4 +1,4 @@
-// The priest's announcements: approve or reject the office's, or post his own.
+// The priest's announcements: approve, reject or archive what the parish office writes.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
@@ -12,15 +12,12 @@ import { messageFor } from '../../lib/errors.js'
 import { clearSession } from '../../lib/session.js'
 
 const TABS = ['pending', 'approved', 'rejected', 'archived']
-const EMPTY = { title: '', content: '' }
 
 export default function AnnouncementApprovals() {
   const navigate = useNavigate()
   const { refresh } = useOutletContext()
   const [announcements, setAnnouncements] = useState(null)
   const [status, setStatus] = useState('pending')
-  const [draft, setDraft] = useState(EMPTY)
-  const [composing, setComposing] = useState(false)
   const [rejectingId, setRejectingId] = useState(null)
   const [reason, setReason] = useState('')
   const [openId, setOpenId] = useState(null)
@@ -86,38 +83,6 @@ export default function AnnouncementApprovals() {
     refresh()
   }
 
-  async function post(submitEvent) {
-    submitEvent.preventDefault()
-    setError('')
-    setNotice('')
-
-    const title = draft.title.trim()
-    const content = draft.content.trim()
-    if (!title || !content) {
-      setError('Give the announcement a title and a message.')
-      return
-    }
-
-    setBusy('post')
-    const r = await authed({ method: 'POST', path: '/api/announcements', body: { title, content } })
-    setBusy('')
-
-    if (isSessionError(r)) {
-      endSession()
-      return
-    }
-    if (!r.ok) {
-      setError(messageFor(r))
-      return
-    }
-
-    setDraft(EMPTY)
-    setComposing(false)
-    setStatus('approved')
-    setNotice('Published. Your own announcement needs no approval.')
-    load()
-  }
-
   return (
     <div className="page">
       <header className="page__hero">
@@ -125,9 +90,8 @@ export default function AnnouncementApprovals() {
           <p className="eyebrow">Announcements</p>
           <h1>Announcement approvals</h1>
           <p className="lede">
-            What the parish office has written, and anything you post yourself. Approving publishes
-            to the public feed, and approval is final — a correction is an archive and a new
-            announcement.
+            What the parish office has written. Approving publishes it to the public feed, and
+            approval is final — a correction is an archive and a new announcement.
           </p>
         </div>
         <div className="panel__actions">
@@ -135,13 +99,6 @@ export default function AnnouncementApprovals() {
             <strong>{announcements ? pendingCount : '—'}</strong>
             waiting for you
           </p>
-          <button
-            type="button"
-            className="btn btn--gold"
-            onClick={() => setComposing((open) => !open)}
-          >
-            {composing ? 'Close' : 'Post my own'}
-          </button>
         </div>
       </header>
 
@@ -150,50 +107,6 @@ export default function AnnouncementApprovals() {
         <p className="alert" role="alert">
           {error}
         </p>
-      )}
-
-      {composing && (
-        <form className="card editor" onSubmit={post}>
-          <p className="eyebrow">Your announcement</p>
-          <p className="notice">
-            Yours is published the moment you post it — you are the approver, so it never waits.
-            One consequence: <strong>it cannot carry an image</strong>, because images can only be
-            attached before approval. For an announcement with a photograph, ask the office to
-            write it and approve theirs.
-          </p>
-          <div className="form-grid">
-            <label className="field field--full">
-              <span>Title *</span>
-              <input
-                value={draft.title}
-                onChange={(changed) =>
-                  setDraft((current) => ({ ...current, title: changed.target.value }))
-                }
-              />
-            </label>
-            <label className="field field--full">
-              <span>Message *</span>
-              <textarea
-                rows={6}
-                value={draft.content}
-                onChange={(changed) =>
-                  setDraft((current) => ({ ...current, content: changed.target.value }))
-                }
-                placeholder="The feed is public, so no personal details of any parishioner."
-              />
-            </label>
-          </div>
-          <div className="form-actions">
-            <div className="form-actions__buttons">
-              <button type="button" className="btn btn--ghost" onClick={() => setComposing(false)}>
-                Cancel
-              </button>
-              <button type="submit" className="btn btn--gold" disabled={busy === 'post'}>
-                {busy === 'post' ? 'Publishing…' : 'Publish'}
-              </button>
-            </div>
-          </div>
-        </form>
       )}
 
       <Seg label="Announcement status">
