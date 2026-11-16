@@ -201,7 +201,7 @@ export default function AnnouncementApprovals() {
               {rejectingId === item.announcementId && (
                 <div className="form-grid">
                   <label className="field field--full">
-                    <span>Reason (optional)</span>
+                    <span>Reason</span>
                     <input
                       value={reason}
                       onChange={(changed) => setReason(changed.target.value)}

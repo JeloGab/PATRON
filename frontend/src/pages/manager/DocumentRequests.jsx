@@ -206,7 +206,7 @@ export default function DocumentRequests() {
 
           <div className="form-grid">
             <label className="field">
-              <span>Certificate *</span>
+              <span>Certificate<b className="req">*</b></span>
               <select value={walkIn.documentTypeId} onChange={update('documentTypeId')}>
                 <option value="">Choose…</option>
                 {types.map((type) => (
@@ -217,7 +217,7 @@ export default function DocumentRequests() {
               </select>
             </label>
             <label className="field">
-              <span>Requesting person *</span>
+              <span>Requesting person<b className="req">*</b></span>
               <input value={walkIn.requestorName} onChange={update('requestorName')} />
             </label>
             <label className="field">
@@ -230,7 +230,7 @@ export default function DocumentRequests() {
               <span className="form-hint">Optional, free text — up to 60 characters.</span>
             </label>
             <label className="field">
-              <span>Their relationship *</span>
+              <span>Their relationship<b className="req">*</b></span>
               <select value={walkIn.relationship} onChange={update('relationship')}>
                 {RELATIONSHIPS.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -240,7 +240,7 @@ export default function DocumentRequests() {
               </select>
             </label>
             <label className="field">
-              <span>Name on the document *</span>
+              <span>Name on the document<b className="req">*</b></span>
               <input value={walkIn.subjectName} onChange={update('subjectName')} />
             </label>
             <label className="field">
@@ -265,7 +265,7 @@ export default function DocumentRequests() {
               <input value={walkIn.motherName} onChange={update('motherName')} />
             </label>
             <label className="field field--full">
-              <span>What is it for? *</span>
+              <span>What is it for?<b className="req">*</b></span>
               <input value={walkIn.purpose} onChange={update('purpose')} />
             </label>
           </div>

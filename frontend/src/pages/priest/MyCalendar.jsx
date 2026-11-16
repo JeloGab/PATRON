@@ -158,13 +158,17 @@ export default function MyCalendar() {
       <section className="panel" aria-labelledby="calendar-heading">
         <div className="panel__head">
           <h2 id="calendar-heading">{formatMonth(cursor.year, cursor.month)}</h2>
-          <div className="panel__actions">
+          <div className="panel__actions month-nav">
             <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(-1)}>
-              Previous
+              ← Previous
             </button>
+            <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
+              Next →
+            </button>
+            <span className="month-nav__sep" aria-hidden="true" />
             <button
               type="button"
-              className="btn btn--ghost"
+              className="btn"
               onClick={() => {
                 const current = new Date()
                 setCursor({ year: current.getFullYear(), month: current.getMonth() })
@@ -172,9 +176,6 @@ export default function MyCalendar() {
               }}
             >
               Today
-            </button>
-            <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
-              Next
             </button>
           </div>
         </div>

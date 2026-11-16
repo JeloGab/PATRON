@@ -186,7 +186,7 @@ export default function CompleteEventModal({ event, participants, signatory, onC
               <h3 className="eyebrow">Register</h3>
               <div className="form-grid">
                 <label className="field">
-                  <span>Book *</span>
+                  <span>Book<b className="req">*</b></span>
                   <input
                     value={registry.bookNo}
                     onChange={(changed) =>
@@ -196,7 +196,7 @@ export default function CompleteEventModal({ event, participants, signatory, onC
                   />
                 </label>
                 <label className="field">
-                  <span>Page *</span>
+                  <span>Page<b className="req">*</b></span>
                   <input
                     value={registry.pageNo}
                     onChange={(changed) =>

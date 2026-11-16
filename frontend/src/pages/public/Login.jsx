@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
+import PasswordField from '../../components/PasswordField.jsx'
 import Seg from '../../components/Seg.jsx'
 import { call } from '../../lib/api.js'
 import { clearEmailConfirmed, peekEmailConfirmed } from '../../lib/authFragment.js'
@@ -169,16 +170,15 @@ export default function Login() {
                 placeholder={config.placeholder}
               />
             </label>
-            <label className="field field--full">
-              <span>Password</span>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter your password"
-              />
-            </label>
+            <PasswordField
+              label="Password"
+              required={false}
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Enter your password"
+              hideOn={error}
+            />
           </div>
 
           <button type="submit" className="btn btn--gold login__submit" disabled={pending}>

@@ -179,7 +179,7 @@ export default function Announcements() {
           <p className="eyebrow">{editingId ? 'Edit announcement' : 'New announcement'}</p>
           <div className="form-grid">
             <label className="field field--full">
-              <span>Title *</span>
+              <span>Title<b className="req">*</b></span>
               <input
                 value={draft.title}
                 onChange={(changed) =>
@@ -189,7 +189,7 @@ export default function Announcements() {
               />
             </label>
             <label className="field field--full">
-              <span>Message *</span>
+              <span>Message<b className="req">*</b></span>
               <textarea
                 rows={6}
                 value={draft.content}

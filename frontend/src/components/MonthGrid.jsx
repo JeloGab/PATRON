@@ -11,6 +11,7 @@ export default function MonthGrid({
   month,
   selectedDate,
   onSelectDate,
+  onOpenDay,
   onSelectEvent,
   selectedEventId,
   eventsByDate,
@@ -64,7 +65,11 @@ export default function MonthGrid({
                 .join(' ')}
               role="gridcell"
             >
-              <button type="button" className="cal__date" onClick={() => onSelectDate?.(iso)}>
+              <button
+                type="button"
+                className="cal__date"
+                onClick={() => (onOpenDay ? onOpenDay(iso) : onSelectDate?.(iso))}
+              >
                 {date.getDate()}
               </button>
 

@@ -232,7 +232,7 @@ export default function RequestDocument() {
 
         <div className="form-grid">
           <label className="field field--full">
-            <span>Certificate *</span>
+            <span>Certificate<b className="req">*</b></span>
             <select value={form.documentTypeId} onChange={update('documentTypeId')}>
               {types.map((type) => (
                 <option key={type.documentTypeId} value={type.documentTypeId}>
@@ -251,7 +251,7 @@ export default function RequestDocument() {
           </label>
 
           <label className="field">
-            <span>Who is this certificate for? *</span>
+            <span>Who is this certificate for?<b className="req">*</b></span>
             <select value={form.relationship} onChange={update('relationship')}>
               {RELATIONSHIPS.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -263,7 +263,7 @@ export default function RequestDocument() {
           </label>
 
           <label className="field">
-            <span>Name on the document *</span>
+            <span>Name on the document<b className="req">*</b></span>
             <input
               value={form.subjectName}
               onChange={update('subjectName')}
@@ -301,7 +301,7 @@ export default function RequestDocument() {
           </label>
 
           <label className="field field--full">
-            <span>What is it for? *</span>
+            <span>What is it for?<b className="req">*</b></span>
             <input
               value={form.purpose}
               onChange={update('purpose')}
@@ -312,7 +312,7 @@ export default function RequestDocument() {
           <h3 className="eyebrow field--full">Payment and identification</h3>
 
           <label className="field field--full">
-            <span>Payment reference number *</span>
+            <span>Payment reference number<b className="req">*</b></span>
             <input
               value={form.invoiceNo}
               onChange={update('invoiceNo')}

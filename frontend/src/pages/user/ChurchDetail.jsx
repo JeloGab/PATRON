@@ -61,11 +61,7 @@ export default function ChurchDetail() {
     }
   }, [id])
 
-  // The calendar is fetched on its own, not appended to the effect above, for two
-  // reasons: a slow month must not hold up the parish name, and month navigation
-  // refetches — reusing the page-level `loading` would blank the whole page on every
-  // flip. `monthWindow` returns the span of the rendered grid, not the calendar
-  // month, so the leading and trailing days of adjacent months are populated too.
+  
   const { from, to } = monthWindow(cursor.year, cursor.month)
 
   useEffect(() => {
@@ -80,9 +76,7 @@ export default function ChurchDetail() {
       })
       if (!live) return
 
-      // Only NO_TOKEN, INVALID_TOKEN and SESSION_REVOKED end a session — not every
-      // 401. This is the one authenticated call on the page, so it is the only one
-      // that can strand a signed-out parishioner here.
+      
       if (isSessionError(r)) {
         clearSession()
         navigate('/login', { replace: true })
@@ -255,13 +249,17 @@ export default function ChurchDetail() {
               <p className="eyebrow">Parish calendar</p>
               <h2 id="parish-calendar-heading">{formatMonth(cursor.year, cursor.month)}</h2>
             </div>
-            <div className="panel__actions">
+            <div className="panel__actions month-nav">
               <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(-1)}>
-                Previous
+                ← Previous
               </button>
+              <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
+                Next →
+              </button>
+              <span className="month-nav__sep" aria-hidden="true" />
               <button
                 type="button"
-                className="btn btn--ghost"
+                className="btn"
                 onClick={() => {
                   const current = new Date()
                   setCursor({ year: current.getFullYear(), month: current.getMonth() })
@@ -269,9 +267,6 @@ export default function ChurchDetail() {
                 }}
               >
                 Today
-              </button>
-              <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
-                Next
               </button>
             </div>
           </div>

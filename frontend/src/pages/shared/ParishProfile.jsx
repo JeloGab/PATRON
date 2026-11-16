@@ -247,12 +247,12 @@ export default function ParishProfile() {
               <p className="eyebrow">Edit details</p>
               <div className="form-grid">
                 <label className="field field--full">
-                  <span>Parish name</span>
+                  <span>Parish name<b className="req">*</b></span>
                   <input value={form.name} onChange={update('name')} />
                   <span className="form-hint">3 to 50 characters.</span>
                 </label>
                 <label className="field field--full">
-                  <span>Address</span>
+                  <span>Address<b className="req">*</b></span>
                   <input value={form.address} onChange={update('address')} />
                   <span className="form-hint">
                     At least 5 characters. The directory derives the municipality from the last part
@@ -260,7 +260,7 @@ export default function ParishProfile() {
                   </span>
                 </label>
                 <label className="field">
-                  <span>Contact number</span>
+                  <span>Contact number<b className="req">*</b></span>
                   <input
                     value={form.contactNo}
                     onChange={update('contactNo')}

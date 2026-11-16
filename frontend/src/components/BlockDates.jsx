@@ -180,7 +180,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
         <div className="form-grid">
           {isParishScope && (
             <label className="field">
-              <span>Scope *</span>
+              <span>Scope<b className="req">*</b></span>
               <select value={form.type} onChange={update('type')}>
                 <option value="parish">The whole parish</option>
                 <option value="priest">One priest only</option>
@@ -195,7 +195,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
           {form.type === 'priest' &&
             (isParishScope ? (
               <label className="field">
-                <span>Priest *</span>
+                <span>Priest<b className="req">*</b></span>
                 <select value={form.priestId} onChange={update('priestId')}>
                   <option value="">Choose…</option>
                   {priests.map((priest) => (
@@ -214,7 +214,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
             ))}
 
           <label className="field">
-            <span>From *</span>
+            <span>From<b className="req">*</b></span>
             <input
               type="date"
               value={form.fromDate}

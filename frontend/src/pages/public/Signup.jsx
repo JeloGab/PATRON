@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
+import PasswordField from '../../components/PasswordField.jsx'
 import { call } from '../../lib/api.js'
 import { getSession, landingFor } from '../../lib/session.js'
 
@@ -153,7 +154,7 @@ export default function Signup() {
 
           <div className="form-grid">
             <label className="field field--full">
-              <span>Full name</span>
+              <span>Full name<b className="req">*</b></span>
               <input
                 type="text"
                 autoComplete="name"
@@ -164,7 +165,7 @@ export default function Signup() {
               <span className="form-hint">As it should appear on a certificate request.</span>
             </label>
             <label className="field field--full">
-              <span>Email</span>
+              <span>Email<b className="req">*</b></span>
               <input
                 type="email"
                 autoComplete="email"
@@ -173,25 +174,21 @@ export default function Signup() {
                 placeholder="name@example.com"
               />
             </label>
-            <label className="field field--full">
-              <span>Password</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <span className="form-hint">At least {MIN_LENGTH} characters.</span>
-            </label>
-            <label className="field field--full">
-              <span>Confirm password</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
-              />
-            </label>
+            <PasswordField
+              label="Password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              hint={`At least ${MIN_LENGTH} characters.`}
+              hideOn={error}
+            />
+            <PasswordField
+              label="Confirm password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              hideOn={error}
+            />
           </div>
 
           <button type="submit" className="btn btn--gold login__submit" disabled={pending}>

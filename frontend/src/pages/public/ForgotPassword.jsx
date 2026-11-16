@@ -108,7 +108,7 @@ export default function ForgotPassword() {
 
           <div className="form-grid">
             <label className="field field--full">
-              <span>Email</span>
+              <span>Email<b className="req">*</b></span>
               <input
                 type="email"
                 autoComplete="email"

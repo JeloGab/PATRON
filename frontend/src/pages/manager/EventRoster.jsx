@@ -334,7 +334,7 @@ export default function EventRoster() {
                 <p className="eyebrow">{editingId ? 'Correct a participant' : 'New participant'}</p>
                 <div className="form-grid">
                   <label className="field">
-                    <span>Full name *</span>
+                    <span>Full name<b className="req">*</b></span>
                     <input
                       value={form.participantName}
                       onChange={update('participantName')}
@@ -342,7 +342,7 @@ export default function EventRoster() {
                     />
                   </label>
                   <label className="field">
-                    <span>Gender *</span>
+                    <span>Gender<b className="req">*</b></span>
                     <select value={form.gender} onChange={update('gender')}>
                       {GENDERS.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -352,7 +352,7 @@ export default function EventRoster() {
                     </select>
                   </label>
                   <label className="field">
-                    <span>Date of birth {rules.birthDate ? '*' : ''}</span>
+                    <span>Date of birth{rules.birthDate && <b className="req">*</b>}</span>
                     <input
                       type="date"
                       value={form.participantDateOfBirth}
@@ -361,7 +361,7 @@ export default function EventRoster() {
                     />
                   </label>
                   <label className="field">
-                    <span>Contact {rules.contact ? '*' : ''}</span>
+                    <span>Contact{rules.contact && <b className="req">*</b>}</span>
                     <input
                       value={form.participantContact}
                       onChange={update('participantContact')}

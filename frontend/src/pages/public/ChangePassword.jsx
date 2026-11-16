@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo.jsx'
+import PasswordField from '../../components/PasswordField.jsx'
 import { call, isSessionError } from '../../lib/api.js'
 import { clearSession, getSession, getToken, landingFor, patchSession } from '../../lib/session.js'
 
@@ -155,34 +156,28 @@ export default function ChangePassword() {
           )}
 
           <div className="form-grid">
-            <label className="field field--full">
-              <span>{forced ? 'Temporary password' : 'Current password'}</span>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={current}
-                onChange={(event) => setCurrent(event.target.value)}
-              />
-            </label>
-            <label className="field field--full">
-              <span>New password</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={next}
-                onChange={(event) => setNext(event.target.value)}
-              />
-              <span className="form-hint">At least {MIN_LENGTH} characters.</span>
-            </label>
-            <label className="field field--full">
-              <span>Confirm new password</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
-              />
-            </label>
+            <PasswordField
+              label={forced ? 'Temporary password' : 'Current password'}
+              autoComplete="current-password"
+              value={current}
+              onChange={(event) => setCurrent(event.target.value)}
+              hideOn={error}
+            />
+            <PasswordField
+              label="New password"
+              autoComplete="new-password"
+              value={next}
+              onChange={(event) => setNext(event.target.value)}
+              hint={`At least ${MIN_LENGTH} characters.`}
+              hideOn={error}
+            />
+            <PasswordField
+              label="Confirm new password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              hideOn={error}
+            />
           </div>
 
           <button type="submit" className="btn btn--gold login__submit" disabled={pending}>

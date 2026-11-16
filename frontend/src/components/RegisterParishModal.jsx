@@ -83,7 +83,7 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
         )}
 
         <label className="field field--full">
-          <span>Parish name</span>
+          <span>Parish name<b className="req">*</b></span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -93,7 +93,7 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
         </label>
 
         <label className="field field--full">
-          <span>Address</span>
+          <span>Address<b className="req">*</b></span>
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -102,7 +102,7 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
         </label>
 
         <label className="field">
-          <span>Contact number</span>
+          <span>Contact number<b className="req">*</b></span>
           <input
             value={contactNo}
             onChange={(e) => setContactNo(e.target.value)}
@@ -112,7 +112,7 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
         </label>
 
         <label className="field">
-          <span>Email (optional)</span>
+          <span>Email</span>
           <input
             type="email"
             value={email}

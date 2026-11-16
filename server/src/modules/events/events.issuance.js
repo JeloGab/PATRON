@@ -120,8 +120,6 @@ export async function completeEventAndIssue(
 
       if (context.signatory_status !== 'active') {
         warnings.push(
-          // The two roles can now differ, so the warning must not claim he was recorded
-          // as the officiant when someone else was named.
           officiantName
             ? `${context.signatory_name} is no longer active — recorded as signatory anyway`
             : `${context.signatory_name} is no longer active — recorded as officiant and signatory anyway`

@@ -71,20 +71,20 @@ export function RecordEditForm({ record, onSave, onCancel }) {
       )}
 
       <label className="field">
-        <span>Book no.</span>
+        <span>Book no.<b className="req">*</b></span>
         <input value={form.bookNo} onChange={(e) => set('bookNo', e.target.value)} />
       </label>
       <label className="field">
-        <span>Page no.</span>
+        <span>Page no.<b className="req">*</b></span>
         <input value={form.pageNo} onChange={(e) => set('pageNo', e.target.value)} />
       </label>
       <label className="field">
-        <span>Entry no.</span>
+        <span>Entry no.<b className="req">*</b></span>
         <input value={form.entryNo} onChange={(e) => set('entryNo', e.target.value)} />
       </label>
 
       <label className="field">
-        <span>Date of sacrament</span>
+        <span>Date of sacrament<b className="req">*</b></span>
         <input
           type="date"
           value={form.recordDate}
@@ -105,7 +105,7 @@ export function RecordEditForm({ record, onSave, onCancel }) {
       )}
 
       <label className="field field--full">
-        <span>Officiant</span>
+        <span>Officiant<b className="req">*</b></span>
         <input
           value={form.officiantName}
           onChange={(e) => set('officiantName', e.target.value)}
@@ -187,12 +187,12 @@ export function SubjectEditForm({ record, subject, onSave, onCancel }) {
       )}
 
       <label className="field field--full">
-        <span>Full name</span>
+        <span>Full name<b className="req">*</b></span>
         <input value={form.fullName} onChange={(e) => set('fullName', e.target.value)} />
       </label>
 
       <label className="field">
-        <span>Gender</span>
+        <span>Gender<b className="req">*</b></span>
         <select
           value={form.gender}
           onChange={(e) => set('gender', e.target.value)}
@@ -211,7 +211,7 @@ export function SubjectEditForm({ record, subject, onSave, onCancel }) {
       </label>
 
       <label className="field">
-        <span>Date of birth{needsBirthDate ? '' : ' (optional)'}</span>
+        <span>Date of birth{needsBirthDate && <b className="req">*</b>}</span>
         <input
           type="date"
           value={form.dateOfBirth}
@@ -220,21 +220,21 @@ export function SubjectEditForm({ record, subject, onSave, onCancel }) {
       </label>
 
       <label className="field field--full">
-        <span>Place of birth (optional)</span>
+        <span>Place of birth</span>
         <input value={form.placeOfBirth} onChange={(e) => set('placeOfBirth', e.target.value)} />
       </label>
 
       <label className="field">
-        <span>Father (optional)</span>
+        <span>Father</span>
         <input value={form.fatherName} onChange={(e) => set('fatherName', e.target.value)} />
       </label>
       <label className="field">
-        <span>Mother (optional)</span>
+        <span>Mother</span>
         <input value={form.motherName} onChange={(e) => set('motherName', e.target.value)} />
       </label>
 
       <label className="field field--full">
-        <span>Sponsors (optional)</span>
+        <span>Sponsors</span>
         <input value={form.sponsorNames} onChange={(e) => set('sponsorNames', e.target.value)} />
       </label>
 

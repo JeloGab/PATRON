@@ -6,6 +6,7 @@ import EventModal from '../../components/EventModal.jsx'
 import EventTable from '../../components/EventTable.jsx'
 import Loading from '../../components/Loading.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
+import Modal from '../../components/Modal.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatMonth, formatWeekdayDate, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -29,6 +30,7 @@ export default function EventScheduling() {
   const [blocks, setBlocks] = useState([])
   const [priests, setPriests] = useState([])
   const [openId, setOpenId] = useState(null)
+  const [dayOpen, setDayOpen] = useState(false)
   const [showBlocked, setShowBlocked] = useState(false)
   const [error, setError] = useState('')
 
@@ -119,7 +121,14 @@ export default function EventScheduling() {
           <Link to="/manager/events/block" className="btn btn--ghost">
             Add blocked date
           </Link>
-          <Link to="/manager/events/new" className="btn btn--gold">
+          <Link
+            to={
+              selectedDate >= todayISO()
+                ? `/manager/events/new?date=${selectedDate}`
+                : '/manager/events/new'
+            }
+            className="btn btn--gold"
+          >
             Create event
           </Link>
         </div>
@@ -176,13 +185,17 @@ export default function EventScheduling() {
       <section className="panel" id="parish-calendar" aria-labelledby="calendar-heading">
         <div className="panel__head">
           <h2 id="calendar-heading">{formatMonth(cursor.year, cursor.month)}</h2>
-          <div className="panel__actions">
+          <div className="panel__actions month-nav">
             <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(-1)}>
-              Previous
+              ← Previous
             </button>
+            <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
+              Next →
+            </button>
+            <span className="month-nav__sep" aria-hidden="true" />
             <button
               type="button"
-              className="btn btn--ghost"
+              className="btn"
               onClick={() => {
                 const current = new Date()
                 setCursor({ year: current.getFullYear(), month: current.getMonth() })
@@ -190,9 +203,6 @@ export default function EventScheduling() {
               }}
             >
               Today
-            </button>
-            <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
-              Next
             </button>
           </div>
         </div>
@@ -205,6 +215,10 @@ export default function EventScheduling() {
             month={cursor.month}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
+            onOpenDay={(iso) => {
+              setSelectedDate(iso)
+              setDayOpen(true)
+            }}
             onSelectEvent={(event) => setOpenId(event.eventId)}
             selectedEventId={openId}
             eventsByDate={eventsByDate}
@@ -212,9 +226,21 @@ export default function EventScheduling() {
             priestBlocksByDate={priestBlocksByDate}
           />
         )}
+      </section>
 
+      <Modal
+        title={formatWeekdayDate(selectedDate)}
+        open={dayOpen}
+        onClose={() => setDayOpen(false)}
+      >
         <div className="day-detail">
-          <h3>{formatWeekdayDate(selectedDate)}</h3>
+          {selectedDate >= todayISO() && (
+            <div className="day-detail__top">
+              <Link to={`/manager/events/new?date=${selectedDate}`} className="btn btn--gold">
+                Create event
+              </Link>
+            </div>
+          )}
           {dayBlocks.length === 0 && dayEvents.length === 0 ? (
             <p className="muted">Nothing scheduled on this day.</p>
           ) : (
@@ -247,7 +273,10 @@ export default function EventScheduling() {
                       <button
                         type="button"
                         className="text-btn"
-                        onClick={() => setOpenId(event.eventId)}
+                        onClick={() => {
+                          setDayOpen(false)
+                          setOpenId(event.eventId)
+                        }}
                       >
                         Open
                       </button>
@@ -258,7 +287,7 @@ export default function EventScheduling() {
             </>
           )}
         </div>
-      </section>
+      </Modal>
 
       <section className="panel">
         <div className="panel__head">
