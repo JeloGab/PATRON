@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import CompleteEventModal from '../../components/CompleteEventModal.jsx'
 import EventCertificates from '../../components/EventCertificates.jsx'
+import EventTable from '../../components/EventTable.jsx'
 import Loading from '../../components/Loading.jsx'
 import RequirementChecklist from '../../components/RequirementChecklist.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -93,6 +94,13 @@ export default function EventRoster() {
     () => (events ?? []).find((item) => item.eventId === eventId) ?? null,
     [events, eventId],
   )
+
+  function selectEvent(next) {
+    setParams(next ? { eventId: next } : {})
+    setParticipants(null)
+    closeForm()
+    setNotice('')
+  }
 
   const loadRoster = useCallback(async () => {
     if (!eventId) {
@@ -256,37 +264,30 @@ export default function EventRoster() {
       )}
       {notice && <p className="notice">{notice}</p>}
 
-      <div className="toolbar">
-        <label className="field">
-          <span>Event</span>
-          <select
-            value={eventId}
-            onChange={(changed) => {
-              const next = changed.target.value
-              setParams(next ? { eventId: next } : {})
-              setParticipants(null)
-              closeForm()
-              setNotice('')
-            }}
-          >
-            <option value="">Choose an event…</option>
-            {(events ?? []).map((item) => (
-              <option key={item.eventId} value={item.eventId}>
-                {formatLongDate(item.eventDate)} · {item.title} · {eventTypeLabel(item)} ·{' '}
-                {STATUS_LABEL[item.status]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {!eventId ? (
-        <p className="empty">
-          Choose an event to see its roster. Events from today through the next three months are
-          listed.
-        </p>
-      ) : !event ? (
-        <p className="empty">That event is not in the current window. Choose another.</p>
+      {!eventId || !event ? (
+        <section className="panel">
+          <div className="panel__head">
+            <div>
+              <h2>Choose an event</h2>
+              <p className="muted panel__note">
+                {eventId && !event && events !== null
+                  ? 'That event is not in the current window. Choose another.'
+                  : 'Events from today through the next three months. Search by title, priest or type, or filter the list.'}
+              </p>
+            </div>
+          </div>
+          {events === null ? (
+            <Loading label="Loading events…" />
+          ) : (
+            <EventTable
+              events={events}
+              empty="No event falls in the next three months."
+              showSearch
+              selectedId={eventId}
+              onSelect={(item) => selectEvent(item.eventId)}
+            />
+          )}
+        </section>
       ) : (
         <>
           <section className="panel">
@@ -299,6 +300,9 @@ export default function EventRoster() {
                 </p>
               </div>
               <div className="panel__actions">
+                <button type="button" className="btn btn--ghost" onClick={() => selectEvent('')}>
+                  Choose another event
+                </button>
                 {canAdd && (
                   <button type="button" className="btn btn--gold" onClick={startAdd}>
                     Add participant

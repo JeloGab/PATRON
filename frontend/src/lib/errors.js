@@ -10,6 +10,8 @@ const MESSAGES = {
   INVALID_ADDRESS: 'Address must be at least 5 characters.',
   INVALID_CONTACT: 'Contact number must be a PH mobile number, e.g. 09171234567.',
   INVALID_EMAIL: 'That email address is not valid.',
+  INVALID_OFFICE_HOURS: 'Office hours must be 300 characters or fewer.',
+  INVALID_MASS_SCHEDULE: 'Mass schedule must be 600 characters or fewer.',
   INVALID_USERNAME: 'That username is not valid.',
   INVALID_PARISH_ID: 'That parish reference is not valid.',
   INVALID_USER_ID: 'That account reference is not valid.',
