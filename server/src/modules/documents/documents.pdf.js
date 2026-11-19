@@ -12,6 +12,10 @@ const LEFT = 56
 const RIGHT = 786
 const BODY_W = RIGHT - LEFT
 
+const CREST = 62
+const CREST_Y = 44
+const CREST_GAP = 12
+
 const TITLES = {
   baptism: 'Certificate of Baptism',
   confirmation: 'Certificate of Confirmation',
@@ -71,7 +75,7 @@ function rule(doc, x1, y, x2, options = {}) {
     .stroke()
 }
 
-export async function buildCertificatePdf({ certificate, signature = null, verifyUrl }) {
+export async function buildCertificatePdf({ certificate, signature = null, seal = null, logo = null, verifyUrl }) {
   const snapshot = certificate.snapshot ?? {}
   const people = snapshot.subjects ?? []
   const type = snapshot.recordType
@@ -101,13 +105,20 @@ export async function buildCertificatePdf({ certificate, signature = null, verif
   doc.rect(24, 24, PAGE_W - 48, PAGE_H - 48).lineWidth(2).strokeColor(GOLD).stroke()
   doc.rect(30, 30, PAGE_W - 60, PAGE_H - 60).lineWidth(0.5).strokeColor(GOLD).stroke()
 
-  const parishSize = fitSize(doc, snapshot.parishName ?? '', 'Times-Bold', BODY_W, 17, 11)
+  if (logo) doc.image(logo, LEFT, CREST_Y, { fit: [CREST, CREST], align: 'center', valign: 'center' })
+  if (seal) doc.image(seal, RIGHT - CREST, CREST_Y, { fit: [CREST, CREST], align: 'center', valign: 'center' })
+
+  const headLeft = LEFT + (logo ? CREST + CREST_GAP : 0)
+  const headRight = RIGHT - (seal ? CREST + CREST_GAP : 0)
+  const headW = headRight - headLeft
+
+  const parishSize = fitSize(doc, snapshot.parishName ?? '', 'Times-Bold', headW, 17, 11)
   doc.font('Times-Bold').fontSize(parishSize).fillColor(BLUE)
-    .text(snapshot.parishName ?? '', LEFT, 50, { width: BODY_W, align: 'center', lineBreak: false })
+    .text(snapshot.parishName ?? '', headLeft, 50, { width: headW, align: 'center', lineBreak: false })
   doc.font('Helvetica').fontSize(8).fillColor(MUTED)
-    .text(snapshot.parishAddress ?? '', LEFT, 74, { width: BODY_W, align: 'center', height: 11, ellipsis: true })
+    .text(snapshot.parishAddress ?? '', headLeft, 74, { width: headW, align: 'center', height: 11, ellipsis: true })
   if (snapshot.parishContact) {
-    doc.text(snapshot.parishContact, LEFT, 86, { width: BODY_W, align: 'center', height: 11, ellipsis: true })
+    doc.text(snapshot.parishContact, headLeft, 86, { width: headW, align: 'center', height: 11, ellipsis: true })
   }
 
   rule(doc, LEFT, 104, RIGHT, { weight: 1.2 })

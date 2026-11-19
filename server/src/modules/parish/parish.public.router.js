@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { getParishDirectory, getPublicParish, getPublicPhoto, getPublicClergyPhoto } from './parish.services.js'
+import { getParishDirectory, getPublicParish, getPublicPhoto, getPublicClergyPhoto, getPublicSeal, getPublicGalleryImage } from './parish.services.js'
 import { getParishFeed } from '../announcements/announcements.services.js'
 
 const directoryLimiter = rateLimit({
@@ -28,6 +28,20 @@ router.get('/:parishId/photo', async (req, res) => {
   res.type(photo.contentType)
   res.set('Cross-Origin-Resource-Policy', 'cross-origin')
   res.send(photo.content)
+})
+
+router.get('/:parishId/seal', async (req, res) => {
+  const seal = await getPublicSeal(req.params.parishId)
+  res.type(seal.contentType)
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.send(seal.content)
+})
+
+router.get('/:parishId/gallery/:imageId', async (req, res) => {
+  const image = await getPublicGalleryImage(req.params.parishId, req.params.imageId)
+  res.type(image.contentType)
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.send(image.content)
 })
 
 router.get('/:parishId/announcements', async (req, res) => {

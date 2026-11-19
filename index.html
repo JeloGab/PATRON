@@ -1,0 +1,1939 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Parish fields — preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===================================================================
+         Tokens copied verbatim from frontend/src/index.css :root
+         =================================================================== */
+      :root {
+        --wine: #5c1824;
+        --wine-deep: #341016;
+        --gold: #c4a35a;
+        --gold-soft: #e8d7a8;
+        --ivory: #f7f1e6;
+        --paper: #fffdf8;
+        --ink: #241c18;
+        --muted: #6b6158;
+        --line: rgba(36, 28, 24, 0.12);
+        --shadow: 0 18px 50px rgba(52, 16, 22, 0.12);
+        --serif: 'Cormorant Garamond', Georgia, serif;
+        --sans: 'Source Sans 3', system-ui, sans-serif;
+        --ease: 140ms cubic-bezier(0.2, 0, 0.2, 1);
+        --btn-rest: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(52, 16, 22, 0.1),
+          0 4px 10px rgba(52, 16, 22, 0.16);
+        --lift: 0 10px 24px rgba(52, 16, 22, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--ivory);
+        color: var(--ink);
+        font-family: var(--sans);
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; line-height: 1.15; }
+      p { margin: 0; }
+      a { color: var(--wine); }
+
+      /* ============ preview chrome — NOT part of PATRON ============ */
+
+      .preview-bar {
+        background: var(--wine-deep);
+        color: var(--gold-soft);
+        padding: 0.65rem 1.15rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 1.1rem;
+        position: sticky;
+        top: 0;
+        z-index: 60;
+      }
+
+      .preview-bar strong { font-family: var(--serif); font-size: 1.12rem; color: #fff; letter-spacing: 0.02em; }
+      .preview-bar .note { font-size: 0.76rem; opacity: 0.7; margin-left: auto; }
+
+      .tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+      .tab {
+        font: inherit;
+        font-size: 0.84rem;
+        color: var(--gold-soft);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(232, 215, 168, 0.25);
+        border-radius: 999px;
+        padding: 0.28rem 0.85rem;
+        cursor: pointer;
+      }
+
+      .tab[aria-selected='true'] { background: var(--gold); border-color: var(--gold); color: var(--wine-deep); font-weight: 600; }
+
+      .view { display: none; }
+      .view.is-on { display: block; }
+
+      /* a dashed gold outline marks everything that is a PROPOSAL,
+         i.e. not in frontend/ today */
+      .proposal { position: relative; }
+      .proposal::before {
+        content: 'proposed';
+        position: absolute;
+        top: -0.62rem;
+        left: 0.9rem;
+        z-index: 3;
+        font-size: 0.56rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--wine);
+        background: var(--gold-soft);
+        border-radius: 999px;
+        padding: 0.08rem 0.5rem;
+      }
+      .proposal { outline: 1px dashed rgba(196, 163, 90, 0.75); outline-offset: 4px; border-radius: 16px; }
+
+      /* ============ PATRON's real vocabulary ============ */
+
+      .page { max-width: 1060px; margin: 0 auto; padding: 1.6rem 1.15rem 4rem; }
+      .page > * + * { margin-top: 1.35rem; }
+
+      .back { font-size: 0.88rem; text-decoration: none; color: var(--muted); }
+      .back:hover { color: var(--wine); }
+
+      .eyebrow {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .eyebrow--light { color: rgba(255, 255, 255, 0.85); }
+      .muted { color: var(--muted); }
+      .lede { color: var(--muted); max-width: 64ch; }
+
+      .detail { display: grid; gap: 1.25rem; }
+
+      /* the real banner: 280px, 22px radius, woven accent + gold */
+      .detail__banner {
+        --accent: #5c1824;
+        position: relative;
+        overflow: hidden;
+        min-height: 280px;
+        border-radius: 22px;
+        background:
+          radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 42%),
+          radial-gradient(circle at 80% 20%, color-mix(in srgb, #c4a35a 35%, transparent), transparent 38%),
+          repeating-linear-gradient(
+            115deg,
+            color-mix(in srgb, var(--accent) 88%, black) 0 18px,
+            color-mix(in srgb, var(--accent) 70%, #c4a35a) 18px 20px
+          );
+      }
+
+      .church-media__crest {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-family: var(--serif);
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        line-height: 1;
+        color: rgba(255, 255, 255, 0.82);
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+        user-select: none;
+      }
+
+      .detail__banner-shade {
+        position: relative;
+        z-index: 1;
+        min-height: 280px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 1.6rem;
+        color: white;
+        background: linear-gradient(180deg, transparent, rgba(20, 10, 12, 0.82));
+      }
+
+      .detail__banner-shade h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); }
+      .detail__banner-shade p { font-size: 0.95rem; }
+
+      /* PROPOSED: the patron, italic gold, directly under the name */
+      .detail__banner-patron {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+        color: var(--gold-soft);
+        margin-top: 0.15rem;
+      }
+
+      .detail__grid { display: grid; gap: 1rem; }
+
+      @media (min-width: 900px) {
+        .detail__grid { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); align-items: start; }
+      }
+
+      .stack { display: grid; gap: 1rem; align-content: start; }
+
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 1.2rem 1.3rem;
+        box-shadow: 0 1px 2px rgba(52, 16, 22, 0.04);
+      }
+
+      .facts { display: grid; gap: 0.7rem; margin: 0.4rem 0 0; }
+      .facts div { display: grid; gap: 0.1rem; }
+      .facts dt { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+      .facts dd { margin: 0; }
+      .facts--stacked { grid-template-columns: 1fr; }
+      .schedule-text { white-space: pre-line; line-height: 1.6; }
+
+      .cta-card__title { font-size: 1.25rem; margin-top: 0.2rem; }
+
+      .btn {
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.92rem;
+        border-radius: 10px;
+        padding: 0.55rem 1.2rem;
+        cursor: pointer;
+        border: 1px solid transparent;
+        background: var(--wine);
+        color: #fff;
+        box-shadow: var(--btn-rest);
+        text-decoration: none;
+        display: inline-block;
+        transition: transform var(--ease), box-shadow var(--ease);
+      }
+
+      .btn:hover { transform: translateY(-1px); box-shadow: var(--lift); }
+      .btn--gold { background: var(--gold); color: var(--wine-deep); }
+      .btn--quiet { background: #fff; color: var(--wine); border-color: var(--line); }
+
+      .priest-list { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+
+      .priest-list > li {
+        padding: 0.75rem 0.9rem;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: white;
+        display: flex;
+        gap: 0.7rem;
+        align-items: center;
+      }
+
+      .avatar {
+        width: 40px; height: 40px; border-radius: 50%; flex: none;
+        background: var(--gold-soft); color: var(--wine);
+        display: grid; place-items: center;
+        font-family: var(--serif); font-weight: 700; font-size: 1.15rem;
+      }
+
+      /* ===================================================================
+         THE PROPOSALS — ornament made from data, no new columns
+         =================================================================== */
+
+      /* 1. illuminated drop cap, from the breviary / illuminated manuscript */
+      .illuminated::first-letter {
+        font-family: var(--serif);
+        font-weight: 700;
+        float: left;
+        font-size: 3.4rem;
+        line-height: 0.78;
+        margin: 0.12rem 0.5rem 0 0;
+        padding: 0.28rem 0.42rem;
+        color: var(--wine);
+        background: linear-gradient(160deg, rgba(196, 163, 90, 0.22), rgba(196, 163, 90, 0.06));
+        border: 1px solid rgba(196, 163, 90, 0.55);
+        border-radius: 4px;
+      }
+
+      /* 2. the founding year as a watermark — a number IS a graphic */
+      .watermarked { position: relative; overflow: hidden; }
+
+      .watermark {
+        position: absolute;
+        right: 0.6rem;
+        bottom: -1.9rem;
+        font-family: var(--serif);
+        font-weight: 700;
+        font-size: 8.5rem;
+        line-height: 1;
+        color: rgba(92, 24, 36, 0.07);
+        letter-spacing: -0.02em;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .watermarked > *:not(.watermark) { position: relative; z-index: 1; }
+
+      /* 3. fleuron divider — ecclesiastical typography, pure text */
+      .fleuron {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        color: var(--gold);
+        margin: 1.1rem 0;
+      }
+
+      .fleuron::before, .fleuron::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(196, 163, 90, 0), var(--gold), rgba(196, 163, 90, 0));
+      }
+
+      .fleuron span { font-size: 0.9rem; letter-spacing: 0.3em; }
+
+      /* 4. the titular plate — letterpress nameplate, NOT a seal */
+      .plate {
+        text-align: center;
+        padding: 1.1rem 0.8rem;
+        background: linear-gradient(160deg, rgba(196, 163, 90, 0.12), rgba(196, 163, 90, 0.03));
+        border: 1px solid rgba(196, 163, 90, 0.5);
+        border-radius: 6px;
+      }
+
+      .plate__rule {
+        height: 3px;
+        border-top: 1px solid var(--gold);
+        border-bottom: 1px solid var(--gold);
+        margin: 0 auto;
+        width: 72%;
+      }
+
+      .plate__patron {
+        font-family: var(--serif);
+        font-size: 1.62rem;
+        font-weight: 600;
+        line-height: 1.08;
+        color: var(--wine);
+        margin: 0.75rem 0 0;
+      }
+
+      .plate__fleuron { color: var(--gold); font-size: 0.95rem; margin: 0.35rem 0 0.3rem; }
+
+      .plate__est {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.75rem;
+      }
+
+      /* 5. the feast day as a calendar leaf */
+      .leaf {
+        width: 74px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: #fff;
+        flex: none;
+        box-shadow: 0 1px 2px rgba(52, 16, 22, 0.08);
+        text-align: center;
+      }
+
+      .leaf__top {
+        background: var(--wine);
+        color: var(--gold-soft);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        padding: 0.2rem 0;
+      }
+
+      .leaf__day {
+        font-family: var(--serif);
+        font-size: 2.1rem;
+        font-weight: 700;
+        line-height: 1.05;
+        color: var(--wine);
+        padding-top: 0.25rem;
+      }
+
+      .leaf__mon {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding-bottom: 0.4rem;
+      }
+
+      .leaf-row { display: flex; gap: 0.9rem; align-items: center; margin-top: 0.4rem; }
+
+      /* 6. tracery texture — quatrefoil tile, SVG data URI */
+      .tracery {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='rgba(92,24,36,0.10)' stroke-width='1'%3E%3Ccircle cx='22' cy='14' r='8'/%3E%3Ccircle cx='30' cy='22' r='8'/%3E%3Ccircle cx='22' cy='30' r='8'/%3E%3Ccircle cx='14' cy='22' r='8'/%3E%3C/g%3E%3C/svg%3E");
+        background-position: center;
+      }
+
+      /* 7. the age, as PATRON's own .stat */
+      .stat {
+        font-family: var(--serif);
+        text-align: right;
+        line-height: 1.1;
+      }
+
+      .stat b { display: block; font-size: 2.3rem; color: var(--wine); font-weight: 700; }
+      .stat span { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-family: var(--sans); font-weight: 700; }
+
+      /* ============ directory ============ */
+
+      .parish-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); }
+
+      .parish-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(52, 16, 22, 0.04);
+        display: flex;
+        flex-direction: column;
+        transition: transform var(--ease), box-shadow var(--ease);
+      }
+
+      .parish-card:hover { transform: translateY(-3px); box-shadow: var(--lift); }
+
+      .parish-card__media {
+        --accent: #5c1824;
+        position: relative;
+        height: 132px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 42%),
+          radial-gradient(circle at 80% 20%, color-mix(in srgb, #c4a35a 35%, transparent), transparent 38%),
+          repeating-linear-gradient(
+            115deg,
+            color-mix(in srgb, var(--accent) 88%, black) 0 18px,
+            color-mix(in srgb, var(--accent) 70%, #c4a35a) 18px 20px
+          );
+      }
+
+      .parish-card__body { padding: 1.1rem 1.2rem 1.25rem; }
+      .parish-card__body h2 { font-size: 1.22rem; }
+
+      .parish-card__patron {
+        color: var(--wine);
+        font-family: var(--serif);
+        font-size: 1.05rem;
+        letter-spacing: 0.01em;
+        margin-top: -0.2rem;
+      }
+
+      .parish-card__summary { color: var(--muted); font-size: 0.88rem; margin-top: 0.55rem; }
+
+      .parish-card__est {
+        margin-top: 0.55rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--line);
+        font-family: var(--serif);
+        font-size: 0.92rem;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+
+      /* ============ form ============ */
+
+      .form-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+      @media (min-width: 720px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+      .field { display: grid; gap: 0.3rem; min-width: 0; }
+      .field--full { grid-column: 1 / -1; }
+      .field > span:first-child { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+      input, textarea {
+        font: inherit; font-size: 0.97rem; color: var(--ink); background: #fff;
+        border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.7rem;
+        width: 100%; resize: vertical;
+      }
+
+      input:focus-visible, textarea:focus-visible {
+        outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196, 163, 90, 0.5);
+      }
+
+      .form-hint { font-size: 0.78rem; color: var(--muted); }
+
+      .form-actions {
+        display: flex; gap: 0.6rem; flex-wrap: wrap;
+        margin-top: 1.2rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+      }
+
+      .callout {
+        border-left: 3px solid var(--gold);
+        background: rgba(196, 163, 90, 0.1);
+        border-radius: 0 10px 10px 0;
+        padding: 0.85rem 1rem;
+        font-size: 0.89rem;
+        color: var(--muted);
+      }
+
+      .callout code, code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; }
+      .callout strong { color: var(--ink); }
+
+      /* ============ notes ============ */
+
+      .notes-grid { display: grid; gap: 1rem; }
+      @media (min-width: 860px) { .notes-grid { grid-template-columns: 1fr 1fr; } }
+
+      .note-card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.25rem; }
+      .note-card h3 { font-size: 1.16rem; margin-top: 0.25rem; }
+      .note-card p { font-size: 0.9rem; color: var(--muted); margin-top: 0.45rem; }
+      .note-card .src { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold); font-weight: 700; }
+
+      .verdict { display: inline-block; margin-top: 0.75rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; border-radius: 999px; padding: 0.16rem 0.6rem; }
+      /* ============ diocese tab ============ */
+
+      .dio-grid { display: grid; gap: 1.4rem; margin-top: 0.9rem; }
+      @media (min-width: 760px) { .dio-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); } }
+
+      .drop {
+        margin-top: 0.9rem;
+        border: 2px dashed rgba(196, 163, 90, 0.7);
+        border-radius: 14px;
+        background: rgba(196, 163, 90, 0.07);
+        padding: 1.8rem 1rem;
+        text-align: center;
+      }
+
+      .drop__lead { font-family: var(--serif); font-size: 1.2rem; color: var(--wine); }
+
+      .logo-frame {
+        margin-top: 0.5rem;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        padding: 1rem;
+        display: grid;
+        place-items: center;
+      }
+
+      .logo-frame svg { width: 100%; max-width: 150px; height: auto; }
+
+      /* the gallery - parish_gallery_image, up to eight, in the wide column */
+      .shots {
+        margin-top: 0.8rem;
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      @media (min-width: 620px) {
+        .shots { gap: 0.7rem; }
+      }
+
+      .shot {
+        position: relative;
+        margin: 0;
+        aspect-ratio: 3 / 2;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f1ead9, #e2d5bd);
+        display: grid;
+        place-items: center;
+        color: #9c8c68;
+        overflow: hidden;
+        cursor: zoom-in;
+      }
+
+      .shot .ico { font-size: 1.5rem; }
+
+      .shot--empty {
+        background: #fff;
+        border-style: dashed;
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: default;
+      }
+
+      .shot__n {
+        position: absolute;
+        top: 0.3rem;
+        left: 0.42rem;
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        color: #8a7a58;
+      }
+
+      .seal-frame { max-width: 190px; margin-inline: auto; background: rgba(255, 255, 255, 0.72); }
+
+      .cert-pair { display: grid; gap: 1.4rem; }
+      @media (min-width: 1000px) { .cert-pair { grid-template-columns: 1fr 1fr; } }
+
+      .cert {
+        margin-top: 0.5rem;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(52, 16, 22, 0.1);
+        background: #fffdf8;
+      }
+
+      .cert svg { width: 100%; height: auto; display: block; }
+
+      .verdict--free { background: #dff0e1; color: #1f5b2c; }
+      .verdict--care { background: var(--gold-soft); color: var(--wine); }
+      .verdict--no { background: #f6dcda; color: #8d2018; }
+
+      /* ===================================================================
+         THE ICON LAYER — one inline <symbol> sprite, stroke only
+         Every icon is drawn here, in this file. No icon font, no package,
+         no network request: 20 <symbol> elements at the top of <body> and a
+         <use> wherever one is needed. Colour comes from `currentColor`, so
+         an icon in a gold eyebrow is gold and the same icon in a wine button
+         is wine — one definition, every context.
+         =================================================================== */
+
+      .ico {
+        width: 1em; height: 1em; flex: none;
+        vertical-align: -0.14em;
+        fill: none; stroke: currentColor;
+        stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+      }
+
+      .eyebrow { display: flex; align-items: center; gap: 0.42rem; flex-wrap: wrap; }
+      .eyebrow .ico { font-size: 1.05rem; color: var(--gold); stroke-width: 1.5; }
+      .eyebrow--light .ico { color: var(--gold-soft); }
+
+      .facts dt { display: flex; align-items: center; gap: 0.38rem; }
+      .facts dt .ico { font-size: 0.95rem; color: var(--gold); }
+
+      .field > span:first-child { display: flex; align-items: center; gap: 0.38rem; }
+      .field > span:first-child .ico { font-size: 0.95rem; color: var(--gold); }
+
+      .btn { display: inline-flex; align-items: center; gap: 0.45rem; }
+      .btn .ico { font-size: 1.02rem; }
+
+      .back { display: inline-flex; align-items: center; gap: 0.3rem; }
+      .back .ico { font-size: 0.95rem; }
+
+      .inline-ico { display: inline-flex; align-items: center; gap: 0.38rem; }
+      .inline-ico .ico { color: var(--gold); font-size: 0.92rem; }
+
+      .parish-card__patron { display: flex; align-items: center; gap: 0.38rem; }
+      .parish-card__patron .ico { color: var(--gold); font-size: 0.95rem; }
+      .parish-card__est { display: flex; align-items: center; gap: 0.34rem; flex-wrap: wrap; }
+      .parish-card__est .ico { color: var(--gold); font-size: 0.92rem; }
+      .parish-card__est .dot { opacity: 0.45; }
+
+      .drop .ico--drop { font-size: 2.1rem; color: var(--gold); stroke-width: 1.1; margin-bottom: 0.35rem; }
+
+      .plate__fleuron .ico { font-size: 1.05rem; stroke-width: 1.4; }
+      .fleuron .ico { font-size: 0.95rem; color: var(--gold); stroke-width: 1.4; }
+
+      .priest-list .ico--role { color: var(--gold); font-size: 0.86rem; }
+      .role-line { display: flex; align-items: center; gap: 0.3rem; }
+
+      .ico-legend { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.9rem; }
+      .ico-legend span {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em;
+        text-transform: uppercase; color: var(--muted);
+        border: 1px solid var(--line); border-radius: 999px;
+        padding: 0.22rem 0.6rem 0.22rem 0.5rem; background: #fff;
+      }
+      .ico-legend .ico { color: var(--gold); font-size: 1rem; }
+
+      /* ===================================================================
+         THE CLERGY BAND — full width, directly under the banner
+         =================================================================== */
+
+      .clergy-band__grid {
+        display: flex; flex-wrap: wrap; gap: 1.5rem;
+        margin-top: 1rem; align-items: flex-start;
+      }
+
+      .cleric { width: 164px; text-align: center; }
+
+      .cleric__frame {
+        width: 112px; height: 112px; margin: 0 auto;
+        border-radius: 50%;
+        background: var(--wine); color: var(--gold-soft);
+        display: grid; place-items: center;
+        font-family: var(--serif); font-weight: 700; font-size: 2.7rem;
+        box-shadow: 0 0 0 1px var(--line), 0 0 0 5px var(--paper),
+                    0 0 0 6px rgba(196, 163, 90, 0.6);
+      }
+
+      .cleric__frame .ico { font-size: 3.4rem; color: rgba(232, 215, 168, 0.85); stroke-width: 1.2; }
+
+      .cleric__frame--photo {
+        background: radial-gradient(circle at 50% 34%, #7a3340 0%, var(--wine) 52%, var(--wine-deep) 100%);
+      }
+
+      .cleric__name {
+        font-family: var(--serif); font-size: 1.3rem; line-height: 1.2;
+        margin-top: 0.85rem; color: var(--ink);
+      }
+
+      .cleric__rank {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; color: var(--gold);
+        margin-top: 0.5rem;
+      }
+
+      .cleric__cap { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+
+      /* variant B — one priest set apart */
+      .clergy-lead { display: flex; gap: 1.6rem; flex-wrap: wrap; align-items: center; margin-top: 1rem; }
+      .cleric--lead { width: auto; text-align: left; display: flex; gap: 1.4rem; align-items: center; }
+      .cleric--lead .cleric__frame { width: 152px; height: 152px; margin: 0; font-size: 3.6rem; }
+      .cleric--lead .cleric__frame .ico { font-size: 4.6rem; }
+      .cleric--lead .cleric__name { font-size: 1.8rem; margin-top: 0.3rem; }
+      .cleric--lead .cleric__rank { margin-top: 0; }
+
+      .clergy-divider { width: 1px; align-self: stretch; min-height: 120px; background: var(--line); }
+
+      .clergy-rest { display: flex; gap: 1.3rem; flex-wrap: wrap; }
+      .clergy-rest .cleric { width: 132px; }
+      .clergy-rest .cleric__frame { width: 88px; height: 88px; font-size: 2.1rem; }
+      .clergy-rest .cleric__frame .ico { font-size: 2.6rem; }
+      .clergy-rest .cleric__name { font-size: 1.08rem; margin-top: 0.65rem; }
+
+      .alt-wrap {
+        margin-top: 1.1rem; padding: 0.9rem 1rem 1.1rem;
+        border: 1px solid var(--line); border-radius: 18px;
+        background: rgba(196, 163, 90, 0.05);
+      }
+
+      .today-box {
+        margin-top: 0.9rem; padding: 0.9rem 1rem;
+        border: 1px solid var(--line); border-radius: 14px; background: #fff;
+      }
+
+      /* ===================================================================
+         THE RAIL BACKGROUNDS — the right column was four plain white cards
+         Every one of these is a gradient or an inline SVG tile. No image
+         file, no request, no column. Each is chosen for what the card holds,
+         and the shared gold hairline at the top edge is what makes the four
+         read as one column rather than four unrelated patterns.
+         =================================================================== */
+
+      .rail-card {
+        position: relative;
+        overflow: hidden;
+        background-color: #fffcf4;
+      }
+
+      .rail-card::after {
+        content: '';
+        position: absolute; left: 0; right: 0; top: 0; height: 2px;
+        background: linear-gradient(
+          90deg,
+          rgba(196, 163, 90, 0) 0%,
+          var(--gold) 22%,
+          var(--gold) 78%,
+          rgba(196, 163, 90, 0) 100%
+        );
+      }
+
+      /* vellum — laid-paper rules, for the engraved plate */
+      .card--vellum {
+        background-image:
+          repeating-linear-gradient(
+            0deg,
+            rgba(92, 24, 36, 0.035) 0 1px,
+            rgba(92, 24, 36, 0) 1px 6px
+          ),
+          linear-gradient(168deg, rgba(196, 163, 90, 0.13), rgba(196, 163, 90, 0) 58%);
+      }
+
+      /* nimbus — light falling on the feast day */
+      .card--nimbus {
+        background-image:
+          radial-gradient(circle at 17% 27%, rgba(196, 163, 90, 0.28), rgba(196, 163, 90, 0) 56%),
+          radial-gradient(circle at 94% 96%, rgba(92, 24, 36, 0.07), rgba(92, 24, 36, 0) 62%);
+      }
+
+      /* rays — a monstrance burst behind the count of years */
+      .card--rays {
+        background-image:
+          radial-gradient(circle at 84% 50%, rgba(255, 252, 244, 0.94) 0 24%, rgba(255, 252, 244, 0) 62%),
+          repeating-conic-gradient(
+            from 0deg at 84% 50%,
+            rgba(196, 163, 90, 0.2) 0deg 3deg,
+            rgba(196, 163, 90, 0) 3deg 9deg
+          );
+      }
+
+      /* guilloche — security-paper lathework, on the card that issues documents */
+      .card--guilloche {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='26' viewBox='0 0 64 26'%3E%3Cg fill='none' stroke='rgba(92,24,36,0.11)' stroke-width='0.8'%3E%3Cpath d='M0 13 Q8 3 16 13 T32 13 T48 13 T64 13'/%3E%3Cpath d='M0 13 Q8 23 16 13 T32 13 T48 13 T64 13'/%3E%3Cpath d='M0 13 Q8 7 16 13 T32 13 T48 13 T64 13'/%3E%3Cpath d='M0 13 Q8 19 16 13 T32 13 T48 13 T64 13'/%3E%3C/g%3E%3C/svg%3E");
+        background-position: center;
+      }
+
+      /* ===================================================================
+         THE ISSUANCE BAND — the one call to action on the page
+         It borrows the certificate's own frame: a 2px gold border with a
+         hairline inset 7px behind it, which is the PDF's double rule at 24
+         and 30. The guilloche tile carries over from the rail card it
+         replaces. It is the only centred block on the page, which is most
+         of why it stands out.
+         =================================================================== */
+
+      .cta-band {
+        text-align: center;
+        padding: 2.1rem 1.3rem 2.2rem;
+        border: 2px solid rgba(196, 163, 90, 0.8);
+        border-radius: 18px;
+        background-color: #fffcf4;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cta-band::after {
+        content: '';
+        position: absolute;
+        inset: 7px;
+        border: 1px solid rgba(196, 163, 90, 0.42);
+        border-radius: 12px;
+        pointer-events: none;
+      }
+
+      .cta-band__inner { position: relative; max-width: 56ch; margin: 0 auto; }
+
+      .cta-band .eyebrow { justify-content: center; }
+
+      .cta-band__title {
+        font-family: var(--serif);
+        font-size: clamp(1.65rem, 3.6vw, 2.15rem);
+        line-height: 1.12;
+        margin-top: 0.5rem;
+        color: var(--wine);
+      }
+
+      .cta-band__lede { color: var(--muted); font-size: 0.95rem; margin-top: 0.6rem; }
+
+      .btn--lg {
+        font-size: 1.02rem;
+        padding: 0.78rem 1.9rem;
+        border-radius: 12px;
+      }
+
+      .btn--lg .ico { font-size: 1.15rem; }
+
+      .cta-band__fine {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .cta-band__fine .ico { color: var(--gold); font-size: 0.95rem; }
+
+      .cta-band__rule {
+        width: 86px;
+        height: 1px;
+        margin: 1.1rem auto 0;
+        background: linear-gradient(90deg, rgba(196, 163, 90, 0), var(--gold), rgba(196, 163, 90, 0));
+      }
+
+      /* Scroll reveal — proposed, frontend/ not touched.
+         The hidden state lives behind .is-armed, which only JS ever sets. No script, no
+         IntersectionObserver, or reduced motion → nothing is ever hidden and the page
+         renders exactly as it did before. */
+      .is-armed .reveal {
+        opacity: 0;
+        translate: 0 56px;
+        transition:
+          opacity 420ms ease-out,
+          translate 980ms cubic-bezier(0.37, 0.16, 0.24, 1);
+        transition-delay: calc(var(--i, 0) * 110ms);
+        will-change: opacity, translate;
+      }
+
+      /* The standalone translate property, not transform — so .parish-card's hover lift
+         composes with the reveal instead of overwriting it, and needs no special case.
+         Opacity finishes in 420ms on purpose: a card still fading in cannot be seen to
+         slide, so the glide has to happen while it is already solid. */
+      .is-armed .reveal.is-in {
+        opacity: 1;
+        translate: none;
+        will-change: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===================================================================
+         THE SPRITE — 20 symbols, drawn by hand on a 24x24 grid, stroke only.
+         In the real frontend this becomes components/Icon.jsx: the sprite is
+         rendered once in App.jsx and <Icon name="pin" /> emits the <use>.
+         =================================================================== -->
+    <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden">
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></symbol>
+      <symbol id="i-church" viewBox="0 0 24 24"><path d="M12 2v3.2" /><path d="M10.4 3.6h3.2" /><path d="M12 6l-6 4.4V21h12V10.4L12 6z" /><path d="M10.4 21v-4.6a1.6 1.6 0 013.2 0V21" /></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.2s7-5.6 7-11.2a7 7 0 10-14 0c0 5.6 7 11.2 7 11.2z" /><circle cx="12" cy="10" r="2.5" /></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><path d="M15.6 21A13.6 13.6 0 013 8.4a2 2 0 011.9-2l2-.5a1.6 1.6 0 011.8.9l1 2.2a1.6 1.6 0 01-.5 1.9l-1 .8a9.6 9.6 0 004.2 4.2l.8-1a1.6 1.6 0 011.9-.5l2.2 1a1.6 1.6 0 01.9 1.8l-.5 2A2 2 0 0115.6 21z" /></symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.6 7.2l8.4 5.8 8.4-5.8" /></symbol>
+      <symbol id="i-saint" viewBox="0 0 24 24"><circle cx="12" cy="9.4" r="3" /><path d="M7.6 6.6a5.6 5.6 0 018.8 0" /><path d="M5 21a7 7 0 0114 0" /></symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18" /><path d="M8 3v4" /><path d="M16 3v4" /></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7.2V12l3.6 2.2" /></symbol>
+      <symbol id="i-cross" viewBox="0 0 24 24"><path d="M12 3v18" /><path d="M6.6 8.4h10.8" /></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 015.5 3H19.5v18H5.5A1.5 1.5 0 014 19.5z" /><path d="M8 3v18" /><path d="M11.4 8.4h4.8" /><path d="M11.4 12h4.8" /></symbol>
+      <symbol id="i-plaque" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.6" /><rect x="6.2" y="8.2" width="11.6" height="7.6" rx="0.8" /></symbol>
+      <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M7 3h10v3.6L12 12l5 5.4V21H7v-3.6L12 12 7 6.6z" /></symbol>
+      <symbol id="i-certificate" viewBox="0 0 24 24"><path d="M19 13V4.5A1.5 1.5 0 0017.5 3h-11A1.5 1.5 0 005 4.5v15A1.5 1.5 0 006.5 21h5" /><path d="M8 7.6h8" /><path d="M8 11h8" /><path d="M8 14.4h3" /><circle cx="17" cy="16.8" r="3" /><path d="M15.2 19.2L14.4 22l2.6-1.2 2.6 1.2-.8-2.8" /></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9.2" cy="8.2" r="3.2" /><path d="M3.2 20a6 6 0 0112 0" /><path d="M16 5.6a3.2 3.2 0 010 5.6" /><path d="M17.6 14.2A6 6 0 0120.8 18.4" /></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M9.6 14.4l4.8-4.8" /><path d="M13 7.2l1.8-1.8a3.5 3.5 0 014.9 4.9L18 12" /><path d="M11 16.8l-1.8 1.8a3.5 3.5 0 01-4.9-4.9L6 12" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.6 4.6L19 7.4" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.2 6.2l11.6 11.6" /><path d="M17.8 6.2L6.2 17.8" /></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16.2V4" /><path d="M7.6 8.4L12 4l4.4 4.4" /><path d="M4 14.8v3.7A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5v-3.7" /></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4.6" width="18" height="14.8" rx="2" /><circle cx="8.6" cy="10" r="1.8" /><path d="M3.6 17.6l4.8-4.4 4 3.4 3-2.4 5 3.8" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.6 7h14.8" /><path d="M9.6 7V4.6h4.8V7" /><path d="M6.6 7l.9 12.1A1.5 1.5 0 009 20.5h6a1.5 1.5 0 001.5-1.4L17.4 7" /></symbol>
+      <symbol id="i-portrait" viewBox="0 0 24 24"><circle cx="12" cy="8.6" r="3.6" /><path d="M4.6 20.4a7.4 7.4 0 0114.8 0" /></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 21s7-3.3 7-9V5.6L12 3 5 5.6V12c0 5.7 7 9 7 9z" /><path d="M12 8v6" /><path d="M9.6 10.4h4.8" /></symbol>
+    </svg>
+    <div class="preview-bar">
+      <strong>Parish fields</strong>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-view="public">Parish page</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="directory">Directory</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="form">Staff form</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="diocese">Diocese logo</button>
+        <button class="tab" role="tab" aria-selected="false" data-view="notes">Inspirations</button>
+      </div>
+      <span class="note">PATRON's own classes · dashed gold = proposed · icons are all proposed · invented content</span>
+    </div>
+
+    <!-- ===================================================================
+         1. THE PARISH PAGE — ChurchDetail as built, plus the proposals
+         =================================================================== -->
+    <section class="view is-on" id="view-public">
+      <div class="page">
+        <a class="back" href="#"><svg class="ico" aria-hidden="true"><use href="#i-chevron-left" /></svg> All parishes</a>
+
+        <article class="detail">
+          <!-- the real .detail__banner: woven accent + gold, crest letter when
+               there is no photograph, which is what most parishes will show -->
+          <div class="detail__banner" style="--accent: #5c1824">
+            <span class="church-media__crest" aria-hidden="true">P</span>
+            <div class="detail__banner-shade">
+              <p class="eyebrow eyebrow--light"><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> Libmanan</p>
+              <h1>Parish of St. James the Greater</h1>
+              <p class="detail__banner-patron proposal" style="display: inline-block; padding: 0.1rem 0.3rem">
+                under the patronage of St. James the Greater
+              </p>
+              <p>Poblacion, Libmanan, Camarines Sur</p>
+            </div>
+          </div>
+
+          <!-- ====== THE CLERGY BAND — first thing after the banner ======
+               The real page puts this card BELOW the parish calendar, at 44px,
+               so it is roughly four screens down. Here it is the first card on
+               the page, at 112px, before the office details. -->
+          <section class="card proposal clergy-band">
+            <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-users" /></svg> The priests of this parish</p>
+            <p class="muted" style="font-size: 0.88rem; margin-top: 0.4rem">
+              Every active priest assigned here. The photographs are real uploads — this is the one
+              part of the page that has always had actual images.
+            </p>
+            <div class="clergy-band__grid">
+              <article class="cleric">
+                <div class="cleric__frame cleric__frame--photo"><svg class="ico" aria-hidden="true"><use href="#i-portrait" /></svg></div>
+                <h3 class="cleric__name">Rev. Fr. Ramon A.<br />Beltran</h3>
+                <p class="cleric__cap">photograph uploaded</p>
+              </article>
+              <article class="cleric">
+                <div class="cleric__frame cleric__frame--photo"><svg class="ico" aria-hidden="true"><use href="#i-portrait" /></svg></div>
+                <h3 class="cleric__name">Rev. Fr. Joel M.<br />Sarmiento</h3>
+                <p class="cleric__cap">photograph uploaded</p>
+              </article>
+              <article class="cleric">
+                <div class="cleric__frame">A</div>
+                <h3 class="cleric__name">Rev. Fr. Andres L.<br />Ocampo</h3>
+                <p class="cleric__cap">no photograph — initial</p>
+              </article>
+            </div>
+          </section>
+
+          <!-- ====== THE ISSUANCE BAND — centred, straight under the priests ====== -->
+          <section class="card proposal cta-band card--guilloche">
+            <div class="cta-band__inner">
+              <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-certificate" /></svg> Online issuance</p>
+              <h2 class="cta-band__title">Request a certificate</h2>
+              <p class="cta-band__lede">
+                Baptismal, confirmation, marriage and death certificates, issued by this parish
+                from its own register.
+              </p>
+              <div class="cta-band__rule"></div>
+              <p style="margin-top: 1.2rem">
+                <a class="btn btn--gold btn--lg" href="#"><svg class="ico" aria-hidden="true"><use href="#i-certificate" /></svg> Request a certificate</a>
+              </p>
+              <p class="cta-band__fine">
+                <svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> Every certificate carries a code and QR anyone can check without an account
+              </p>
+            </div>
+          </section>
+
+          <!-- ====== REORDERED 2026-11-19 ======================================
+               Main column, after the request band: About -> Photographs -> Schedule.
+               Rail: Parish information -> Parish seal -> Titular feast -> Founded.
+               Two of these need storage that does not exist yet: the gallery is a new
+               table, the seal is two new columns on parish. Everything else is a move.
+               ================================================================= -->
+          <div class="detail__grid">
+            <div class="stack">
+
+              <!-- 1 - ABOUT THIS PARISH, first, because it is the one block that tells
+                   a visitor what this place is. -->
+              <section class="card watermarked tracery proposal">
+                <span class="watermark" aria-hidden="true">1619</span>
+                <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-book" /></svg> About this parish</p>
+                <div class="fleuron"><span><svg class="ico" aria-hidden="true"><use href="#i-cross" /></svg></span></div>
+                <p class="illuminated schedule-text">The parish was established in 1619 as a visita under the care of the Franciscan missionaries, serving the scattered settlements along the Libmanan River. It was raised to a full parish later that century, with St. James the Greater named as its patron.
+
+The present stone church was begun in the 1750s and completed in stages over the decades that followed. Its bell tower, added in the nineteenth century, still carries three of the original bells.
+
+The parish has served as the mother church of several communities that were themselves later erected into parishes of their own, and today remains the seat of the vicariate.</p>
+              </section>
+
+              <!-- 2 - THE PHOTOGRAPHS: parish_gallery_image, the new table. Four at
+                   most, 5 MB each, upload order, no captions and no reordering. -->
+              <section class="card proposal">
+                <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-image" /></svg> Photographs of the church <span class="tag-new"></span></p>
+                <p class="muted" style="font-size: 0.88rem; margin-top: 0.4rem">
+                  Up to four, 5 MB each, in the order the parish uploaded them. Click one to enlarge.
+                </p>
+                <div class="shots">
+                  <figure class="shot"><span class="shot__n">1</span><svg class="ico" aria-hidden="true"><use href="#i-image" /></svg></figure>
+                  <figure class="shot"><span class="shot__n">2</span><svg class="ico" aria-hidden="true"><use href="#i-image" /></svg></figure>
+                  <figure class="shot"><span class="shot__n">3</span><svg class="ico" aria-hidden="true"><use href="#i-image" /></svg></figure>
+                  <figure class="shot shot--empty">free</figure>
+                </div>
+                <p class="muted" style="font-size: 0.78rem; margin-top: 0.7rem">
+                  Served from <code>parish_gallery_public</code> keyed by <code>image_id</code>, so a
+                  photograph's URL never changes. The banner above is still the separate
+                  <code>parish.photo</code> &mdash; this card does not replace it.
+                </p>
+              </section>
+
+              <!-- 3 - SCHEDULE: office hours and Mass times, the two columns from
+                   2026-10-17, unchanged. -->
+              <section class="card">
+                <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-clock" /></svg> Office hours and Mass schedule</p>
+                <dl class="facts facts--stacked">
+                  <div>
+                    <dt><svg class="ico" aria-hidden="true"><use href="#i-clock" /></svg> Office hours</dt>
+                    <dd class="schedule-text">Monday to Friday — 8:00 AM to 12:00 NN, 1:00 PM to 5:00 PM
+Saturday — 8:00 AM to 12:00 NN
+Closed on Sundays and public holidays</dd>
+                  </div>
+                  <div>
+                    <dt><svg class="ico" aria-hidden="true"><use href="#i-cross" /></svg> Mass schedule</dt>
+                    <dd class="schedule-text">Sunday — 5:30 AM, 7:00 AM, 9:00 AM (English), 4:00 PM, 6:00 PM
+Weekdays — 6:00 AM
+Saturday — 6:00 AM, 5:00 PM (anticipated Mass)
+First Friday — 6:00 AM, 5:30 PM</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <div class="callout">
+                <strong>What this reorder actually changes.</strong> The history card comes first and
+                the contact details move to the rail, so the first thing a visitor reads is what the
+                parish <em>is</em> rather than its phone number &mdash; and the photographs sit in the
+                wide column, where four across is legible, instead of the 1fr rail where they would be
+                thumbnails. <strong>Only two of these cards need storage that does not exist:</strong>
+                the photographs (one new table) and the seal (two new columns). The rest is ordering.
+              </div>
+
+              <div class="callout">
+                <strong>Four ornaments, no new columns.</strong> An illuminated drop cap, a
+                fleuron rule — now a drawn cross rather than the <code>✠</code> character, for
+                the reason in the Inspirations tab — the founding year set at 8.5rem as a watermark, and a
+                quatrefoil tracery tile behind it all. The tile is an inline SVG data URI, so it adds
+                no request and no asset. Everything you see is <code>history</code> and
+                <code>year_established</code> — the two columns you are already adding.
+              </div>
+
+              <div class="callout proposal">
+                <strong>And the rail backgrounds.</strong> The cards in the right column were
+                plain white. Each now carries a background chosen for what it holds —
+                <strong>laid-paper rules</strong> behind the parish information, a
+                <strong>monstrance burst</strong> behind the seal, a <strong>nimbus</strong>
+                of light on the feast day, and <strong>guilloche lathework</strong> — the lathe pattern on banknotes and
+                share certificates — on the card that issues documents. They share one gold
+                hairline along the top edge, which is what makes the column read as a set rather
+                than four unrelated patterns. Three are pure CSS gradients; the guilloche is a
+                64&times;26 inline SVG tile, four interleaved sine curves. <strong>No image file, no
+                request, no column.</strong>
+              </div>
+
+              <div class="callout proposal">
+                <strong>And the icon layer.</strong> Every glyph on this page is an inline
+                <code>&lt;symbol&gt;</code> drawn in this file on a 24&times;24 grid — stroke only,
+                1.6 units, no fills, inheriting <code>currentColor</code> so the same cross is gold
+                in an eyebrow and wine in a button. <strong>Twenty-two symbols, about 2.6 KB, zero
+                dependencies and zero network requests</strong> — no icon font, no
+                <code>lucide-react</code>, nothing added to <code>package.json</code>. In the real
+                tree it is one <code>components/Icon.jsx</code> rendering
+                <code>&lt;use href="#i-pin" /&gt;</code>, with the sprite mounted once in
+                <code>App.jsx</code>.
+                <div class="ico-legend">
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg> pin</span><span><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg> phone</span><span><svg class="ico" aria-hidden="true"><use href="#i-mail" /></svg> mail</span>
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-saint" /></svg> saint</span><span><svg class="ico" aria-hidden="true"><use href="#i-calendar" /></svg> calendar</span><span><svg class="ico" aria-hidden="true"><use href="#i-clock" /></svg> clock</span>
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-cross" /></svg> cross</span><span><svg class="ico" aria-hidden="true"><use href="#i-book" /></svg> book</span><span><svg class="ico" aria-hidden="true"><use href="#i-plaque" /></svg> plaque</span>
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-hourglass" /></svg> hourglass</span><span><svg class="ico" aria-hidden="true"><use href="#i-church" /></svg> church</span><span><svg class="ico" aria-hidden="true"><use href="#i-certificate" /></svg> certificate</span>
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-users" /></svg> users</span><span><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> shield</span><span><svg class="ico" aria-hidden="true"><use href="#i-link" /></svg> link</span>
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-image" /></svg> image</span><span><svg class="ico" aria-hidden="true"><use href="#i-upload" /></svg> upload</span><span><svg class="ico" aria-hidden="true"><use href="#i-trash" /></svg> trash</span>
+                  <span><svg class="ico" aria-hidden="true"><use href="#i-check" /></svg> check</span><span><svg class="ico" aria-hidden="true"><use href="#i-x" /></svg> close</span><span><svg class="ico" aria-hidden="true"><use href="#i-chevron-left" /></svg> back</span><span><svg class="ico" aria-hidden="true"><use href="#i-portrait" /></svg> portrait</span>
+                </div>
+              </div>
+            </div>
+
+            <aside class="stack">
+
+              <!-- RAIL 1 - PARISH INFORMATION: the old "Parish office" card, moved here.
+                   Patron saint stays with it; feast day and founding year do not, because
+                   they have cards of their own below. -->
+              <section class="card proposal rail-card card--vellum">
+                <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-church" /></svg> Parish information</p>
+                <dl class="facts facts--stacked">
+                  <div><dt><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg> Address</dt><dd>Poblacion, Libmanan, Camarines Sur</dd></div>
+                  <div><dt><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg> Contact number</dt><dd><a href="#">09171234567</a></dd></div>
+                  <div><dt><svg class="ico" aria-hidden="true"><use href="#i-mail" /></svg> Email</dt><dd><a href="#">stjames.libmanan@example.ph</a></dd></div>
+                  <div><dt><svg class="ico" aria-hidden="true"><use href="#i-saint" /></svg> Patron saint</dt><dd>St. James the Greater</dd></div>
+                </dl>
+              </section>
+
+              <!-- RAIL 2 - THE PARISH SEAL: two new columns, seal + seal_content_type,
+                   following parish.photo exactly. Round here, unlike the titular plate it
+                   replaces, because a seal IS an authenticating mark. -->
+              <section class="card proposal rail-card card--rays">
+                <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> Parish seal <span class="tag-new"></span></p>
+                <div class="logo-frame seal-frame">
+                  <svg viewBox="0 0 120 120" aria-label="Placeholder parish seal">
+                    <circle cx="60" cy="60" r="55" fill="none" stroke="#5c1824" stroke-width="2.5" />
+                    <circle cx="60" cy="60" r="44" fill="none" stroke="#c4a35a" stroke-width="1.2" />
+                    <g fill="#5c1824">
+                      <rect x="57" y="32" width="6" height="52" rx="1" />
+                      <rect x="43" y="46" width="34" height="6" rx="1" />
+                    </g>
+                    <text x="60" y="100" text-anchor="middle" font-family="Times New Roman, serif" font-size="7.5" fill="#6b6158" letter-spacing="1.1">ST. JAMES &#183; 1619</text>
+                  </svg>
+                </div>
+                <p class="muted" style="font-size: 0.8rem; margin-top: 0.7rem">
+                  The parish's own mark. <strong>Its real job is the certificate</strong>, beside the
+                  diocese logo of phase 3 &mdash; showing it here as well is optional, and costs a
+                  tenth public surface.
+                </p>
+              </section>
+
+              <!-- RAIL 3 - TITULAR FEAST: feast_day -->
+              <section class="card proposal rail-card card--nimbus">
+                <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-calendar" /></svg> Titular feast</p>
+                <div class="leaf-row">
+                  <div class="leaf">
+                    <div class="leaf__top">Feast</div>
+                    <div class="leaf__day">25</div>
+                    <div class="leaf__mon">July</div>
+                  </div>
+                  <div>
+                    <p style="font-family: var(--serif); font-size: 1.2rem">St. James the Greater</p>
+                    <p class="muted" style="font-size: 0.85rem">Patronal title of the parish</p>
+                  </div>
+                </div>
+              </section>
+
+              <!-- RAIL 4 - FOUNDED: year_established -->
+              <section class="card proposal rail-card" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem">
+                <div>
+                  <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-hourglass" /></svg> Founded</p>
+                  <p class="muted" style="font-size: 0.85rem; margin-top: 0.2rem">Established 1619</p>
+                </div>
+                <p class="stat"><b>406</b><span>years</span></p>
+              </section>
+
+            </aside>
+          </div>
+
+          <div class="callout">
+            <strong>The band above is a move, not a new feature.</strong> Priests have been public since
+            2026-10-16 through <code>parish_clergy_public</code>, <strong>with photographs</strong>.
+            The only changes are <em>where</em> the card sits and <em>how big</em> it is — from
+            below the parish calendar at 44px to directly under the banner at 112px. The band reads
+            <code>full_name</code> and <code>has_photo</code>, exactly what
+            <code>PriestPhoto.jsx</code> already reads, and adds nothing to the public boundary.
+          </div>
+
+          <div class="alt-wrap proposal">
+            <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> Alternative · needs one new column</p>
+            <h3 style="font-family: var(--serif); font-size: 1.32rem; margin-top: 0.45rem">
+              Setting the parish priest apart
+            </h3>
+            <p class="muted" style="font-size: 0.88rem; margin-top: 0.4rem; max-width: 62ch">
+              If the point is that a visitor should see <strong>who the parish priest is</strong> —
+              not merely who the priests are — then the band above cannot do it, because
+              <strong>the database does not record which one he is.</strong> With one column it
+              looks like this.
+            </p>
+
+            <div class="clergy-lead">
+              <article class="cleric cleric--lead">
+                <div class="cleric__frame cleric__frame--photo"><svg class="ico" aria-hidden="true"><use href="#i-portrait" /></svg></div>
+                <div>
+                  <p class="cleric__rank">Parish Priest</p>
+                  <h3 class="cleric__name">Rev. Fr. Ramon A. Beltran</h3>
+                </div>
+              </article>
+              <div class="clergy-divider"></div>
+              <div class="clergy-rest">
+                <article class="cleric">
+                <div class="cleric__frame cleric__frame--photo"><svg class="ico" aria-hidden="true"><use href="#i-portrait" /></svg></div>
+                <p class="cleric__rank">Parochial Vicar</p>
+                <h3 class="cleric__name">Rev. Fr. Joel M. Sarmiento</h3>
+              </article>
+                <article class="cleric">
+                <div class="cleric__frame">A</div>
+                <p class="cleric__rank">Parochial Vicar</p>
+                <h3 class="cleric__name">Rev. Fr. Andres L. Ocampo</h3>
+              </article>
+              </div>
+            </div>
+
+            <div class="today-box">
+              <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-users" /></svg> What the view actually gives you today</p>
+              <pre style="margin-top: 0.6rem; font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; color: var(--muted); white-space: pre-wrap">parish_clergy_public
+  parish_id
+  user_id
+  full_name
+  has_photo</pre>
+              <p class="muted" style="font-size: 0.85rem; margin-top: 0.5rem">
+                Four columns, and <code>where u.role = 'priest' and u.status = 'active'</code>. There
+                is no rank, no title and no ordering — so <em>Parish Priest</em> and
+                <em>Parochial Vicar</em> above are <strong>invented</strong>, exactly as the mock
+                parish card's diocese and vicariate were. Nothing in the system can tell them apart.
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         2. DIRECTORY
+         =================================================================== -->
+    <section class="view" id="view-directory">
+      <div class="page">
+        <div>
+          <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> Diocese of Libmanan</p>
+          <h1 style="font-size: clamp(1.8rem, 4vw, 2.3rem); margin-top: 0.3rem">Parish directory</h1>
+          <p class="lede" style="margin-top: 0.5rem">
+            The woven banner and crest letter are what the cards already do when a parish has no
+            photograph. The patron saint and the founding year are what phase 2 adds.
+          </p>
+        </div>
+
+        <div class="parish-grid">
+          <article class="parish-card">
+            <div class="parish-card__media" style="--accent: #5c1824">
+              <span class="church-media__crest" aria-hidden="true">P</span>
+            </div>
+            <div class="parish-card__body">
+              <h2>Parish of St. James the Greater</h2>
+              <p class="parish-card__patron"><svg class="ico" aria-hidden="true"><use href="#i-saint" /></svg>St. James the Greater</p>
+              <p class="muted inline-ico" style="font-size: 0.9rem"><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg>Poblacion, Libmanan</p>
+              <p class="parish-card__summary inline-ico"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg>Office: 09171234567</p>
+              <p class="parish-card__est"><svg class="ico" aria-hidden="true"><use href="#i-hourglass" /></svg>Established 1619<span class="dot">·</span><svg class="ico" aria-hidden="true"><use href="#i-calendar" /></svg>Feast 25 July</p>
+            </div>
+          </article>
+
+          <article class="parish-card">
+            <div class="parish-card__media" style="--accent: #1e4d6b">
+              <span class="church-media__crest" aria-hidden="true">P</span>
+            </div>
+            <div class="parish-card__body">
+              <h2>Parish of the Holy Cross</h2>
+              <p class="parish-card__patron"><svg class="ico" aria-hidden="true"><use href="#i-saint" /></svg>Exaltation of the Holy Cross</p>
+              <p class="muted inline-ico" style="font-size: 0.9rem"><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg>Sipocot, Camarines Sur</p>
+              <p class="parish-card__summary inline-ico"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg>Office: 09181234567</p>
+              <p class="parish-card__est"><svg class="ico" aria-hidden="true"><use href="#i-hourglass" /></svg>Established 1801<span class="dot">·</span><svg class="ico" aria-hidden="true"><use href="#i-calendar" /></svg>Feast 14 September</p>
+            </div>
+          </article>
+
+          <article class="parish-card">
+            <div class="parish-card__media" style="--accent: #3d5a3a">
+              <span class="church-media__crest" aria-hidden="true">P</span>
+            </div>
+            <div class="parish-card__body">
+              <h2>Parish of St. Joseph the Worker</h2>
+              <p class="parish-card__patron"><svg class="ico" aria-hidden="true"><use href="#i-saint" /></svg>St. Joseph the Worker</p>
+              <p class="muted inline-ico" style="font-size: 0.9rem"><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg>Cabusao, Camarines Sur</p>
+              <p class="parish-card__summary inline-ico"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg>Office: 09191234567</p>
+              <p class="parish-card__est"><svg class="ico" aria-hidden="true"><use href="#i-hourglass" /></svg>Established 1952<span class="dot">·</span><svg class="ico" aria-hidden="true"><use href="#i-calendar" /></svg>Feast 1 May</p>
+            </div>
+          </article>
+
+          <article class="parish-card">
+            <div class="parish-card__media" style="--accent: #3b2a55">
+              <span class="church-media__crest" aria-hidden="true">P</span>
+            </div>
+            <div class="parish-card__body">
+              <h2>Parish of Our Lady of the Rosary</h2>
+              <p class="muted inline-ico" style="font-size: 0.9rem"><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg>Pamplona, Camarines Sur</p>
+              <p class="parish-card__summary inline-ico"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg>No contact number listed</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="callout">
+          <strong>The accent colour is already per-parish.</strong>
+          <code>accentFor(parishId)</code> hashes the id onto six colours — wine, rust, green, two
+          blues and a violet — so the four cards above differ without anyone choosing anything. The
+          fourth parish has filled nothing in: no subtitle, no founding line, and it still reads
+          correctly.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         3. STAFF FORM
+         =================================================================== -->
+    <section class="view" id="view-form">
+      <div class="page">
+        <div>
+          <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-church" /></svg> Parish profile</p>
+          <h1 style="font-size: clamp(1.8rem, 4vw, 2.3rem); margin-top: 0.3rem">Parish of St. James the Greater</h1>
+          <p class="lede" style="margin-top: 0.5rem">
+            These are the details a parishioner sees in the public directory. Everything here except
+            the Facebook page ID is part of that public listing, so a change here is a change to what
+            the public sees.
+          </p>
+        </div>
+
+        <section class="card">
+          <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-users" /></svg> Shown to the public</p>
+          <div class="form-grid" style="margin-top: 0.8rem">
+            <label class="field"><span><svg class="ico" aria-hidden="true"><use href="#i-church" /></svg> Parish name</span><input value="Parish of St. James the Greater" /></label>
+            <label class="field"><span><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg> Contact number</span><input value="09171234567" /></label>
+            <label class="field field--full"><span><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg> Address</span><input value="Poblacion, Libmanan, Camarines Sur" /></label>
+            <label class="field"><span><svg class="ico" aria-hidden="true"><use href="#i-mail" /></svg> Email</span><input value="stjames.libmanan@example.ph" /></label>
+            <label class="field">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-link" /></svg> Facebook page ID</span>
+              <input value="" placeholder="Not set" />
+              <span class="form-hint">Not shown to the public.</span>
+            </label>
+            <label class="field field--full">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-clock" /></svg> Office hours</span>
+              <textarea rows="3">Monday to Friday — 8:00 AM to 12:00 NN, 1:00 PM to 5:00 PM
+Saturday — 8:00 AM to 12:00 NN
+Closed on Sundays and public holidays</textarea>
+              <span class="form-hint">Up to 300 characters.</span>
+            </label>
+            <label class="field field--full">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-cross" /></svg> Mass schedule</span>
+              <textarea rows="4">Sunday — 5:30 AM, 7:00 AM, 9:00 AM (English), 4:00 PM, 6:00 PM
+Weekdays — 6:00 AM
+Saturday — 6:00 AM, 5:00 PM (anticipated Mass)
+First Friday — 6:00 AM, 5:30 PM</textarea>
+              <span class="form-hint">
+                Write it however the parish says it — days, times, language, anything else. Up to 600
+                characters.
+              </span>
+            </label>
+            <label class="field">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-saint" /></svg> Patron saint</span>
+              <input value="St. James the Greater" maxlength="60" placeholder="St. Joseph the Worker" />
+              <span class="form-hint">Optional. Up to 60 characters.</span>
+            </label>
+            <label class="field">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-calendar" /></svg> Feast day</span>
+              <input value="25 July" maxlength="40" placeholder="May 1" />
+              <span class="form-hint">
+                Optional, and written however the parish says it — a day and a month, no year.
+              </span>
+            </label>
+            <label class="field">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-hourglass" /></svg> Year established</span>
+              <input inputmode="numeric" value="1619" maxlength="4" placeholder="1898" />
+              <span class="form-hint">Optional. Four digits, from 1521 to this year.</span>
+            </label>
+            <label class="field field--full">
+              <span><svg class="ico" aria-hidden="true"><use href="#i-book" /></svg> History</span>
+              <textarea rows="8" maxlength="1200">The parish was established in 1619 as a visita under the care of the Franciscan missionaries, serving the scattered settlements along the Libmanan River. It was raised to a full parish later that century, with St. James the Greater named as its patron.
+
+The present stone church was begun in the 1750s and completed in stages over the decades that followed. Its bell tower, added in the nineteenth century, still carries three of the original bells.</textarea>
+              <span class="form-hint">
+                Optional. Blank lines separate paragraphs and are kept exactly as you type them. Up
+                to 1,200 characters.
+              </span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn"><svg class="ico" aria-hidden="true"><use href="#i-check" /></svg> Save changes</button>
+            <button class="btn btn--quiet"><svg class="ico" aria-hidden="true"><use href="#i-x" /></svg> Cancel</button>
+          </div>
+        </section>
+
+        <div class="callout">
+          This tab is the form <strong>as it is in the tree</strong> — nothing proposed. Both the
+          Parish Priest and the Parish Manager reach it, mirroring the record policy, and it saves
+          with PATCH so only changed fields are sent.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4. DIOCESE LOGO — phase 3
+         =================================================================== -->
+    <section class="view" id="view-diocese">
+      <div class="page">
+        <div>
+          <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg> Phase 3 · panel recommendation 2</p>
+          <h1 style="font-size: clamp(1.8rem, 4vw, 2.3rem); margin-top: 0.3rem">The diocese logo</h1>
+          <p class="lede" style="margin-top: 0.5rem">
+            Uploaded once by the System Administrator, inherited by every parish, printed on every
+            certificate. The two certificates below are drawn at the PDF's own coordinates — 842 × 595
+            user units, the same numbers <code>documents.pdf.js</code> uses — so the header shift is
+            exact, not an impression of it.
+          </p>
+        </div>
+
+        <!-- the sysadmin page -->
+        <section class="card proposal">
+          <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-upload" /></svg> pages/admin/DioceseLogo.jsx · new</p>
+          <div class="dio-grid">
+            <div>
+              <h2 style="font-size: 1.3rem">Diocesan letterhead</h2>
+              <p class="muted" style="font-size: 0.9rem; margin-top: 0.4rem">
+                One image for the whole diocese. It appears at the top left of every certificate this
+                system issues, beside the parish name. PNG or JPEG, up to 1 MB.
+              </p>
+              <div class="drop">
+                <svg class="ico ico--drop" aria-hidden="true"><use href="#i-upload" /></svg>
+                <p class="drop__lead">Drag the diocesan logo here</p>
+                <p class="muted" style="font-size: 0.8rem">or click to choose a file · PNG or JPEG · max 1 MB</p>
+              </div>
+              <p class="muted" style="font-size: 0.82rem; margin-top: 0.7rem">
+                Reuses <code>components/PhotoDrop.jsx</code>, already used by the parish photo.
+              </p>
+            </div>
+            <div>
+              <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-image" /></svg> Current logo</p>
+              <div class="logo-frame">
+                <svg viewBox="0 0 120 120" aria-label="Placeholder diocesan logo">
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="#1f3a93" stroke-width="3" />
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="#c9a227" stroke-width="1.5" />
+                  <g fill="#1f3a93">
+                    <rect x="56" y="30" width="8" height="58" rx="1" />
+                    <rect x="40" y="46" width="40" height="8" rx="1" />
+                  </g>
+                  <text x="60" y="104" text-anchor="middle" font-family="Times New Roman, serif" font-size="9" fill="#5b5b5b" letter-spacing="1.2">LIBMANAN</text>
+                </svg>
+              </div>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem">
+                <button class="btn btn--quiet" style="font-size: 0.85rem"><svg class="ico" aria-hidden="true"><use href="#i-upload" /></svg> Replace</button>
+                <button class="btn btn--quiet" style="font-size: 0.85rem"><svg class="ico" aria-hidden="true"><use href="#i-trash" /></svg> Remove</button>
+              </div>
+              <p class="muted" style="font-size: 0.78rem; margin-top: 0.6rem">
+                Fetched with the Bearer token into a blob URL, like the signature preview — so this
+                route needs no <code>Cross-Origin-Resource-Policy</code> header.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- the certificates -->
+        <div class="cert-pair">
+          <div>
+            <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-certificate" /></svg> Today · no logo uploaded</p>
+            <div class="cert">
+              <svg viewBox="0 0 842 595" role="img" aria-label="Certificate as rendered today">
+                <rect width="842" height="595" fill="#fffdf8" />
+                <rect x="24" y="24" width="794" height="547" fill="none" stroke="#c9a227" stroke-width="2" />
+                <rect x="30" y="30" width="782" height="535" fill="none" stroke="#c9a227" stroke-width="0.5" />
+
+                <!-- header, centred across the FULL body width -->
+                <text x="421" y="64" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="17" fill="#1f3a93">Parish of St. James the Greater</text>
+                <text x="421" y="80" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="8" fill="#5b5b5b">Poblacion, Libmanan, Camarines Sur</text>
+                <text x="421" y="92" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="8" fill="#5b5b5b">09171234567</text>
+
+                <line x1="56" y1="104" x2="786" y2="104" stroke="#c9a227" stroke-width="1.2" />
+                <text x="421" y="138" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="28" fill="#1a1a1a" letter-spacing="3">CERTIFICATE OF BAPTISM</text>
+                <line x1="371" y1="156" x2="471" y2="156" stroke="#c9a227" stroke-width="0.8" />
+                <text x="421" y="179" text-anchor="middle" font-family="Times New Roman, serif" font-style="italic" font-size="11" fill="#5b5b5b">This is to certify that</text>
+                <text x="421" y="207" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="26" fill="#1f3a93">Maria Clara R. Dimaano</text>
+                <text x="421" y="230" text-anchor="middle" font-family="Times New Roman, serif" font-style="italic" font-size="12" fill="#1a1a1a">has been baptized in this parish</text>
+                <line x1="241" y1="246" x2="601" y2="246" stroke="#c9a227" stroke-width="0.4" />
+
+                <!-- a few fields -->
+                <g font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="0.8">
+                  <text x="150" y="280" text-anchor="middle">DATE OF BAPTISM</text>
+                  <text x="421" y="280" text-anchor="middle">DATE OF BIRTH</text>
+                  <text x="692" y="280" text-anchor="middle">OFFICIATING MINISTER</text>
+                  <text x="150" y="324" text-anchor="middle">FATHER</text>
+                  <text x="421" y="324" text-anchor="middle">MOTHER</text>
+                  <text x="692" y="324" text-anchor="middle">SPONSORS</text>
+                </g>
+                <g font-family="Times New Roman, serif" font-size="11" fill="#1a1a1a">
+                  <text x="150" y="294" text-anchor="middle">14 June 1998</text>
+                  <text x="421" y="294" text-anchor="middle">2 May 1998</text>
+                  <text x="692" y="294" text-anchor="middle">Rev. Fr. Ramon A. Beltran</text>
+                  <text x="150" y="338" text-anchor="middle">Jose R. Dimaano</text>
+                  <text x="421" y="338" text-anchor="middle">Ana L. Reyes</text>
+                  <text x="692" y="338" text-anchor="middle">P. Villamor, L. Ocampo</text>
+                </g>
+                <line x1="56" y1="372" x2="786" y2="372" stroke="#c9a227" stroke-width="0.4" />
+                <g font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="0.8">
+                  <text x="150" y="400" text-anchor="middle">BOOK</text>
+                  <text x="330" y="400" text-anchor="middle">PAGE</text>
+                  <text x="510" y="400" text-anchor="middle">ENTRY</text>
+                  <text x="692" y="400" text-anchor="middle">DATE ISSUED</text>
+                </g>
+                <g font-family="Times New Roman, serif" font-size="11" fill="#1a1a1a">
+                  <text x="150" y="414" text-anchor="middle">12</text>
+                  <text x="330" y="414" text-anchor="middle">148</text>
+                  <text x="510" y="414" text-anchor="middle">7</text>
+                  <text x="692" y="414" text-anchor="middle">17 November 2026</text>
+                </g>
+
+                <!-- footer: FOOT = 468, FOOT_RULE = 458 -->
+                <line x1="56" y1="458" x2="786" y2="458" stroke="#c9a227" stroke-width="0.4" />
+                <rect x="56" y="468" width="66" height="66" fill="#1a1a1a" />
+                <g fill="#fffdf8">
+                  <rect x="62" y="474" width="16" height="16" /><rect x="100" y="474" width="16" height="16" />
+                  <rect x="62" y="512" width="16" height="16" /><rect x="84" y="494" width="10" height="10" />
+                </g>
+                <text x="89" y="545" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="6.5" fill="#5b5b5b" letter-spacing="0.6">SCAN TO VERIFY</text>
+                <text x="142" y="486" font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="0.8">VERIFICATION CODE</text>
+                <text x="142" y="504" font-family="Courier New, monospace" font-weight="700" font-size="16" fill="#1a1a1a" letter-spacing="2.5">K7M4QP2XR9</text>
+                <path d="M585 496 q22 -16 44 -4 t44 -10" fill="none" stroke="#1a1a1a" stroke-width="1.4" />
+                <line x1="536" y1="510" x2="786" y2="510" stroke="#1a1a1a" stroke-width="0.6" />
+                <text x="661" y="525" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="11" fill="#1a1a1a">Rev. Fr. Ramon A. Beltran</text>
+                <text x="661" y="538" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="1.2">PARISH PRIEST</text>
+              </svg>
+            </div>
+            <p class="muted" style="font-size: 0.82rem; margin-top: 0.5rem">
+              Header centred on <code>LEFT + BODY_W / 2</code> = <strong>421</strong>.
+            </p>
+          </div>
+
+          <div>
+            <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-certificate" /></svg> With a logo uploaded <span class="tag-new"></span></p>
+            <div class="cert">
+              <svg viewBox="0 0 842 595" role="img" aria-label="Certificate with the diocese logo">
+                <rect width="842" height="595" fill="#fffdf8" />
+                <rect x="24" y="24" width="794" height="547" fill="none" stroke="#c9a227" stroke-width="2" />
+                <rect x="30" y="30" width="782" height="535" fill="none" stroke="#c9a227" stroke-width="0.5" />
+
+                <!-- doc.image(logo, LEFT + 8, 42, { fit: [58, 58] }) -->
+                <g transform="translate(64 42)">
+                  <circle cx="29" cy="29" r="26" fill="none" stroke="#1f3a93" stroke-width="2" />
+                  <circle cx="29" cy="29" r="22" fill="none" stroke="#c9a227" stroke-width="1" />
+                  <g fill="#1f3a93">
+                    <rect x="26.5" y="13" width="5" height="30" rx="0.8" />
+                    <rect x="18" y="22" width="22" height="5" rx="0.8" />
+                  </g>
+                </g>
+                <rect x="64" y="42" width="58" height="58" fill="none" stroke="#c4a35a" stroke-width="0.8" stroke-dasharray="3 3" />
+
+                <!-- HEAD_X = LEFT + 76 = 132 · HEAD_W = 654 · centre = 459 -->
+                <text x="459" y="64" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="17" fill="#1f3a93">Parish of St. James the Greater</text>
+                <text x="459" y="80" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="8" fill="#5b5b5b">Poblacion, Libmanan, Camarines Sur</text>
+                <text x="459" y="92" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="8" fill="#5b5b5b">09171234567</text>
+
+                <line x1="56" y1="104" x2="786" y2="104" stroke="#c9a227" stroke-width="1.2" />
+                <text x="421" y="138" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="28" fill="#1a1a1a" letter-spacing="3">CERTIFICATE OF BAPTISM</text>
+                <line x1="371" y1="156" x2="471" y2="156" stroke="#c9a227" stroke-width="0.8" />
+                <text x="421" y="179" text-anchor="middle" font-family="Times New Roman, serif" font-style="italic" font-size="11" fill="#5b5b5b">This is to certify that</text>
+                <text x="421" y="207" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="26" fill="#1f3a93">Maria Clara R. Dimaano</text>
+                <text x="421" y="230" text-anchor="middle" font-family="Times New Roman, serif" font-style="italic" font-size="12" fill="#1a1a1a">has been baptized in this parish</text>
+                <line x1="241" y1="246" x2="601" y2="246" stroke="#c9a227" stroke-width="0.4" />
+
+                <g font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="0.8">
+                  <text x="150" y="280" text-anchor="middle">DATE OF BAPTISM</text>
+                  <text x="421" y="280" text-anchor="middle">DATE OF BIRTH</text>
+                  <text x="692" y="280" text-anchor="middle">OFFICIATING MINISTER</text>
+                  <text x="150" y="324" text-anchor="middle">FATHER</text>
+                  <text x="421" y="324" text-anchor="middle">MOTHER</text>
+                  <text x="692" y="324" text-anchor="middle">SPONSORS</text>
+                </g>
+                <g font-family="Times New Roman, serif" font-size="11" fill="#1a1a1a">
+                  <text x="150" y="294" text-anchor="middle">14 June 1998</text>
+                  <text x="421" y="294" text-anchor="middle">2 May 1998</text>
+                  <text x="692" y="294" text-anchor="middle">Rev. Fr. Ramon A. Beltran</text>
+                  <text x="150" y="338" text-anchor="middle">Jose R. Dimaano</text>
+                  <text x="421" y="338" text-anchor="middle">Ana L. Reyes</text>
+                  <text x="692" y="338" text-anchor="middle">P. Villamor, L. Ocampo</text>
+                </g>
+                <line x1="56" y1="372" x2="786" y2="372" stroke="#c9a227" stroke-width="0.4" />
+                <g font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="0.8">
+                  <text x="150" y="400" text-anchor="middle">BOOK</text>
+                  <text x="330" y="400" text-anchor="middle">PAGE</text>
+                  <text x="510" y="400" text-anchor="middle">ENTRY</text>
+                  <text x="692" y="400" text-anchor="middle">DATE ISSUED</text>
+                </g>
+                <g font-family="Times New Roman, serif" font-size="11" fill="#1a1a1a">
+                  <text x="150" y="414" text-anchor="middle">12</text>
+                  <text x="330" y="414" text-anchor="middle">148</text>
+                  <text x="510" y="414" text-anchor="middle">7</text>
+                  <text x="692" y="414" text-anchor="middle">17 November 2026</text>
+                </g>
+
+                <line x1="56" y1="458" x2="786" y2="458" stroke="#c9a227" stroke-width="0.4" />
+                <rect x="56" y="468" width="66" height="66" fill="#1a1a1a" />
+                <g fill="#fffdf8">
+                  <rect x="62" y="474" width="16" height="16" /><rect x="100" y="474" width="16" height="16" />
+                  <rect x="62" y="512" width="16" height="16" /><rect x="84" y="494" width="10" height="10" />
+                </g>
+                <text x="89" y="545" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="6.5" fill="#5b5b5b" letter-spacing="0.6">SCAN TO VERIFY</text>
+                <text x="142" y="486" font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="0.8">VERIFICATION CODE</text>
+                <text x="142" y="504" font-family="Courier New, monospace" font-weight="700" font-size="16" fill="#1a1a1a" letter-spacing="2.5">K7M4QP2XR9</text>
+                <path d="M585 496 q22 -16 44 -4 t44 -10" fill="none" stroke="#1a1a1a" stroke-width="1.4" />
+                <line x1="536" y1="510" x2="786" y2="510" stroke="#1a1a1a" stroke-width="0.6" />
+                <text x="661" y="525" text-anchor="middle" font-family="Times New Roman, serif" font-weight="700" font-size="11" fill="#1a1a1a">Rev. Fr. Ramon A. Beltran</text>
+                <text x="661" y="538" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="7" fill="#5b5b5b" letter-spacing="1.2">PARISH PRIEST</text>
+              </svg>
+            </div>
+            <p class="muted" style="font-size: 0.82rem; margin-top: 0.5rem">
+              Logo at <code>(64, 42)</code> fitted to 58 × 58. Header re-centred on
+              <strong>459</strong> — a 38pt shift. <strong>Nothing else on the page moves.</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>Three coordinates, and the conditional is the load-bearing part.</strong>
+          <code>HEAD_X = logo ? LEFT + 76 : LEFT</code>. With no logo the header renders at exactly
+          today's numbers, so every certificate is byte-identical until a sysadmin chooses otherwise —
+          and <code>fitSize</code> already shrinks a long parish name to whatever width it is given, so
+          a narrower column shrinks the text rather than colliding with the logo.
+          <code>if (signature)</code> at line 214 is the existing precedent for an optional
+          <code>doc.image</code>.
+        </div>
+
+        <h2 style="font-size: 1.4rem; margin-top: 2rem">The problems worth knowing about</h2>
+        <div class="notes-grid" style="margin-top: 0.9rem">
+          <div class="note-card">
+            <p class="src">The decision the panel will ask about</p>
+            <h3>Read live, not snapshotted</h3>
+            <p>
+              Every other value on a certificate comes from the <code>jsonb</code> snapshot taken at
+              issuance — that is what makes it verifiable. <strong>The logo deliberately does not.</strong>
+              It is letterhead, not certified content, so it is read at render time: one upload fixes
+              every certificate including those already issued, and a sysadmin who uploads a bad file
+              can repair it instead of reissuing. The signature is the opposite case and stays snapshotted.
+            </p>
+            <span class="verdict verdict--care">Deliberate · opposite of the signature</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">A first for this codebase</p>
+            <h3>The project's first writable global table</h3>
+            <p>
+              <code>diocese</code> is one row, forced: <code>id smallint primary key default 1</code>
+              with <code>check (id = 1)</code>, seeded by the migration, following
+              <code>health_check</code>. Every write is <code>update … where id = 1</code>, so
+              <em>"which logo?"</em> has exactly one answer. RLS on, a
+              <code>for select to patron_app</code> read policy and
+              <code>for all to patron_admin</code> for writes — a global table with RLS and no policy
+              denies everything, which is the default the project leans on.
+            </p>
+            <span class="verdict verdict--care">New in kind · needs the read policy</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">The trap</p>
+            <h3>The admin router has never taken a binary body</h3>
+            <p>
+              It needs its own <code>express.raw({ type: LOGO_TYPES, limit: '1mb' })</code>. The size
+              ceiling is in SQL as well —
+              <code>check (octet_length(logo) &lt;= 1048576)</code> — so a bug in Express cannot put a
+              40 MB image into a backed-up table. Same belt-and-braces as
+              <code>parish.photo</code>.
+            </p>
+            <span class="verdict verdict--care">Mind the parser</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">The good news</p>
+            <h3>Zero new error codes, and one function to change</h3>
+            <p>
+              <code>MISSING_FILE</code>, <code>INVALID_FILE_TYPE</code>,
+              <code>FILE_TOO_LARGE</code> and <code>IMAGE_NOT_FOUND</code> already mean exactly this,
+              so <code>error_codes.md</code> and <code>lib/errors.js</code> are untouched. And all
+              three PDF routes — Path 1 staff, Path 1 parishioner, Path 2 event certificates — funnel
+              through <code>renderCertificatePdf</code>, so threading one <code>logo</code> parameter
+              covers every certificate the system can issue.
+            </p>
+            <span class="verdict verdict--free">One migration · one function · no new codes</span>
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top: 1.3rem">
+          <strong>Why this is the honest counterpart to the seal.</strong> The diocese logo is a real
+          mark, supplied by the people who own it, stored as the bytes they uploaded. That is precisely
+          what the generated parish seal was not — and it is why the logo belongs on a certificate while
+          the seal did not belong on a parish page.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         5. INSPIRATIONS
+         =================================================================== -->
+    <section class="view" id="view-notes">
+      <div class="page">
+        <div>
+          <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-book" /></svg> Design notes</p>
+          <h1 style="font-size: clamp(1.8rem, 4vw, 2.3rem); margin-top: 0.3rem">Pictures without a schema change</h1>
+          <p class="lede" style="margin-top: 0.5rem">
+            The page reads as text because six facts sit in one column and the history is one
+            paragraph block. Every idea below fixes that using only the four columns you are already
+            adding — none of them stores an image.
+          </p>
+        </div>
+
+        <div class="notes-grid">
+          <div class="note-card">
+            <p class="src">Banknotes · share certificates · laid paper</p>
+            <h3>Backgrounds for the rail, not for everything</h3>
+            <p>
+              The right column read as four plain white boxes. Each now has a background that says
+              something about the card: <strong>laid-paper rules</strong> on the plate,
+              a <strong>nimbus</strong> on the feast, a <strong>monstrance burst</strong> behind the
+              406 years, and <strong>guilloche</strong> — the lathe-turned line work engravers put on
+              banknotes precisely because it is hard to copy — on the card that issues certificates.
+              Three are CSS gradients, one is a 64&times;26 SVG tile.
+            </p>
+            <p>
+              The restraint that matters here is <strong>what was left alone</strong>. The
+              <em>Parish office</em> and <em>Schedule</em> cards on the left are still flat, on
+              purpose: they are four label-and-value pairs and a block of times, and dense factual
+              reading wants a quiet field behind it. Texture belongs on the ornamental rail, not
+              under the Mass times a parishioner is trying to read.
+            </p>
+            <span class="verdict verdict--free">Free · CSS and one SVG tile</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Feather · Lucide · Phosphor — studied, not installed</p>
+            <h3>A stroke icon set, drawn in the file</h3>
+            <p>
+              Twenty-two symbols on a 24&times;24 grid, stroke only, 1.6 units, round caps, no fills —
+              the same discipline those sets use, which is why they sit quietly beside Cormorant
+              rather than competing with it. They are <strong>drawn here, not imported</strong>:
+              <code>package.json</code> is untouched, there is no icon font and no request, and the
+              whole sprite is about 2.6&nbsp;KB of markup.
+            </p>
+            <p>
+              Three of them earn their place rather than decorate. The <strong>Latin cross</strong>
+              marks the Mass schedule, which is the one row on the card a parishioner actually came
+              for. The same cross replaces the <code>✠</code> character in the fleuron and the
+              titular plate — a text glyph that <strong>Cormorant Garamond does not contain</strong>,
+              so today it silently falls back to another font and on some machines shows a blank box.
+              And the <strong>saint</strong> glyph gives <code>patron_saint</code> a mark of its own
+              in the directory, where it is the only line distinguishing one card from the next.
+            </p>
+            <p>
+              The restraint is deliberate: <strong>icons sit on labels, never on values</strong>. A
+              phone glyph beside <em>Contact number</em> is a signpost; one beside the number itself
+              would be noise.
+            </p>
+            <span class="verdict verdict--free">Free · no dependency, no schema</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Illuminated manuscripts · breviaries · missals</p>
+            <h3>The drop cap as ornament</h3>
+            <p>
+              The oldest answer to a wall of text, and the right one for a parish. The first letter
+              of the history is set in Cormorant at 3.4rem in a gold-ruled box. One CSS rule, applied
+              to a column you already have.
+            </p>
+            <span class="verdict verdict--free">Free · CSS only</span>
+          </div>
+
+          <div class="note-card" style="border-color: rgba(141, 32, 24, 0.45)">
+            <p class="src" style="color: #8d2018">Cut — and why</p>
+            <h3>A generated parish seal</h3>
+            <p>
+              The first draft of this rail held a round seal: the patron curved on an arc, a cross, the
+              year in Roman numerals. It looked the best of anything here and it was
+              <strong>wrong</strong>.
+            </p>
+            <p>
+              A seal is an official mark, particular to one parish, pressed onto documents to
+              authenticate them. A roundel generated from a text field is not that parish's seal — and
+              in a system whose thesis claim is <em>verifiable document issuance</em>, a device that
+              reads as authentication but authenticates nothing is the one ornament that cannot be
+              afforded. The panel asks "is that the parish's real seal?" and the answer is no.
+            </p>
+            <span class="verdict verdict--no">Cut · misrepresents an official mark</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Letterpress nameplates · title pages · engraved plaques</p>
+            <h3>A titular plate instead</h3>
+            <p>
+              Same two columns, none of the claim. <strong>Rectangular on purpose:</strong> a circle
+              with curved lettering reads as a seal, a ruled plate reads as a title. No cross-and-circle
+              device, no Roman numerals, no municipality ring — just the patron set large in Cormorant
+              between two gold rules, and the founding year in small caps.
+            </p>
+            <p>
+              It also fixes the seal's practical defect. A 43-character title would not fit on a 230-unit
+              arc; set as two lines of straight type it simply wraps.
+            </p>
+            <span class="verdict verdict--free">Free · markup and CSS, no new column</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Editorial print · annual reports · gallery wall text</p>
+            <h3>The year as a watermark</h3>
+            <p>
+              <code>1619</code> set at 8.5rem in wine at 7% opacity, bleeding off the bottom of the
+              About card. A number is the cheapest graphic there is, and a four-digit year is the
+              most graphic thing in the whole record.
+            </p>
+            <span class="verdict verdict--free">Free · one element</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Gothic tracery · rose windows · tile floors</p>
+            <h3>A quatrefoil texture behind the prose</h3>
+            <p>
+              Four overlapping circles in a 44px tile, wine at 10% opacity, as an SVG data URI. It
+              gives a text card a surface without an image request, an asset or a route. Use it on
+              one card only — on every card it becomes noise.
+            </p>
+            <span class="verdict verdict--free">Free · data URI, no asset</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Ecclesiastical typography · service booklets</p>
+            <h3>A fleuron rule instead of a border</h3>
+            <p>
+              A cross centred between two hairlines that fade out. It separates the eyebrow from
+              the prose far better than a plain <code>border-top</code>. It began as the single
+              character <code>✠</code> and is now the drawn <code>#i-cross</code> symbol, because
+              Cormorant Garamond has no glyph for that code point.
+            </p>
+            <span class="verdict verdict--free">Free · two strokes</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Wall calendars · event listings</p>
+            <h3>The feast day as a calendar leaf</h3>
+            <p>
+              <strong>The one with a catch.</strong> It needs the day and the month apart, and
+              <code>feast_day</code> is deliberately free text so a parish can write
+              <em>"Last Sunday of January"</em> or <em>"Moveable — Pentecost"</em>. Parsing it would
+              work for most and look broken for the rest. Show the leaf only when the text matches a
+              day-and-month pattern, and fall back to the plain line otherwise.
+            </p>
+            <span class="verdict verdict--care">Needs care · free text will not always parse</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">Museum labels · National Trust property pages</p>
+            <h3>The age, derived</h3>
+            <p>
+              <code>406 years</code> from <code>year_established</code> and this year, set in
+              PATRON's existing <code>.stat</code>. A derived number carries more than the raw one
+              and costs a subtraction.
+            </p>
+            <span class="verdict verdict--free">Free · derived, nothing stored</span>
+          </div>
+
+          <div class="note-card">
+            <p class="src">What I would not do</p>
+            <h3>A photo gallery, a timeline, a Mass-times grid</h3>
+            <p>
+              All three need schema. A gallery needs a second photo table —
+              <code>parish_photo_public</code> holds exactly one. A timeline needs dated events, not
+              one founding year. A day-by-day Mass grid needs structured schedule rows, which is
+              already a deferral in <code>backlog.md</code>. None is worth opening after the defense.
+            </p>
+            <span class="verdict verdict--no">Needs schema · leave it</span>
+          </div>
+        </div>
+
+        <div class="callout" style="margin-top: 1.4rem">
+          <strong>If you take three, take these.</strong> The drop cap, the year watermark and the
+          titular plate. They are the whole difference between a text page and a designed one, they
+          touch no migration, and all three come out of the two columns —
+          <code>patron_saint</code> and <code>year_established</code> — that the panel asked for in
+          the first place.
+          <br /><br />
+          <strong>And if a parish wants its real seal shown</strong>, that is an upload, not a
+          drawing: another <code>bytea</code> column, a public route with
+          <code>Cross-Origin-Resource-Policy</code>, and a 404 path for parishes without one. It is
+          the identical pattern to the diocese logo in phase 3, so it belongs there if it belongs
+          anywhere — not invented here.
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const tabs = document.querySelectorAll('.tab')
+      const views = document.querySelectorAll('.view')
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach((t) => t.setAttribute('aria-selected', String(t === tab)))
+          views.forEach((v) => v.classList.toggle('is-on', v.id === 'view-' + tab.dataset.view))
+          window.scrollTo({ top: 0 })
+        })
+      })
+
+      // Scroll reveal. Targets are collected here rather than marked up by hand, and the
+      // hidden state only exists once .is-armed is set — so a throw anywhere in this block
+      // leaves every card visible rather than blanking the page.
+      const mayAnimate =
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
+        'IntersectionObserver' in window
+
+      if (mayAnimate) {
+        const cards = document.querySelectorAll('.card, .parish-card, .note-card')
+
+        // Staggered within each parent, so a four-card grid ripples while card 15 of the
+        // page does not sit waiting a second for its turn.
+        const counts = new Map()
+        cards.forEach((card) => {
+          const n = counts.get(card.parentElement) ?? 0
+          counts.set(card.parentElement, n + 1)
+          card.style.setProperty('--i', String(Math.min(n, 5)))
+          card.classList.add('reveal')
+        })
+
+        document.body.classList.add('is-armed')
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return
+              entry.target.classList.add('is-in')
+              io.unobserve(entry.target)
+            })
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.04 },
+        )
+
+        cards.forEach((card) => io.observe(card))
+      }
+    </script>
+  </body>
+</html>

@@ -3,10 +3,13 @@ import { withActor } from '../../db/withTenant.js'
 
 const COLUMNS = `parish_id, name, address, contact_no, email,
                  facebook_page_id, status, created_at, photo_content_type,
-                 office_hours, mass_schedule`
+                 office_hours, mass_schedule,
+                 patron_saint, feast_day, year_established, history,
+                 seal_content_type`
 
 const DIRECTORY_COLUMNS = `parish_id, name, address, contact_no, email,
-                           office_hours, mass_schedule`
+                           office_hours, mass_schedule,
+                           patron_saint, feast_day, year_established, history`
 
 const EDITABLE = [
   ['name', 'name'],
@@ -16,6 +19,10 @@ const EDITABLE = [
   ['facebookPageId', 'facebook_page_id'],
   ['officeHours', 'office_hours'],
   ['massSchedule', 'mass_schedule'],
+  ['patronSaint', 'patron_saint'],
+  ['feastDay', 'feast_day'],
+  ['yearEstablished', 'year_established'],
+  ['history', 'history'],
 ]
 
 function mapParish(row) {
@@ -31,6 +38,11 @@ function mapParish(row) {
     hasPhoto: row.photo_content_type !== null && row.photo_content_type !== undefined,
     officeHours: row.office_hours,
     massSchedule: row.mass_schedule,
+    patronSaint: row.patron_saint,
+    feastDay: row.feast_day,
+    yearEstablished: row.year_established,
+    history: row.history,
+    hasSeal: row.seal_content_type !== null && row.seal_content_type !== undefined,
   }
 }
 
@@ -43,6 +55,10 @@ function mapDirectoryEntry(row) {
     email: row.email,
     officeHours: row.office_hours,
     massSchedule: row.mass_schedule,
+    patronSaint: row.patron_saint,
+    feastDay: row.feast_day,
+    yearEstablished: row.year_established,
+    history: row.history,
   }
 }
 
@@ -189,4 +205,115 @@ export async function findPublicClergyPhoto(parishId, userId) {
   )
   if (rows.length === 0) return null
   return { contentType: rows[0].photo_content_type, content: rows[0].photo }
+}
+
+export async function setParishSeal(actor, { contentType, content }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set seal = $1,
+              seal_content_type = $2
+        where parish_id = public.current_parish_id()`,
+      [content, contentType]
+    )
+    return rowCount
+  })
+}
+
+export async function clearParishSeal(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set seal = null,
+              seal_content_type = null
+        where parish_id = public.current_parish_id()`
+    )
+    return rowCount
+  })
+}
+
+export async function findPublicParishSeal(parishId) {
+  const { rows } = await pool.query(
+    `select seal_content_type, seal
+       from public.parish_seal_public
+      where parish_id = $1`,
+    [parishId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].seal_content_type, content: rows[0].seal }
+}
+
+function mapGalleryImage(row) {
+  return {
+    imageId: row.image_id,
+    fileName: row.file_name,
+    contentType: row.content_type,
+    byteSize: row.byte_size,
+    uploadedAt: row.uploaded_at,
+  }
+}
+
+const GALLERY_LIST = `select image_id, file_name, content_type, byte_size, uploaded_at
+                        from public.parish_gallery_image
+                       order by uploaded_at, image_id`
+
+export async function listGalleryImages(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(GALLERY_LIST)
+    return rows.map(mapGalleryImage)
+  })
+}
+
+export async function insertGalleryImage(actor, { fileName, contentType, content, max }) {
+  return withActor(actor, async (client) => {
+    const counted = await client.query(
+      `select count(*)::int as total from public.parish_gallery_image`
+    )
+    if (counted.rows[0].total >= max) return { full: true, images: null }
+
+    await client.query(
+      `insert into public.parish_gallery_image
+         (parish_id, file_name, content_type, byte_size, content, uploaded_by)
+       values (public.current_parish_id(), $1, $2, $3, $4, public.current_user_id())`,
+      [fileName, contentType, content.length, content]
+    )
+
+    const { rows } = await client.query(GALLERY_LIST)
+    return { full: false, images: rows.map(mapGalleryImage) }
+  })
+}
+
+export async function deleteGalleryImage(actor, imageId) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `delete from public.parish_gallery_image where image_id = $1`,
+      [imageId]
+    )
+    if (rowCount === 0) return null
+
+    const { rows } = await client.query(GALLERY_LIST)
+    return rows.map(mapGalleryImage)
+  })
+}
+
+export async function listPublicGalleryIds(parishId) {
+  const { rows } = await pool.query(
+    `select image_id
+       from public.parish_gallery_public
+      where parish_id = $1
+      order by uploaded_at, image_id`,
+    [parishId]
+  )
+  return rows.map((row) => row.image_id)
+}
+
+export async function findPublicGalleryImage(parishId, imageId) {
+  const { rows } = await pool.query(
+    `select content_type, content
+       from public.parish_gallery_public
+      where parish_id = $1 and image_id = $2`,
+    [parishId, imageId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].content_type, content: rows[0].content }
 }

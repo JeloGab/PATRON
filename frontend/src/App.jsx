@@ -14,6 +14,7 @@ import ChangePassword from './pages/public/ChangePassword.jsx'
 import BlockDate from './pages/manager/BlockDate.jsx'
 import ForgotPassword from './pages/public/ForgotPassword.jsx'
 import ChurchDetail from './pages/user/ChurchDetail.jsx'
+import DioceseLogo from './pages/admin/DioceseLogo.jsx'
 import CreateEvent from './pages/manager/CreateEvent.jsx'
 import Dashboard from './pages/manager/Dashboard.jsx'
 import DocumentApprovals from './pages/priest/DocumentApprovals.jsx'
@@ -73,6 +74,7 @@ export default function App() {
         }
       >
         <Route index element={<RegisteredParishes />} />
+        <Route path="diocese-logo" element={<DioceseLogo />} />
       </Route>
 
       <Route

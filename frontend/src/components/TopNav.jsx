@@ -16,6 +16,11 @@ const MANAGER_LINKS = [
   { to: '/manager/parish', label: 'Parish profile' },
 ]
 
+const ADMIN_LINKS = [
+  { to: '/admin', label: 'Registered parishes', end: true },
+  { to: '/admin/diocese-logo', label: 'Diocese logo' },
+]
+
 const PRIEST_LINKS = [
   { to: '/priest', label: 'My calendar', end: true },
   { to: '/priest/approvals', label: 'Pending approvals', badge: 'events' },
@@ -146,17 +151,16 @@ function PriestNav({ counts }) {
 }
 
 function AdminNav() {
+  const { pathname } = useLocation()
   const session = getSession()
   const initial = (session?.name || 'A').slice(0, 1).toUpperCase()
 
   return (
     <header className="topbar">
       <div className="topbar__inner">
-        <div className="topbar__brand">
+        <NavLink to="/admin" className="topbar__brand">
           <Logo compact />
-        </div>
-
-        <p className="topbar__section">Registered parishes</p>
+        </NavLink>
 
         <div className="topbar__user">
           <Avatar initial={initial} hasPhoto={session?.hasPhoto} />
@@ -166,6 +170,25 @@ function AdminNav() {
           </NavLink>
           <SignOut />
         </div>
+      </div>
+
+      <div className="topbar__tabs">
+        <Tabs label="System administrator">
+          {ADMIN_LINKS.map((item) => {
+            const current = isCurrent(item, pathname)
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={`tabs__link ${current ? 'is-active' : ''}`}
+                aria-current={current ? 'page' : undefined}
+              >
+                {item.label}
+              </NavLink>
+            )
+          })}
+        </Tabs>
       </div>
     </header>
   )

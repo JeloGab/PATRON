@@ -5,6 +5,7 @@ import Loading from '../../components/Loading.jsx'
 import { BASE, call } from '../../lib/api.js'
 import { formatLongDate } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
+import useReveal from '../../lib/useReveal.js'
 
 export default function Feed() {
   const [announcements, setAnnouncements] = useState(null)
@@ -28,8 +29,10 @@ export default function Feed() {
     load()
   }, [load])
 
+  const stage = useReveal([announcements])
+
   return (
-    <div className="page">
+    <div className="page" ref={stage}>
       <header className="page__hero">
         <div>
           <p className="eyebrow">Parish announcements</p>

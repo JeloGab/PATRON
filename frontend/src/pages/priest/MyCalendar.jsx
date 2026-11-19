@@ -88,11 +88,15 @@ export default function MyCalendar() {
   const dayParishBlocks = parishBlocksByDate.get(selectedDate) ?? []
   const dayMyBlocks = myBlocksByDate.get(selectedDate) ?? []
   const open = (events ?? []).find((item) => item.eventId === openId) ?? null
+  // Floored at today, because PendingApprovals windows its fetch from today — counting a
+  // past-dated pending event sends the priest to a page that will not list it.
+  const today = todayISO()
   const myPending = (events ?? []).filter(
     (event) =>
       event.status === 'pending' &&
       event.eventType === 'sacramental' &&
-      event.assignedPriestId === priestId,
+      event.assignedPriestId === priestId &&
+      event.eventDate >= today,
   )
 
   function shiftMonth(amount) {

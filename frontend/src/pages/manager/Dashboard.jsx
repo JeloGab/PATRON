@@ -85,7 +85,10 @@ export default function Dashboard() {
   )
   const upcoming = live.filter((event) => event.eventDate >= today)
   const awaitingApproval = live.filter(
-    (event) => event.status === 'pending' && event.eventType === 'sacramental',
+    (event) =>
+      event.status === 'pending' &&
+      event.eventType === 'sacramental' &&
+      event.eventDate >= today,
   )
 
   const metrics = [

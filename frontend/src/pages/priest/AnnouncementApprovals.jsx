@@ -3,15 +3,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
+import FacebookSync from '../../components/FacebookSync.jsx'
 import Loading from '../../components/Loading.jsx'
 import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { STATUS_HINT, STATUS_LABEL, canArchive, statusPill } from '../../lib/announcements.js'
+import { syncStateOf } from '../../lib/facebook.js'
 import { formatStamp } from '../../lib/documents.js'
 import { messageFor } from '../../lib/errors.js'
 import { clearSession } from '../../lib/session.js'
 
 const TABS = ['pending', 'approved', 'rejected', 'archived']
+
+const SYNC_NOTICE = {
+  synced: ' It was posted to the parish Facebook page.',
+  failed: ' Facebook refused the post — use Try again below.',
+  skipped: ' No Facebook page is connected, so nothing was posted there.',
+  none: '',
+}
 
 export default function AnnouncementApprovals() {
   const navigate = useNavigate()
@@ -55,6 +64,20 @@ export default function AnnouncementApprovals() {
   )
   const pendingCount = (announcements ?? []).filter((item) => item.status === 'pending').length
 
+  // The sync route answers with getAnnouncement(), whose column list carries no
+  // image_count — so imageCount arrives as 0 and would hide the "View images" button.
+  // The row is patched rather than reloaded, which also keeps FacebookSync mounted and
+  // its own error visible.
+  function patch(next) {
+    setAnnouncements((list) =>
+      (list ?? []).map((item) =>
+        item.announcementId === next.announcementId
+          ? { ...item, ...next, imageCount: item.imageCount }
+          : item,
+      ),
+    )
+  }
+
   async function act(announcement, action, body = {}) {
     setError('')
     setNotice('')
@@ -76,7 +99,11 @@ export default function AnnouncementApprovals() {
     }
 
     const said = { approve: 'published', reject: 'rejected', archive: 'archived' }[action]
-    setNotice(`“${announcement.title}” was ${said}.`)
+    // Approving posts to Facebook in the same request, so the answer already knows how
+    // that went. Saying it here is what the UAT task is scored on.
+    const posted =
+      action === 'approve' ? SYNC_NOTICE[syncStateOf(r.json.announcement ?? {})] : ''
+    setNotice(`“${announcement.title}” was ${said}.${posted}`)
     setRejectingId(null)
     setReason('')
     load()
@@ -154,6 +181,8 @@ export default function AnnouncementApprovals() {
               <p className="feed__body">{item.content}</p>
               <p className="muted">{STATUS_HINT[item.status]}</p>
               {item.statusReason && <p className="alert">Reason: {item.statusReason}</p>}
+
+              <FacebookSync announcement={item} onChanged={patch} onSessionEnd={endSession} />
 
               <div className="form-actions__buttons">
                 {item.imageCount > 0 && (

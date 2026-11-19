@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
+import FacebookSync from '../../components/FacebookSync.jsx'
 import Loading from '../../components/Loading.jsx'
 import Modal from '../../components/Modal.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
@@ -252,6 +253,18 @@ export default function Announcements() {
     )
   }
 
+  // The sync route answers with getAnnouncement(), whose column list carries no
+  // image_count — so imageCount arrives as 0 and the image controls would disappear.
+  function patch(next) {
+    setAnnouncements((list) =>
+      (list ?? []).map((item) =>
+        item.announcementId === next.announcementId
+          ? { ...item, ...next, imageCount: item.imageCount }
+          : item,
+      ),
+    )
+  }
+
   async function act(announcement, action) {
     setError('')
     setNotice('')
@@ -343,6 +356,8 @@ export default function Announcements() {
               <p className="feed__body">{item.content}</p>
               <p className="muted">{STATUS_HINT[item.status]}</p>
               {item.statusReason && <p className="alert">Reason: {item.statusReason}</p>}
+
+              <FacebookSync announcement={item} onChanged={patch} onSessionEnd={endSession} />
 
               <div className="form-actions__buttons">
                 <button type="button" className="btn btn--ghost" onClick={() => openDetail(item)}>

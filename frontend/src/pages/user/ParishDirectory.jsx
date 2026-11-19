@@ -1,4 +1,4 @@
-// The public directory: five columns, active parishes only.
+// The public directory: eleven columns, active parishes only.
 
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -7,6 +7,7 @@ import Loading from '../../components/Loading.jsx'
 import { call } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
 import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
+import useReveal from '../../lib/useReveal.js'
 
 export default function ParishDirectory() {
   const [parishes, setParishes] = useState(null)
@@ -41,8 +42,10 @@ export default function ParishDirectory() {
     )
   }, [parishes, query])
 
+  const stage = useReveal([list])
+
   return (
-    <div className="page">
+    <div className="page" ref={stage}>
       <header className="page__hero">
         <div>
           <p className="eyebrow">Directory</p>
@@ -105,6 +108,9 @@ export default function ParishDirectory() {
                   </ChurchMedia>
                   <div className="parish-card__body">
                     <h2>{parish.name}</h2>
+                    {parish.patronSaint && (
+                      <p className="parish-card__patron">{parish.patronSaint}</p>
+                    )}
                     <p className="muted">{parish.address}</p>
                     <p className="parish-card__summary">
                       {parish.contactNo ? `Office: ${parish.contactNo}` : 'No contact number listed'}

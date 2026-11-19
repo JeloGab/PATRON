@@ -19,6 +19,10 @@ export const LIMITS = {
   invoiceNo: { min: 3, max: 40 },
   officeHours: { max: 300 },
   massSchedule: { max: 600 },
+  patronSaint: { max: 60 },
+  feastDay: { max: 40 },
+  yearEstablished: { min: 1521 },
+  history: { max: 1200 },
    content: { min: 5, max: 5000 }
 }
 
@@ -295,4 +299,35 @@ export function optionalOfficeHours(value) {
 
 export function optionalMassSchedule(value) {
   return optionalMultiline(value, 'INVALID_MASS_SCHEDULE', LIMITS.massSchedule.max)
+}
+
+export function optionalPatronSaint(value) {
+  const name = squeeze(value)
+  if (!name) return null
+  if (name.length > LIMITS.patronSaint.max) throw new AppError('INVALID_PATRON_SAINT', 400)
+  return name
+}
+
+export function optionalFeastDay(value) {
+  const day = squeeze(value)
+  if (!day) return null
+  if (day.length > LIMITS.feastDay.max) throw new AppError('INVALID_FEAST_DAY', 400)
+  return day
+}
+
+export function optionalYearEstablished(value) {
+  const text = squeeze(value)
+  if (!text) return null
+  if (!/^\d{4}$/.test(text)) throw new AppError('INVALID_YEAR_ESTABLISHED', 400)
+
+  const year = Number(text)
+  const thisYear = Number(todayInParish().slice(0, 4))
+  if (year < LIMITS.yearEstablished.min) throw new AppError('INVALID_YEAR_ESTABLISHED', 400)
+  if (year > thisYear) throw new AppError('INVALID_YEAR_ESTABLISHED', 400)
+
+  return year
+}
+
+export function optionalHistory(value) {
+  return optionalMultiline(value, 'INVALID_HISTORY', LIMITS.history.max)
 }

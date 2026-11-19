@@ -2,6 +2,12 @@
 
 import { useState } from 'react'
 import { checkPhoto } from '../lib/fileCheck.js'
+import {
+  OFFICIANT_MAX,
+  OFFICIANT_TITLES,
+  joinOfficiant,
+  officiantNameLimit,
+} from '../lib/officiant.js'
 import Modal from './Modal.jsx'
 import PhotoDrop from './PhotoDrop.jsx'
 
@@ -33,6 +39,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
   const [entryNo, setEntryNo] = useState('')
   const [recordDate, setRecordDate] = useState('')
   const [dateOfDeath, setDateOfDeath] = useState('')
+  const [officiantTitle, setOfficiantTitle] = useState('Rev. Fr.')
   const [officiantName, setOfficiantName] = useState('')
   const [subjects, setSubjects] = useState([emptySubject()])
   const [photo, setPhoto] = useState(null)
@@ -49,6 +56,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
     setEntryNo('')
     setRecordDate('')
     setDateOfDeath('')
+    setOfficiantTitle('Rev. Fr.')
     setOfficiantName('')
     setSubjects([emptySubject()])
     setPhoto(null)
@@ -106,6 +114,10 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
       setError("The officiant's name is required.")
       return
     }
+    if (joinOfficiant(officiantTitle, officiantName).length > OFFICIANT_MAX) {
+      setError(`The title and name together cannot be longer than ${OFFICIANT_MAX} characters.`)
+      return
+    }
     if (subjects.some((row) => !row.fullName.trim())) {
       setError('Every subject needs a full name.')
       return
@@ -132,7 +144,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
       pageNo: pageNo.trim(),
       entryNo: entryNo.trim(),
       recordDate,
-      officiantName: officiantName.trim(),
+      officiantName: joinOfficiant(officiantTitle, officiantName),
       subjects: subjects.map((row) => {
         const subject = { fullName: row.fullName.trim(), gender: row.gender }
         if (row.dateOfBirth) subject.dateOfBirth = row.dateOfBirth
@@ -199,18 +211,34 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
           <input value={entryNo} onChange={(e) => setEntryNo(e.target.value)} placeholder="12" />
         </label>
 
-        <label className="field field--full">
+        <div className="field field--full">
           <span>Officiant<b className="req">*</b></span>
-          <input
-            value={officiantName}
-            onChange={(e) => setOfficiantName(e.target.value)}
-            placeholder="Rev. Fr. Juan dela Cruz"
-          />
+          <div className="officiant-row">
+            <select
+              aria-label="Officiant's title"
+              value={officiantTitle}
+              onChange={(e) => setOfficiantTitle(e.target.value)}
+            >
+              <option value="">No title</option>
+              {OFFICIANT_TITLES.map((title) => (
+                <option key={title} value={title}>
+                  {title}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Officiant's name"
+              value={officiantName}
+              onChange={(e) => setOfficiantName(e.target.value)}
+              maxLength={officiantNameLimit(officiantTitle)}
+              placeholder="Juan dela Cruz"
+            />
+          </div>
           <span className="form-hint">
-            Free text, not a list of current priests — old ledgers name priests who were never in
-            the system.
+            The name is free text, not a list of current priests — old ledgers name priests who
+            were never in the system. Choose <em>No title</em> to type the whole thing yourself.
           </span>
-        </label>
+        </div>
 
         {recordType === 'death' && (
           <label className="field field--full">

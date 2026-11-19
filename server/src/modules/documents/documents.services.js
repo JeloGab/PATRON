@@ -1,7 +1,7 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import {clean, optionalContact, optionalPastDate, optionalReason, optionalSacramentYear, optionalSubjectName, requireFullName, requireInvoiceNo, requirePurpose, requireRelationship, requireSubjectName } from '../../lib/validators.js'
-import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate, findCertificateSignature, hasOwnSignature } from './documents.queries.js'
+import { attachRecord as attachRecordRow, cancelApplication, findActiveParish, findApplication, findApplications, findDocumentType, findDocumentTypes, findRecordType, insertApplication,markPaid as markPaidRow, rejectApplication as rejectApplicationRow, findCertificate, issueCertificate, findCertificateMarks, hasOwnSignature, findDioceseLogo } from './documents.queries.js'
 import {mintVerificationCode} from '../../lib/verificationCode.js'
 import { buildCertificatePdf } from './documents.pdf.js'
 import { updateIdFile, findIdFile } from './documents.queries.js'
@@ -228,10 +228,12 @@ export async function getCertificate(actor, applicationId) {
   return certificate
 }
 
-export async function renderCertificatePdf(certificate, signature = null) {
+export async function renderCertificatePdf(certificate, marks = {}) {
   const buffer = await buildCertificatePdf({
     certificate,
-    signature,
+    signature: marks.signature ?? null,
+    seal: marks.seal ?? null,
+    logo: await findDioceseLogo(),
     verifyUrl: `${VERIFY_BASE}/${certificate.verificationCode}`,
   })
 
@@ -245,8 +247,8 @@ export async function renderCertificatePdf(certificate, signature = null) {
 
 export async function getCertificatePdf(actor, applicationId) {
   const certificate = await getCertificate(actor, applicationId)
-  const signature = await findCertificateSignature(actor, certificate.certificateId)
-  return renderCertificatePdf(certificate, signature)
+  const marks = await findCertificateMarks(actor, certificate.certificateId)
+  return renderCertificatePdf(certificate, marks)
 }
 
 

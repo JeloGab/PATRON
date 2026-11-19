@@ -368,13 +368,23 @@ export async function countRecordDocuments(actor, recordId) {
 // Deliberately NOT part of CERT_COLUMNS: that list is shared with
 // findEventCertificates, so a twelve-baptism ceremony would ship twelve signatures to
 // draw a list of download links. Only the PDF ever reads these bytes.
-export async function findCertificateSignature(actor, fileId) {
+//
+// The seal is joined from parish_seal_public rather than read from public.parish: a
+// parishioner downloading their own certificate belongs to no parish, so parish RLS
+// would hide the seal from exactly the person the certificate is for. The view is
+// security_invoker = off, so it runs as its owner and the join reaches the bytes for
+// staff and parishioner alike.
+export async function findCertificateMarks(actor, fileId) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
-      `select signature from public.document_file where file_id = $1`,
+      `select f.signature, s.seal
+         from public.document_file f
+         left join public.parish_seal_public s on s.parish_id = f.parish_id
+        where f.file_id = $1`,
       [fileId]
     )
-    return rows.length === 0 ? null : rows[0].signature
+    if (rows.length === 0) return { signature: null, seal: null }
+    return { signature: rows[0].signature, seal: rows[0].seal }
   })
 }
 
@@ -443,4 +453,17 @@ export async function findIdFile(actor, applicationId) {
       content: rows[0].id_file,
     }
   })
+}
+
+// Bare pool, not withActor: diocese is a non-tenant table and there is no actor to set.
+// Letterhead must never block issuance, so a failure here is logged and the certificate
+// renders without a logo rather than failing the download.
+export async function findDioceseLogo() {
+  try {
+    const { rows } = await pool.query(`select logo from public.diocese where id = 1`)
+    return rows.length === 0 ? null : rows[0].logo
+  } catch (err) {
+    console.error('diocese logo read failed:', err.code, err.message)
+    return null
+  }
 }

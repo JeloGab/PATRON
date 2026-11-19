@@ -145,3 +145,41 @@ export async function setStaffPassword({ userId, role, passwordHash }) {
   if (rows.length === 0) return null
   return mapUser(rows[0])
 }
+
+export async function setDioceseLogo({ contentType, content, userId }) {
+  const { rows } = await adminPool.query(
+    `update public.diocese
+        set logo = $1,
+            logo_content_type = $2,
+            updated_at = now(),
+            updated_by = $3
+      where id = 1
+      returning logo_content_type, updated_at`,
+    [content, contentType, userId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].logo_content_type, updatedAt: rows[0].updated_at }
+}
+
+export async function clearDioceseLogo(userId) {
+  const { rows } = await adminPool.query(
+    `update public.diocese
+        set logo = null,
+            logo_content_type = null,
+            updated_at = now(),
+            updated_by = $1
+      where id = 1
+      returning logo_content_type, updated_at`,
+    [userId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].logo_content_type, updatedAt: rows[0].updated_at }
+}
+
+export async function findDioceseLogo() {
+  const { rows } = await adminPool.query(
+    `select logo, logo_content_type from public.diocese where id = 1`
+  )
+  if (rows.length === 0 || rows[0].logo === null) return null
+  return { contentType: rows[0].logo_content_type, content: rows[0].logo }
+}
