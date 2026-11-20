@@ -1,8 +1,12 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireParishName, requireAddress, requireMobile, optionalEmail, optionalOfficeHours, optionalMassSchedule, optionalPatronSaint, optionalFeastDay, optionalYearEstablished, optionalHistory } from '../../lib/validators.js'
+import { clean, requireParishName, requireAddress, requireMobile, optionalEmail, optionalOfficeHours, optionalMassSchedule, optionalPatronSaint, optionalFeastDay, optionalYearEstablished, optionalHistory, requireFacebookToken, optionalFacebookPage } from '../../lib/validators.js'
 import { sniffContentType, sanitizeFileName } from '../../lib/fileType.js'
-import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto, setParishSeal, clearParishSeal, findPublicParishSeal, listGalleryImages, insertGalleryImage, deleteGalleryImage, listPublicGalleryIds, findPublicGalleryImage } from './parish.queries.js'
+import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto, setParishSeal, clearParishSeal, findPublicParishSeal, listGalleryImages, insertGalleryImage, deleteGalleryImage, listPublicGalleryIds, findPublicGalleryImage, setParishPageToken, clearParishPageToken, setParishPageConnection } from './parish.queries.js'
+import { isLoginConfigured, dialogUrl, connectPageFromCode } from '../../integrations/facebook.js'
+import { signConnectState, verifyConnectState } from './parish.state.js'
+
+const REDIRECT_URI = `${process.env.CLIENT_ORIGIN}/`
 
 export const PHOTO_TYPES = ['image/jpeg', 'image/png']
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024
@@ -30,7 +34,7 @@ export async function editOwnParish(actor, body) {
   if (body.address !== undefined) patch.address = requireAddress(body.address)
   if (body.contactNo !== undefined) patch.contactNo = requireMobile(body.contactNo)
   if (body.email !== undefined) patch.email = optionalEmail(body.email)
-  if (body.facebookPageId !== undefined) patch.facebookPageId = clean(body.facebookPageId) || null
+  if (body.facebookPageId !== undefined) patch.facebookPageId = optionalFacebookPage(body.facebookPageId)
   if (body.officeHours !== undefined) patch.officeHours = optionalOfficeHours(body.officeHours)
   if (body.massSchedule !== undefined) patch.massSchedule = optionalMassSchedule(body.massSchedule)
   if (body.patronSaint !== undefined) patch.patronSaint = optionalPatronSaint(body.patronSaint)
@@ -40,10 +44,78 @@ export async function editOwnParish(actor, body) {
 
   if (Object.keys(patch).length === 0) throw new AppError('NO_FIELDS_TO_UPDATE', 400)
 
+  // parish_page_token_needs_page forbids a token with no page, so clearing the page
+  // would raise 23514 - a constraint violation the client cannot act on. Disconnecting
+  // the page disconnects the posting, which is also what a person means by it. Cleared
+  // in its own statement so the credential never enters EDITABLE.
+  if (body.facebookPageId !== undefined && patch.facebookPageId === null) {
+    await clearParishPageToken(actor)
+  }
+
   const parish = await updateOwnParish(actor, patch)
   if (!parish) throw new AppError('PARISH_NOT_FOUND', 404)
 
   return parish
+}
+
+export async function setPageToken(actor, body) {
+  const token = requireFacebookToken(body.token)
+
+  const parish = await getOwnParish(actor)
+  if (!parish.facebookPageId) throw new AppError('FACEBOOK_PAGE_REQUIRED', 409)
+
+  const changed = await setParishPageToken(actor, token)
+  if (changed === 0) throw new AppError('PARISH_NOT_FOUND', 404)
+
+  return getOwnParish(actor)
+}
+
+export async function removePageToken(actor) {
+  const changed = await clearParishPageToken(actor)
+  if (changed === 0) throw new AppError('PARISH_NOT_FOUND', 404)
+
+  return getOwnParish(actor)
+}
+
+export async function getFacebookConnectUrl(actor) {
+  if (!isLoginConfigured()) throw new AppError('FACEBOOK_LOGIN_UNAVAILABLE', 503)
+
+  return {
+    url: dialogUrl({
+      redirectUri: REDIRECT_URI,
+      state: signConnectState({ userId: actor.userId, parishId: actor.parishId }),
+    }),
+  }
+}
+
+export async function connectFacebookPage(actor, body) {
+  if (!isLoginConfigured()) throw new AppError('FACEBOOK_LOGIN_UNAVAILABLE', 503)
+
+  const code = clean(body.code)
+  if (!code) throw new AppError('MISSING_FIELDS', 400)
+  verifyConnectState(body.state, actor)
+
+  const result = await connectPageFromCode({ code, redirectUri: REDIRECT_URI })
+
+  if (!result.ok) {
+    console.error('[facebook] connect failed:', result.detail)
+    if (result.expiring) throw new AppError('FACEBOOK_TOKEN_NOT_PERMANENT', 409)
+    throw new AppError('FACEBOOK_CONNECT_FAILED', 502)
+  }
+
+  // A parish has one page, so more than one granted is refused rather than
+  // disambiguated - a picker would need the page tokens held between two requests.
+  if (result.pages) {
+    throw new AppError(
+      result.pages.length === 0 ? 'FACEBOOK_NO_PAGE_GRANTED' : 'FACEBOOK_MULTIPLE_PAGES',
+      409
+    )
+  }
+
+  const changed = await setParishPageConnection(actor, result.page)
+  if (changed === 0) throw new AppError('PARISH_NOT_FOUND', 404)
+
+  return getOwnParish(actor)
 }
 
 export async function getParishDirectory() {

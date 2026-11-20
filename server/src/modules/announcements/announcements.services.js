@@ -14,8 +14,12 @@ import {
   deleteImage,
   listFeed,
   findFeedImage,
+  findImageBytes,
+  recordSync,
 } from './announcements.queries.js'
 import { sniffContentType, sanitizeFileName } from '../../lib/fileType.js'
+import { findOwnPageToken } from '../parish/parish.queries.js'
+import { postAnnouncement } from '../../integrations/facebook.js'
 
 const STATUSES = ['pending', 'approved', 'rejected', 'archived']
 export const IMAGE_TYPES = ['image/jpeg', 'image/png']
@@ -38,17 +42,55 @@ function pageOf(value) {
   return Number.isFinite(page) && page > 0 ? page : 1
 }
 
+// Runs AFTER the approval has committed, and never inside withActor. A Facebook post
+// cannot be rolled back, so a post made inside the transaction that then failed to
+// commit would be live on the page pointing at an announcement nobody approved.
+//
+// Nothing in here throws. The announcement is published in PATRON either way, and
+// sync_status is the entire report.
+async function publishToFacebook(actor, announcementId) {
+  try {
+    const token = await findOwnPageToken(actor)
+    if (!token) {
+      await recordSync(actor, { announcementId, syncStatus: 'skipped' })
+      return
+    }
+
+    const announcement = await findAnnouncement(actor, announcementId)
+    if (!announcement) return
+
+    const posted = await postAnnouncement({
+      token,
+      title: announcement.title,
+      content: announcement.content,
+      images: await findImageBytes(actor, announcementId),
+    })
+
+    await recordSync(actor, {
+      announcementId,
+      syncStatus: posted.ok ? 'synced' : 'failed',
+      postId: posted.ok ? posted.postId : null,
+    })
+  } catch (err) {
+    console.error('[facebook] sync failed for', announcementId, err)
+  }
+}
+
 export async function createAnnouncement(actor, body) {
   const title = requireTitle(body.title)
   const content = requireContent(body.content)
   const bornApproved = actor.role === 'priest'
 
-  return insertAnnouncement(actor, {
+  const announcement = await insertAnnouncement(actor, {
     title,
     content,
     status: bornApproved ? 'approved' : 'pending',
     approvedBy: bornApproved ? actor.userId : null,
   })
+  if (!bornApproved) return announcement
+
+  await publishToFacebook(actor, announcement.announcementId)
+  return getAnnouncement(actor, announcement.announcementId)
 }
 
 export async function listAnnouncements(actor, query) {
@@ -85,6 +127,32 @@ export async function approveAnnouncement(actor, announcementId) {
   const id = requireId(announcementId)
   const decided = await decideAnnouncement(actor, id, { status: 'approved', reason: null })
   if (!decided) throw new AppError('ANNOUNCEMENT_NOT_FOUND', 404)
+
+  // Before getAnnouncement, so the response the priest's browser receives already
+  // carries the real syncStatus. Reversed, the UI would say "not posted" until a
+  // manual refresh.
+  await publishToFacebook(actor, id)
+  return getAnnouncement(actor, id)
+}
+
+export async function syncAnnouncement(actor, announcementId) {
+  const id = requireId(announcementId)
+
+  const announcement = await findAnnouncement(actor, id)
+  if (!announcement) throw new AppError('ANNOUNCEMENT_NOT_FOUND', 404)
+  if (announcement.status !== 'approved') throw new AppError('ANNOUNCEMENT_NOT_PUBLISHED', 409)
+
+  // Not an error. The button is only offered on `failed` and on the null state, so
+  // reaching this means a stale page - answering with the current state makes the
+  // button disappear, which is correct, and erroring would risk a double post.
+  if (announcement.syncStatus === 'synced') return announcement
+
+  // Approval records `skipped` silently, because nobody asked it to post. A retry is a
+  // deliberate act, so a missing token is reported instead of swallowed.
+  const token = await findOwnPageToken(actor)
+  if (!token) throw new AppError('FACEBOOK_NOT_CONNECTED', 409)
+
+  await publishToFacebook(actor, id)
   return getAnnouncement(actor, id)
 }
 

@@ -34,6 +34,33 @@ const MODES = {
   },
 }
 
+const WIDE = '(min-width: 900px)'
+const STILL = '(prefers-reduced-motion: reduce)'
+
+// The aside is display:none under 900px, but a <video> inside a hidden parent still
+// downloads, so the element is kept out of the tree rather than hidden by CSS.
+function useAsideVideo() {
+  const [show, setShow] = useState(
+    () => window.matchMedia(WIDE).matches && !window.matchMedia(STILL).matches,
+  )
+
+  useEffect(() => {
+    const wide = window.matchMedia(WIDE)
+    const still = window.matchMedia(STILL)
+    const sync = () => setShow(wide.matches && !still.matches)
+
+    wide.addEventListener('change', sync)
+    still.addEventListener('change', sync)
+
+    return () => {
+      wide.removeEventListener('change', sync)
+      still.removeEventListener('change', sync)
+    }
+  }, [])
+
+  return show
+}
+
 const MESSAGES = {
   ACCOUNT_INACTIVE:
     'This account has been deactivated. Ask your parish office, or the diocesan administrator, to restore it.',
@@ -57,6 +84,9 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+
+  const showVideo = useAsideVideo()
 
   useEffect(() => {
     if (confirmed) clearEmailConfirmed()
@@ -109,6 +139,24 @@ export default function Login() {
   return (
     <div className="login">
       <aside className="login__aside">
+        {showVideo && (
+          <>
+            <div className="login__media">
+              <video
+                src="/patron-login-bg.mp4"
+                className={videoReady ? 'is-ready' : ''}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                onCanPlay={() => setVideoReady(true)}
+              />
+            </div>
+            <div className="login__scrim" />
+          </>
+        )}
+
         <Logo light tag="" />
         <div className="login__aside-inner">
           <p className="eyebrow">PATRON</p>

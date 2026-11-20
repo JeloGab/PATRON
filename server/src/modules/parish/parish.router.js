@@ -1,6 +1,6 @@
 import express, { Router } from 'express'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { getOwnParish, editOwnParish, getActivePriests, setPhoto, removePhoto, setSeal, removeSeal, getGallery, addGalleryImage, removeGalleryImage, PHOTO_TYPES, SEAL_TYPES, GALLERY_TYPES } from './parish.services.js'
+import { getOwnParish, editOwnParish, getActivePriests, setPhoto, removePhoto, setSeal, removeSeal, getGallery, addGalleryImage, removeGalleryImage, setPageToken, removePageToken, getFacebookConnectUrl, connectFacebookPage, PHOTO_TYPES, SEAL_TYPES, GALLERY_TYPES } from './parish.services.js'
 
 const router = Router()
 
@@ -67,6 +67,22 @@ router.post('/gallery', galleryUpload, async (req, res) => {
 
 router.delete('/gallery/:imageId', async (req, res) => {
   res.json({ ok: true, images: await removeGalleryImage(req.user, req.params.imageId) })
+})
+
+router.post('/facebook-token', async (req, res) => {
+  res.json({ ok: true, parish: await setPageToken(req.user, req.body ?? {}) })
+})
+
+router.delete('/facebook-token', async (req, res) => {
+  res.json({ ok: true, parish: await removePageToken(req.user) })
+})
+
+router.get('/facebook/connect-url', async (req, res) => {
+  res.json({ ok: true, ...(await getFacebookConnectUrl(req.user)) })
+})
+
+router.post('/facebook/connect', async (req, res) => {
+  res.json({ ok: true, parish: await connectFacebookPage(req.user, req.body ?? {}) })
 })
 
 export default router

@@ -1206,6 +1206,50 @@ textarea:focus {
   font-weight: 600;
 }
 
+/* The video behind the login aside. The aside's own gradient stays underneath as the
+   fallback, so a missing file, a narrow screen or a reduced-motion visitor sees the
+   panel exactly as it was before. */
+.login__media {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.login__media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+
+.login__media video.is-ready {
+  opacity: 1;
+}
+
+.login__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(196, 163, 90, 0.22), transparent 36%),
+    linear-gradient(
+      165deg,
+      rgba(109, 36, 50, 0.62) 0%,
+      rgba(52, 16, 22, 0.76) 58%,
+      rgba(36, 16, 20, 0.86) 100%
+    );
+}
+
+.login__aside > .brand,
+.login__aside-inner {
+  position: relative;
+  z-index: 3;
+}
+
 /* Ledger photo drop target */
 .dropzone {
   margin: 0.9rem 0 0;

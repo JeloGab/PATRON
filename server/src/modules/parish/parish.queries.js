@@ -5,7 +5,8 @@ const COLUMNS = `parish_id, name, address, contact_no, email,
                  facebook_page_id, status, created_at, photo_content_type,
                  office_hours, mass_schedule,
                  patron_saint, feast_day, year_established, history,
-                 seal_content_type`
+                 seal_content_type,
+                 public.current_parish_has_page_token() as has_facebook_token`
 
 const DIRECTORY_COLUMNS = `parish_id, name, address, contact_no, email,
                            office_hours, mass_schedule,
@@ -43,6 +44,7 @@ function mapParish(row) {
     yearEstablished: row.year_established,
     history: row.history,
     hasSeal: row.seal_content_type !== null && row.seal_content_type !== undefined,
+    hasFacebookToken: row.has_facebook_token === true,
   }
 }
 
@@ -101,6 +103,54 @@ export async function clearParishPhoto(actor) {
         where parish_id = public.current_parish_id()`
     )
     return rowCount
+  })
+}
+
+export async function setParishPageToken(actor, token) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_token = $1
+        where parish_id = public.current_parish_id()`,
+      [token]
+    )
+    return rowCount
+  })
+}
+
+export async function clearParishPageToken(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_token = null
+        where parish_id = public.current_parish_id()`
+    )
+    return rowCount
+  })
+}
+
+// Both columns in ONE statement, because parish_page_token_needs_page forbids a token
+// with no page - writing them separately would either violate the constraint or leave a
+// window where the parish has a token for a page it does not name.
+export async function setParishPageConnection(actor, { pageId, token }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_id = $1,
+              facebook_page_token = $2
+        where parish_id = public.current_parish_id()`,
+      [pageId, token]
+    )
+    return rowCount
+  })
+}
+
+// The security definer function is the only thing in the database that can see the
+// column; patron_app cannot select it.
+export async function findOwnPageToken(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query('select public.current_parish_page_token() as token')
+    return rows[0]?.token ?? null
   })
 }
 

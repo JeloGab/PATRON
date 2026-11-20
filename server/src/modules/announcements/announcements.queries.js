@@ -54,6 +54,37 @@ function mapImage(row) {
   }
 }
 
+// findImage() returns one image; the album post needs every image's bytes in slot
+// order, and list queries deliberately never select `content`.
+export async function findImageBytes(actor, announcementId) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select file_name, content_type, content
+         from public.announcement_image
+        where announcement_id = $1
+        order by slot_no`,
+      [announcementId]
+    )
+    return rows.map((row) => ({
+      fileName: row.file_name,
+      contentType: row.content_type,
+      content: row.content,
+    }))
+  })
+}
+
+// The only way to write sync_status or facebook_post_id. patron_app holds no update
+// grant on either column, so this function is not a convenience - it is the door.
+export async function recordSync(actor, { announcementId, syncStatus, postId = null }) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      'select public.record_announcement_sync($1, $2, $3) as done',
+      [announcementId, syncStatus, postId]
+    )
+    return rows[0]?.done === true
+  })
+}
+
 function mapFeedItem(row) {
   return {
     announcementId: row.announcement_id,

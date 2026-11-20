@@ -122,6 +122,16 @@ const MESSAGES = {
   FACEBOOK_PAGE_REQUIRED: 'Set the Facebook page first, then connect the token.',
   FACEBOOK_NOT_CONNECTED:
     'This parish has no Facebook page connected. Connect one on the parish profile first.',
+  FACEBOOK_LOGIN_UNAVAILABLE: 'Connecting a page is not set up on this server yet.',
+  INVALID_CONNECT_STATE:
+    'That connection attempt expired or did not come from here. Start again.',
+  FACEBOOK_CONNECT_FAILED: 'Facebook could not complete the connection. Try again.',
+  FACEBOOK_NO_PAGE_GRANTED:
+    "No page was granted. Start again and select the parish's page.",
+  FACEBOOK_MULTIPLE_PAGES:
+    "You granted more than one page. Start again and select only the parish's page.",
+  FACEBOOK_TOKEN_NOT_PERMANENT:
+    'Facebook issued a temporary key. Start again, and if it repeats, reconnect from Facebook’s settings.',
 
   PROVISIONING_FAILED: 'The account could not be created. Please try again.',
   AUTH_PROVIDER_ERROR: 'The sign-in service is not responding. Please try again shortly.',
