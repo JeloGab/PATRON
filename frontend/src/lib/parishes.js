@@ -67,8 +67,14 @@ export function feastParts(value) {
   const text = String(value ?? '').trim()
   if (!text) return null
 
-  const lower = text.toLowerCase()
-  const month = MONTHS.find((name) => lower.includes(name.slice(0, 3).toLowerCase()))
+  // Matched word by word, and a word counts only when it is a prefix of the month name:
+  // "Mary" and "Mark" both contain "mar", so a substring test over months in calendar
+  // order turned every Marian feast into March. "Sept" still matches September.
+  const words = text.toLowerCase().match(/[a-z]+/g) ?? []
+  const month = MONTHS.find((name) => {
+    const lower = name.toLowerCase()
+    return words.some((word) => word.length >= 3 && lower.startsWith(word))
+  })
   const digits = text.match(/\b(\d{1,2})\b/)
   if (!month || !digits) return null
 

@@ -1,6 +1,7 @@
 // Images on an announcement: up to four, JPEG or PNG, 2 MB each, raw-body upload.
 
 import { useEffect, useRef, useState } from 'react'
+import { useConfirm } from './ConfirmProvider.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { IMAGE_ACCEPT, MAX_IMAGES, MAX_IMAGE_BYTES } from '../lib/announcements.js'
 import { messageFor } from '../lib/errors.js'
@@ -8,6 +9,7 @@ import Loading from './Loading.jsx'
 import PhotoDrop from './PhotoDrop.jsx'
 
 export default function AnnouncementImages({ announcement, canWrite, onChanged, onSessionEnd }) {
+  const { ask } = useConfirm()
   const [images, setImages] = useState(null)
   const [previews, setPreviews] = useState({})
   const [error, setError] = useState('')
@@ -106,7 +108,12 @@ export default function AnnouncementImages({ announcement, canWrite, onChanged, 
   }
 
   async function remove(image) {
-    if (!window.confirm(`Remove ${image.fileName}?`)) return
+    const ok = await ask({
+      title: 'Remove image',
+      message: `Remove ${image.fileName}?`,
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setBusy(image.imageId)
     const r = await authed({
       method: 'DELETE',

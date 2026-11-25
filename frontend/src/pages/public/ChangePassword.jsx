@@ -21,7 +21,7 @@ const MESSAGES = {
     'This account signs in through email, so its password is not changed here. Use password recovery instead.',
   UPDATE_BLOCKED: 'Your account cannot be updated right now. Please contact your parish office.',
   NETWORK_ERROR:
-    'Cannot reach the server. Check that the API is running on port 4000 and that this page is on http://localhost:5173.',
+    'Cannot reach the server. Check your internet connection, then try again.',
   REQUEST_FAILED: 'Something went wrong. Please try again.',
 }
 

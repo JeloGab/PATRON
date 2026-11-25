@@ -2,7 +2,7 @@ import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
 import { clean, requireParishName, requireAddress, requireMobile, optionalEmail, optionalOfficeHours, optionalMassSchedule, optionalPatronSaint, optionalFeastDay, optionalYearEstablished, optionalHistory, requireFacebookToken, optionalFacebookPage } from '../../lib/validators.js'
 import { sniffContentType, sanitizeFileName } from '../../lib/fileType.js'
-import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto, setParishSeal, clearParishSeal, findPublicParishSeal, listGalleryImages, insertGalleryImage, deleteGalleryImage, listPublicGalleryIds, findPublicGalleryImage, setParishPageToken, clearParishPageToken, setParishPageConnection } from './parish.queries.js'
+import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto, setParishSeal, clearParishSeal, findPublicParishSeal, listGalleryImages, insertGalleryImage, deleteGalleryImage, listPublicGalleryIds, findPublicGalleryImage, setParishPageToken, clearParishPageToken, clearParishPageTokenIfPageChanged, setParishPageConnection } from './parish.queries.js'
 import { isLoginConfigured, dialogUrl, connectPageFromCode } from '../../integrations/facebook.js'
 import { signConnectState, verifyConnectState } from './parish.state.js'
 
@@ -44,12 +44,13 @@ export async function editOwnParish(actor, body) {
 
   if (Object.keys(patch).length === 0) throw new AppError('NO_FIELDS_TO_UPDATE', 400)
 
-  // parish_page_token_needs_page forbids a token with no page, so clearing the page
-  // would raise 23514 - a constraint violation the client cannot act on. Disconnecting
-  // the page disconnects the posting, which is also what a person means by it. Cleared
-  // in its own statement so the credential never enters EDITABLE.
-  if (body.facebookPageId !== undefined && patch.facebookPageId === null) {
-    await clearParishPageToken(actor)
+  // parish_page_token_needs_page forbids a token with no page, so clearing the page would
+  // raise 23514 - a constraint violation the client cannot act on. Cleared in its own
+  // statement so the credential never enters EDITABLE, and BEFORE the update so the
+  // constraint holds at every point: a null token is always legal. Any change of page
+  // clears it, not only a clear to null.
+  if (body.facebookPageId !== undefined) {
+    await clearParishPageTokenIfPageChanged(actor, patch.facebookPageId)
   }
 
   const parish = await updateOwnParish(actor, patch)

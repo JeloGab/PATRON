@@ -3282,3 +3282,61 @@ img.cleric__frame {
   border-radius: 12px;
   padding: 0.6rem;
 }
+
+/* ── 10 · Confirm dialog ─────────────────────────────────────────────── */
+
+.btn--danger {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #fff;
+}
+
+.btn--danger:not(:disabled):hover {
+  background: var(--wine-deep, #42101a);
+  border-color: var(--wine-deep, #42101a);
+}
+
+.confirm {
+  display: grid;
+  gap: 1rem;
+}
+
+.confirm__message {
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.55;
+}
+
+.confirm__value {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper, #fbf8f3);
+}
+
+.confirm__value code {
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .confirm__actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm__actions .btn {
+    width: 100%;
+  }
+}

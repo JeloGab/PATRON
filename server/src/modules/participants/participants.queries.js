@@ -57,6 +57,11 @@ function mapParticipant(row) {
   }
 }
 
+// The two seeded templates whose evidence is a seminar roster rather than a register.
+// requirement_template is seeded and read-only, so these names cannot drift without a
+// migration - and a migration that adds a third seminar template must add it here.
+export const SEMINAR_REQUIREMENTS = ['Confirmation Seminar', 'Pre-Cana Seminar']
+
 function mapRequirement(row) {
   return {
     requirementId: row.requirement_id,
@@ -64,6 +69,7 @@ function mapRequirement(row) {
     requirementName: row.requirement_name,
     description: row.description,
     autoCheckRecordType: row.auto_check_record_type,
+    isSeminarAttendance: SEMINAR_REQUIREMENTS.includes(row.requirement_name),
     validityPeriodMonths: row.validity_period_months,
     status: row.status,
     notes: row.notes,
@@ -227,6 +233,53 @@ export async function findMatchingRecordIds(actor, { recordType, normalisedName,
       [recordType, normalisedName, dateOfBirth],
     )
     return rows.map((row) => row.record_id)
+  })
+}
+
+// Mirrors the escape in records.queries.js. A pasted name holding % or _ would
+// otherwise widen the search instead of narrowing it.
+const escapeSeminarLike = (word) => word.replace(/[\\%_]/g, '\\$&')
+
+// Word-by-word ILIKE in any order - the same rule as record search, deliberately, so a
+// manager gets the behaviour they already know from Sacramental Records. RLS scopes
+// this to the caller's own parish, so another parish's seminars are unreachable.
+//
+// Returns seminars that have NOT yet been held as well, flagged, because telling a
+// manager "no attendance found" for someone enrolled in next week's batch is worse
+// than showing it and letting them see the date.
+export async function findSeminarAttendance(actor, { words, limit }) {
+  const conditions = [`e.event_type = 'seminar'`, `p.status <> 'withdrawn'`]
+  const values = []
+
+  for (const word of words) {
+    values.push(`%${escapeSeminarLike(word)}%`)
+    conditions.push(`p.participant_name ilike $${values.length}`)
+  }
+  values.push(limit)
+
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select p.participant_id, p.participant_name, p.participant_date_of_birth,
+              p.status, e.event_id, e.title, e.event_date, e.status as event_status
+         from public.event_participant p
+         join public.parish_event e
+           on e.event_id = p.event_id and e.parish_id = p.parish_id
+        where ${conditions.join(' and ')}
+        order by e.event_date desc, p.participant_name
+        limit $${values.length}`,
+      values,
+    )
+    return rows.map((row) => ({
+      participantId: row.participant_id,
+      participantName: row.participant_name,
+      dateOfBirth: row.participant_date_of_birth,
+      participantStatus: row.status,
+      eventId: row.event_id,
+      title: row.title,
+      eventDate: row.event_date,
+      eventStatus: row.event_status,
+      held: row.event_status === 'completed',
+    }))
   })
 }
 

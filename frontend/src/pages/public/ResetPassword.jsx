@@ -22,7 +22,7 @@ const MESSAGES = {
   TOO_MANY_ATTEMPTS: 'Too many attempts. Wait about 15 minutes before trying again.',
   AUTH_PROVIDER_ERROR: 'The sign-in service is not responding. Please try again shortly.',
   NETWORK_ERROR:
-    'Cannot reach the server. Check that the API is running on port 4000 and that this page is on http://localhost:5173.',
+    'Cannot reach the server. Check your internet connection, then try again.',
   REQUEST_FAILED: 'Something went wrong. Please try again.',
 }
 

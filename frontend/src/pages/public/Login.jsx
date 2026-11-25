@@ -70,7 +70,7 @@ const MESSAGES = {
   AUTH_PROVIDER_ERROR: 'The sign-in service is not responding. Please try again in a moment.',
   PROVISIONING_FAILED: 'Your account could not be set up. Please contact the parish office.',
   NETWORK_ERROR:
-    'Cannot reach the server. Check that the API is running on port 4000 and that this page is on http://localhost:5173.',
+    'Cannot reach the server. Check your internet connection, then try again.',
   REQUEST_FAILED: 'Something went wrong signing you in. Please try again.',
 }
 

@@ -21,6 +21,7 @@ export default function RequirementChecklist({
   const [notes, setNotes] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
+  const [seminars, setSeminars] = useState(null)
   const [chosenRecordId, setChosenRecordId] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
@@ -48,8 +49,30 @@ export default function RequirementChecklist({
     setNotes(requirement.notes ?? '')
     setQuery(participant.participantName)
     setResults(null)
+    setSeminars(null)
     setChosenRecordId('')
     setError('')
+  }
+
+  // Evidence for a seminar requirement. The roster is the only place attendance is
+  // recorded, so this reads it and the manager decides from the seminar's own title —
+  // nothing here distinguishes a pre-Cana seminar from any other, and nothing should.
+  async function searchSeminars() {
+    setError('')
+    setBusy('seminars')
+    const r = await authed({
+      path: `/api/participants/seminar-attendance?name=${encodeURIComponent(query)}`,
+    })
+    setBusy('')
+    if (isSessionError(r)) {
+      onSessionEnd()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setSeminars(r.json.attendance)
   }
 
   async function search(requirement) {
@@ -147,9 +170,17 @@ export default function RequirementChecklist({
                     date.
                   </p>
                 )}
-                {!requirement.autoCheckRecordType && requirement.status === 'pending' && (
+                {!requirement.autoCheckRecordType &&
+                  !requirement.isSeminarAttendance &&
+                  requirement.status === 'pending' && (
+                    <p className="muted">
+                      Checked by hand — there is no register this can be matched against.
+                    </p>
+                  )}
+                {requirement.isSeminarAttendance && requirement.status === 'pending' && (
                   <p className="muted">
-                    Checked by hand — there is no register this can be matched against.
+                    Satisfied by a seminar roster, not a register — search the parish’s
+                    seminars by name.
                   </p>
                 )}
               </div>
@@ -221,6 +252,79 @@ export default function RequirementChecklist({
                                     onClick={() => setChosenRecordId(row.recordId)}
                                   >
                                     {chosenRecordId === row.recordId ? 'Chosen' : 'Choose'}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {requirement.isSeminarAttendance && (
+                    <>
+                      <p className="muted field--full">
+                        Find this person on a seminar roster. The seminar’s own name is what
+                        tells you whether it is the right one.
+                      </p>
+                      <label className="field">
+                        <span>Search seminar rosters</span>
+                        <input
+                          value={query}
+                          onChange={(event) => setQuery(event.target.value)}
+                          placeholder={participant.participantName}
+                        />
+                      </label>
+                      <div className="field">
+                        <span>&nbsp;</span>
+                        <button
+                          type="button"
+                          className="btn btn--ghost"
+                          onClick={searchSeminars}
+                          disabled={busy === 'seminars'}
+                        >
+                          {busy === 'seminars' ? 'Searching…' : 'Search'}
+                        </button>
+                      </div>
+
+                      {seminars !== null && (
+                        <div className="field--full">
+                          {seminars.length === 0 ? (
+                            <p className="empty">
+                              No one by that name is on a seminar roster in this parish.
+                            </p>
+                          ) : (
+                            <ul className="priest-list">
+                              {seminars.map((row) => (
+                                <li
+                                  key={`${row.participantId}`}
+                                  className="priest-list__row"
+                                >
+                                  <div>
+                                    <strong>{row.title}</strong>
+                                    <p className="muted">
+                                      {row.participantName} · {formatLongDate(row.eventDate)}
+                                      {row.dateOfBirth
+                                        ? ` · born ${formatLongDate(row.dateOfBirth)}`
+                                        : ''}
+                                      {row.held ? '' : ' · not yet held'}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="btn btn--ghost"
+                                    onClick={() =>
+                                      setNotes(
+                                        `Attended “${row.title}”, ${formatLongDate(row.eventDate)}`,
+                                      )
+                                    }
+                                    disabled={!row.held}
+                                    title={
+                                      row.held ? undefined : 'This seminar has not been held yet'
+                                    }
+                                  >
+                                    Use this
                                   </button>
                                 </li>
                               ))}

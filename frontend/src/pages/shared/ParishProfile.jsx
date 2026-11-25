@@ -1,6 +1,7 @@
 // GET/PATCH /api/parish and /api/parish/priests; eleven editable fields.
 
 import { useCallback, useEffect, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
 import FacebookPageCard from '../../components/FacebookPageCard.jsx'
@@ -66,6 +67,7 @@ function toForm(parish) {
 export default function ParishProfile() {
   const navigate = useNavigate()
   const session = getSession()
+  const { ask } = useConfirm()
   const [parish, setParish] = useState(null)
   const [priests, setPriests] = useState([])
   const [form, setForm] = useState(null)
@@ -153,7 +155,12 @@ export default function ParishProfile() {
   }
 
   async function removePhoto() {
-    if (!window.confirm('Remove the parish photo?')) return
+    const ok = await ask({
+      title: 'Remove parish photo',
+      message: 'It disappears from the public parish page and the directory.',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setPhotoBusy('remove')
@@ -232,7 +239,12 @@ export default function ParishProfile() {
   }
 
   async function removeGalleryPhoto(imageId) {
-    if (!window.confirm('Remove this photograph?')) return
+    const ok = await ask({
+      title: 'Remove photograph',
+      message: 'Remove this photograph from the parish gallery?',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setGalleryBusy('Removing…')
@@ -289,7 +301,13 @@ export default function ParishProfile() {
   }
 
   async function removeSeal() {
-    if (!window.confirm('Remove the parish seal?')) return
+    const ok = await ask({
+      title: 'Remove parish seal',
+      message:
+        'The seal is read when a certificate is rendered, so it disappears from certificates already issued as well as new ones.',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setSealBusy('remove')
@@ -311,6 +329,16 @@ export default function ParishProfile() {
 
   function update(field) {
     return (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
+  }
+
+  // Re-seeded on open, not only on cancel. `parish` is refreshed on its own by the photo,
+  // seal and Facebook-connect handlers, while `form` is a snapshot taken at load - and
+  // save() diffs the fresh parish against the stale form, so a field changed outside the
+  // editor reads as one the user just cleared and gets sent as empty.
+  function openEditor() {
+    setForm(toForm(parish))
+    setEditing(true)
+    setError('')
   }
 
   function cancel() {
@@ -556,7 +584,7 @@ export default function ParishProfile() {
                 </div>
               </dl>
               <div className="form-actions__buttons">
-                <button type="button" className="btn btn--gold" onClick={() => setEditing(true)}>
+                <button type="button" className="btn btn--gold" onClick={openEditor}>
                   Edit details
                 </button>
               </div>

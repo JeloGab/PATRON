@@ -1,6 +1,7 @@
 // An event's participants and their frozen requirement checklists.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import CompleteEventModal from '../../components/CompleteEventModal.jsx'
 import EventCertificates from '../../components/EventCertificates.jsx'
@@ -37,6 +38,7 @@ export default function EventRoster() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const eventId = params.get('eventId') ?? ''
+  const { ask } = useConfirm()
   const [events, setEvents] = useState(null)
   const [participants, setParticipants] = useState(null)
   const [priests, setPriests] = useState([])
@@ -129,8 +131,7 @@ export default function EventRoster() {
   const canAdd = rosterAcceptsAdditions(event)
   const canEdit = rosterIsOpen(event)
   const warning = event && participants ? marriageWarning(event, participants) : null
-  const canComplete =
-    event?.status === 'approved' && event.eventDate <= todayISO() && event.eventType === 'sacramental'
+  const canComplete = event?.status === 'approved' && event.eventDate <= todayISO()
   const cleared = (participants ?? []).filter((person) => person.status === 'cleared').length
 
   function update(field) {
@@ -217,7 +218,12 @@ export default function EventRoster() {
   }
 
   async function withdraw(person) {
-    if (!window.confirm(`Withdraw ${person.participantName} from this event?`)) return
+    const ok = await ask({
+      title: 'Withdraw participant',
+      message: `Withdraw ${person.participantName} from this event? Only cleared participants are recorded when the event completes.`,
+      confirmLabel: 'Withdraw',
+    })
+    if (!ok) return
     setBusy(person.participantId)
     setError('')
     const r = await authed({
@@ -314,7 +320,7 @@ export default function EventRoster() {
                     className="btn btn--gold"
                     onClick={() => setCompleting(true)}
                   >
-                    Complete and issue
+                    {event.eventType === 'sacramental' ? 'Complete and issue' : 'Mark complete'}
                   </button>
                 )}
               </div>

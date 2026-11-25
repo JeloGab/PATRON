@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { addParticipant, listParticipants, getParticipant, editParticipant, withdrawParticipant, listRequirements, decideRequirement } from './participants.services.js'
+import { addParticipant, listParticipants, getParticipant, editParticipant, withdrawParticipant, listRequirements, decideRequirement, searchSeminarAttendance } from './participants.services.js'
 
 const router = Router()
 
@@ -10,6 +10,12 @@ const managerOnly = requireRole('manager')
 
 router.get('/', async (req, res) => {
   res.json({ ok: true, participants: await listParticipants(req.user, req.query) })
+})
+
+// Must stay ABOVE /:participantId, or Express matches it as a participant id - the
+// same trap as events/priest-suggestion.
+router.get('/seminar-attendance', async (req, res) => {
+  res.json({ ok: true, attendance: await searchSeminarAttendance(req.user, req.query) })
 })
 
 router.get('/:participantId', async (req, res) => {

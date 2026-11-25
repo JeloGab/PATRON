@@ -289,7 +289,13 @@ export default function CompleteEventModal({ event, participants, signatory, onC
                 className="btn btn--gold"
                 disabled={pending || signatoryBlocked}
               >
-                {pending ? 'Writing the register…' : 'Complete and issue'}
+                {pending
+                  ? sacramental
+                    ? 'Writing the register…'
+                    : 'Completing…'
+                  : sacramental
+                    ? 'Complete and issue'
+                    : 'Mark complete'}
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@
 // every parish issues. GET/POST/DELETE /api/admin/diocese/logo
 
 import { useCallback, useEffect, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon.jsx'
 import Loading from '../../components/Loading.jsx'
@@ -15,6 +16,7 @@ const MAX_LOGO_BYTES = 1 * 1024 * 1024
 
 export default function DioceseLogo() {
   const navigate = useNavigate()
+  const { ask } = useConfirm()
   const [url, setUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
@@ -97,7 +99,13 @@ export default function DioceseLogo() {
   }
 
   async function remove() {
-    if (!window.confirm('Remove the diocese logo from every certificate?')) return
+    const ok = await ask({
+      title: 'Remove diocese logo',
+      message:
+        'Every certificate is rendered on demand, so the logo disappears from certificates already issued as well as new ones.',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setBusy('remove')

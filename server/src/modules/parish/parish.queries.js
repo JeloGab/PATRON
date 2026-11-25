@@ -129,6 +129,24 @@ export async function clearParishPageToken(actor) {
   })
 }
 
+// Cleared on any CHANGE of page, not only on a clear. The token authorises exactly one
+// page, so keeping it across a change left posts going to the old page while the profile
+// named the new one. `is distinct from` because either side can be null, and one
+// statement rather than a read-then-compare so two saves cannot interleave. A rowCount
+// of 0 means the page did not change, which is the ordinary case and not an error.
+export async function clearParishPageTokenIfPageChanged(actor, nextPageId) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_token = null
+        where parish_id = public.current_parish_id()
+          and facebook_page_id is distinct from $1`,
+      [nextPageId]
+    )
+    return rowCount
+  })
+}
+
 // Both columns in ONE statement, because parish_page_token_needs_page forbids a token
 // with no page - writing them separately would either violate the constraint or leave a
 // window where the parish has a token for a page it does not name.
