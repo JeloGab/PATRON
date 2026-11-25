@@ -1,6 +1,7 @@
 // GET /api/auth/me, read-only: no route lets an account edit its own name.
 
 import { useCallback, useEffect, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import Loading from '../../components/Loading.jsx'
 import Logo from '../../components/Logo.jsx'
@@ -21,6 +22,7 @@ const ROLE_LABEL = {
 export default function Account() {
   const navigate = useNavigate()
   const session = getSession()
+  const { ask } = useConfirm()
   const [me, setMe] = useState(null)
   const [parish, setParish] = useState(null)
   const [error, setError] = useState('')
@@ -170,7 +172,13 @@ export default function Account() {
   }
 
   async function removeSignature() {
-    if (!window.confirm('Remove your signature? No certificate can be issued without one.')) return
+    const ok = await ask({
+      title: 'Remove signature',
+      message:
+        'No certificate can be issued without one, and you will not be suggested for sacramental events until you draw it again.',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setSignatureBusy('remove')
@@ -236,7 +244,12 @@ export default function Account() {
   }
 
   async function removePhoto() {
-    if (!window.confirm('Remove your photo?')) return
+    const ok = await ask({
+      title: 'Remove photo',
+      message: 'Remove your profile photo?',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setPhotoBusy('remove')

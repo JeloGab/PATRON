@@ -1,6 +1,7 @@
 // The parishioner's own requests; withdrawal is pending-only.
 
 import { useCallback, useEffect, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import Loading from '../../components/Loading.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -21,6 +22,7 @@ export default function MyRequests() {
   const user = getSession()
   const [params] = useSearchParams()
   const submittedId = params.get('submitted')
+  const { ask } = useConfirm()
   const [requests, setRequests] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -52,7 +54,12 @@ export default function MyRequests() {
   if (!user) return <Navigate to="/login" replace />
 
   async function cancel(request) {
-    if (!window.confirm(`Withdraw your request for ${request.subjectName}?`)) return
+    const ok = await ask({
+      title: 'Withdraw request',
+      message: `Withdraw your request for ${request.subjectName}? You would have to file it again.`,
+      confirmLabel: 'Withdraw',
+    })
+    if (!ok) return
     setBusyId(request.applicationId)
     setError('')
     setNotice('')

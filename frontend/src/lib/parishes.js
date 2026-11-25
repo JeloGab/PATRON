@@ -3,7 +3,12 @@
 export const LIMITS = {
   officeHours: { max: 300 },
   massSchedule: { max: 600 },
+  patronSaint: { max: 60 },
+  feastDay: { max: 40 },
+  history: { max: 1200 },
 }
+
+export const YEAR_ESTABLISHED_MIN = 1521
 
 export function municipalityFromAddress(address) {
   const parts = String(address ?? '')
@@ -38,4 +43,43 @@ export function accentFor(id) {
     hash = Math.imul(hash, 16777619)
   }
   return ACCENTS[(hash >>> 0) % ACCENTS.length]
+}
+
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+// feast_day is free text by design — "December 8", "Second Sunday of October", "Easter
+// Monday" are all legitimate. The calendar leaf needs a day and a month, so this returns
+// them only when both are unambiguous and the caller falls back to the raw text.
+export function feastParts(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return null
+
+  // Matched word by word, and a word counts only when it is a prefix of the month name:
+  // "Mary" and "Mark" both contain "mar", so a substring test over months in calendar
+  // order turned every Marian feast into March. "Sept" still matches September.
+  const words = text.toLowerCase().match(/[a-z]+/g) ?? []
+  const month = MONTHS.find((name) => {
+    const lower = name.toLowerCase()
+    return words.some((word) => word.length >= 3 && lower.startsWith(word))
+  })
+  const digits = text.match(/\b(\d{1,2})\b/)
+  if (!month || !digits) return null
+
+  const day = Number(digits[1])
+  if (day < 1 || day > 31) return null
+
+  return { day: String(day), month }
 }

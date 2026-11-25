@@ -11,13 +11,17 @@ function initial(name) {
   return letter || '✝'
 }
 
-export default function PriestPhoto({ parishId, userId, name, hasPhoto = false }) {
+export default function PriestPhoto({ parishId, userId, name, hasPhoto = false, variant = 'row' }) {
   const [failed, setFailed] = useState(false)
   const show = hasPhoto && parishId && userId && !failed
+  const band = variant === 'band'
 
   if (!show) {
     return (
-      <span className="clergy__photo clergy__photo--empty" aria-hidden="true">
+      <span
+        className={band ? 'cleric__frame' : 'clergy__photo clergy__photo--empty'}
+        aria-hidden="true"
+      >
         {initial(name)}
       </span>
     )
@@ -29,7 +33,7 @@ export default function PriestPhoto({ parishId, userId, name, hasPhoto = false }
 
   return (
     <img
-      className="clergy__photo"
+      className={band ? 'cleric__frame cleric__frame--photo' : 'clergy__photo'}
       src={src}
       alt={name ?? ''}
       loading="lazy"

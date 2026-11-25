@@ -1,15 +1,17 @@
-// GET/PATCH /api/parish and /api/parish/priests; five editable fields.
+// GET/PATCH /api/parish and /api/parish/priests; eleven editable fields.
 
 import { useCallback, useEffect, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
+import FacebookPageCard from '../../components/FacebookPageCard.jsx'
 import Loading from '../../components/Loading.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import StaffPhoto from '../../components/StaffPhoto.jsx'
-import { authed, isSessionError } from '../../lib/api.js'
+import { BASE, authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
 import { formatLongDate } from '../../lib/dates.js'
-import { LIMITS, accentFor, municipalityFromAddress } from '../../lib/parishes.js'
+import { LIMITS, YEAR_ESTABLISHED_MIN, accentFor, municipalityFromAddress } from '../../lib/parishes.js'
 import { clearSession, getSession } from '../../lib/session.js'
 
 const EDITABLE = [
@@ -20,9 +22,18 @@ const EDITABLE = [
   'facebookPageId',
   'officeHours',
   'massSchedule',
+  'patronSaint',
+  'feastDay',
+  'yearEstablished',
+  'history',
 ]
 
 const PH_MOBILE = /^09\d{9}$/
+
+const MAX_GALLERY = 4
+const MAX_GALLERY_BYTES = 5 * 1024 * 1024
+const MAX_SEAL_BYTES = 1 * 1024 * 1024
+const IMAGE_TYPES = ['image/jpeg', 'image/png']
 
 function diff(initial, current) {
   const patch = {}
@@ -45,12 +56,18 @@ function toForm(parish) {
     facebookPageId: parish.facebookPageId ?? '',
     officeHours: parish.officeHours ?? '',
     massSchedule: parish.massSchedule ?? '',
+    patronSaint: parish.patronSaint ?? '',
+    feastDay: parish.feastDay ?? '',
+    // yearEstablished arrives as a number; the input and diff() both work in strings.
+    yearEstablished: parish.yearEstablished == null ? '' : String(parish.yearEstablished),
+    history: parish.history ?? '',
   }
 }
 
 export default function ParishProfile() {
   const navigate = useNavigate()
   const session = getSession()
+  const { ask } = useConfirm()
   const [parish, setParish] = useState(null)
   const [priests, setPriests] = useState([])
   const [form, setForm] = useState(null)
@@ -60,6 +77,10 @@ export default function ParishProfile() {
   const [pending, setPending] = useState(false)
   const [photoBusy, setPhotoBusy] = useState('')
   const [photoVersion, setPhotoVersion] = useState(0)
+  const [gallery, setGallery] = useState([])
+  const [galleryBusy, setGalleryBusy] = useState('')
+  const [sealBusy, setSealBusy] = useState('')
+  const [sealVersion, setSealVersion] = useState(0)
 
   const endSession = useCallback(() => {
     clearSession()
@@ -85,6 +106,9 @@ export default function ParishProfile() {
 
       const p = await authed({ path: '/api/parish/priests' })
       if (live && p.ok) setPriests(p.json.priests)
+
+      const g = await authed({ path: '/api/parish/gallery' })
+      if (live && g.ok) setGallery(g.json.images)
     }
 
     load()
@@ -131,7 +155,12 @@ export default function ParishProfile() {
   }
 
   async function removePhoto() {
-    if (!window.confirm('Remove the parish photo?')) return
+    const ok = await ask({
+      title: 'Remove parish photo',
+      message: 'It disappears from the public parish page and the directory.',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setError('')
     setNotice('')
     setPhotoBusy('remove')
@@ -151,8 +180,165 @@ export default function ParishProfile() {
     setNotice('The parish photo was removed. The directory shows the parish crest instead.')
   }
 
+  async function uploadGallery(files) {
+    setError('')
+    setNotice('')
+
+    const room = MAX_GALLERY - gallery.length
+    if (room <= 0) {
+      setError('This parish already has four photos. Remove one first.')
+      return
+    }
+
+    const rejected = []
+    const accepted = []
+    for (const file of files.slice(0, room)) {
+      if (file.size > MAX_GALLERY_BYTES) rejected.push(`${file.name} is larger than 5 MB`)
+      else if (!IMAGE_TYPES.includes(file.type)) rejected.push(`${file.name} is not a JPEG or a PNG`)
+      else accepted.push(file)
+    }
+    if (files.length > room) {
+      rejected.push(room === 1 ? 'only one more photo fits' : `only ${room} more photos fit`)
+    }
+
+    let added = 0
+    for (const [index, file] of accepted.entries()) {
+      setGalleryBusy(`Uploading ${index + 1} of ${accepted.length}…`)
+      const r = await authed({
+        method: 'POST',
+        path: '/api/parish/gallery',
+        raw: file,
+        headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) },
+      })
+
+      if (isSessionError(r)) {
+        setGalleryBusy('')
+        endSession()
+        return
+      }
+      if (!r.ok) {
+        setGalleryBusy('')
+        setError(messageFor(r))
+        if (added > 0) {
+          setNotice(`${added} ${added === 1 ? 'photograph was' : 'photographs were'} added before this one failed.`)
+        }
+        return
+      }
+
+      setGallery(r.json.images)
+      added += 1
+    }
+    setGalleryBusy('')
+
+    if (added > 0) {
+      setNotice(
+        `${added} ${added === 1 ? 'photograph' : 'photographs'} added. They show on the parish page at once.`,
+      )
+    }
+    if (rejected.length > 0) setError(`Not uploaded — ${rejected.join('; ')}.`)
+  }
+
+  async function removeGalleryPhoto(imageId) {
+    const ok = await ask({
+      title: 'Remove photograph',
+      message: 'Remove this photograph from the parish gallery?',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
+    setError('')
+    setNotice('')
+    setGalleryBusy('Removing…')
+    const r = await authed({ method: 'DELETE', path: `/api/parish/gallery/${imageId}` })
+    setGalleryBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setGallery(r.json.images)
+    setNotice('The photograph was removed.')
+  }
+
+  async function uploadSeal(files) {
+    const file = files[0]
+    if (!file) return
+    setError('')
+    setNotice('')
+
+    if (file.size > MAX_SEAL_BYTES) {
+      setError('That image is larger than 1 MB.')
+      return
+    }
+    if (!IMAGE_TYPES.includes(file.type)) {
+      setError('A parish seal must be a JPEG or a PNG.')
+      return
+    }
+
+    setSealBusy('upload')
+    const r = await authed({
+      method: 'POST',
+      path: '/api/parish/seal',
+      raw: file,
+      headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) },
+    })
+    setSealBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setParish(r.json.parish)
+    setSealVersion((current) => current + 1)
+    setNotice('The parish seal was updated. It prints on every certificate, including those already issued.')
+  }
+
+  async function removeSeal() {
+    const ok = await ask({
+      title: 'Remove parish seal',
+      message:
+        'The seal is read when a certificate is rendered, so it disappears from certificates already issued as well as new ones.',
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
+    setError('')
+    setNotice('')
+    setSealBusy('remove')
+    const r = await authed({ method: 'DELETE', path: '/api/parish/seal' })
+    setSealBusy('')
+
+    if (isSessionError(r)) {
+      endSession()
+      return
+    }
+    if (!r.ok) {
+      setError(messageFor(r))
+      return
+    }
+    setParish(r.json.parish)
+    setSealVersion((current) => current + 1)
+    setNotice('The parish seal was removed. Certificates print without it.')
+  }
+
   function update(field) {
     return (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
+  }
+
+  // Re-seeded on open, not only on cancel. `parish` is refreshed on its own by the photo,
+  // seal and Facebook-connect handlers, while `form` is a snapshot taken at load - and
+  // save() diffs the fresh parish against the stale form, so a field changed outside the
+  // editor reads as one the user just cleared and gets sent as empty.
+  function openEditor() {
+    setForm(toForm(parish))
+    setEditing(true)
+    setError('')
   }
 
   function cancel() {
@@ -222,9 +408,9 @@ export default function ParishProfile() {
           <p className="eyebrow">Parish profile</p>
           <h1>{parish.name}</h1>
           <p className="lede">
-            These are the details a parishioner sees in the public directory. Four of them —
-            name, address, contact number and email — are the whole of that public listing, so a
-            change here is a change to what the public sees.
+            These are the details a parishioner sees in the public directory. Everything here
+            except the Facebook page ID is part of that public listing, so a change here is a
+            change to what the public sees.
           </p>
         </div>
         <p className="stat">
@@ -247,39 +433,32 @@ export default function ParishProfile() {
               <p className="eyebrow">Edit details</p>
               <div className="form-grid">
                 <label className="field field--full">
-                  <span>Parish name</span>
+                  <span>Parish name<b className="req">*</b></span>
                   <input value={form.name} onChange={update('name')} />
-                  <span className="form-hint">3 to 50 characters.</span>
                 </label>
                 <label className="field field--full">
-                  <span>Address</span>
-                  <input value={form.address} onChange={update('address')} />
-                  <span className="form-hint">
-                    At least 5 characters. The directory derives the municipality from the last part
-                    of this address, so end it with the town and province.
-                  </span>
+                  <span>Address<b className="req">*</b></span>
+                  <input
+                    value={form.address}
+                    onChange={update('address')}
+                    placeholder="Barangay, Town, Province"
+                  />
                 </label>
                 <label className="field">
-                  <span>Contact number</span>
+                  <span>Contact number<b className="req">*</b></span>
                   <input
                     value={form.contactNo}
                     onChange={update('contactNo')}
                     placeholder="09171234567"
                   />
-                  <span className="form-hint">PH mobile only — a landline is refused.</span>
                 </label>
                 <label className="field">
                   <span>Email</span>
                   <input type="email" value={form.email} onChange={update('email')} />
-                  <span className="form-hint">Optional. Clear it to remove it.</span>
                 </label>
                 <label className="field field--full">
                   <span>Facebook page ID</span>
                   <input value={form.facebookPageId} onChange={update('facebookPageId')} />
-                  <span className="form-hint">
-                    Optional, and unvalidated. It is where announcements would be mirrored once the
-                    page sync is built.
-                  </span>
                 </label>
 
                 <h3 className="eyebrow field--full">Shown to the public</h3>
@@ -293,10 +472,6 @@ export default function ParishProfile() {
                     maxLength={LIMITS.officeHours.max}
                     placeholder={'Monday to Friday, 8:00 AM - 5:00 PM\nSaturday, 8:00 AM - 12:00 NN\nClosed Sunday'}
                   />
-                  <span className="form-hint">
-                    Optional. One line each — the line breaks are kept exactly as you type them.
-                    Up to {LIMITS.officeHours.max} characters. Clear it to remove it.
-                  </span>
                 </label>
 
                 <label className="field field--full">
@@ -308,10 +483,48 @@ export default function ParishProfile() {
                     maxLength={LIMITS.massSchedule.max}
                     placeholder={'Sunday, 6:00 / 8:00 / 10:00 AM and 5:00 PM\nWeekdays, 6:00 AM\nFirst Friday, 6:00 PM'}
                   />
-                  <span className="form-hint">
-                    Optional, and typed however your parish writes it — first Fridays, novenas and
-                    anything else. Up to {LIMITS.massSchedule.max} characters.
-                  </span>
+                </label>
+
+                <label className="field">
+                  <span>Patron saint</span>
+                  <input
+                    value={form.patronSaint}
+                    onChange={update('patronSaint')}
+                    maxLength={LIMITS.patronSaint.max}
+                    placeholder="St. Joseph the Worker"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Feast day</span>
+                  <input
+                    value={form.feastDay}
+                    onChange={update('feastDay')}
+                    maxLength={LIMITS.feastDay.max}
+                    placeholder="May 1"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Year established</span>
+                  <input
+                    inputMode="numeric"
+                    value={form.yearEstablished}
+                    onChange={update('yearEstablished')}
+                    maxLength={4}
+                    placeholder="1898"
+                  />
+                </label>
+
+                <label className="field field--full">
+                  <span>History</span>
+                  <textarea
+                    rows={8}
+                    value={form.history}
+                    onChange={update('history')}
+                    maxLength={LIMITS.history.max}
+                    placeholder={'The parish was established in 1898 as a visita of…\n\nThe present church was built in…'}
+                  />
                 </label>
               </div>
 
@@ -354,12 +567,24 @@ export default function ParishProfile() {
                   <dd>{parish.email || '—'}</dd>
                 </div>
                 <div>
+                  <dt>Patron saint</dt>
+                  <dd>{parish.patronSaint || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Feast day</dt>
+                  <dd>{parish.feastDay || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Year established</dt>
+                  <dd>{parish.yearEstablished || '—'}</dd>
+                </div>
+                <div>
                   <dt>Facebook page ID</dt>
                   <dd>{parish.facebookPageId || 'Not set'}</dd>
                 </div>
               </dl>
               <div className="form-actions__buttons">
-                <button type="button" className="btn btn--gold" onClick={() => setEditing(true)}>
+                <button type="button" className="btn btn--gold" onClick={openEditor}>
                   Edit details
                 </button>
               </div>
@@ -379,6 +604,13 @@ export default function ParishProfile() {
                   <dd className="schedule-text">{parish.massSchedule || 'Not set'}</dd>
                 </div>
               </dl>
+            </section>
+          )}
+
+          {!editing && parish.history && (
+            <section className="card">
+              <p className="eyebrow">About this parish</p>
+              <p className="schedule-text">{parish.history}</p>
             </section>
           )}
         </div>
@@ -417,6 +649,84 @@ export default function ParishProfile() {
           </section>
 
           <section className="card">
+            <p className="eyebrow">
+              Photographs <span className="gallery-count">{gallery.length} of {MAX_GALLERY}</span>
+            </p>
+
+            {gallery.length > 0 && (
+              <ul className="gallery-grid">
+                {gallery.map((image) => (
+                  <li key={image.imageId} className="gallery-tile">
+                    <img
+                      src={`${BASE}/api/parishes/${parish.parishId}/gallery/${image.imageId}`}
+                      alt={image.fileName}
+                      loading="lazy"
+                    />
+                    <button
+                      type="button"
+                      className="gallery-tile__remove"
+                      onClick={() => removeGalleryPhoto(image.imageId)}
+                      disabled={Boolean(galleryBusy)}
+                      aria-label={`Remove ${image.fileName}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {gallery.length < MAX_GALLERY ? (
+              <PhotoDrop
+                onFiles={uploadGallery}
+                accept="image/jpeg,image/png"
+                multiple
+                busy={Boolean(galleryBusy)}
+                busyLead={galleryBusy}
+                lead="Drag photos of the church here"
+                hint="JPEG or PNG, up to 5 MB each. Four at most. These upload straight away — Cancel on Edit details will not undo them."
+              />
+            ) : (
+              <p className="muted">Four photographs is the limit. Remove one to add another.</p>
+            )}
+          </section>
+
+          <section className="card">
+            <p className="eyebrow">Parish seal</p>
+            {parish.hasSeal ? (
+              <>
+                <img
+                  className="seal-preview"
+                  src={`${BASE}/api/parishes/${parish.parishId}/seal?v=${sealVersion}`}
+                  alt={`Seal of ${parish.name}`}
+                />
+                <p className="muted">
+                  Printed on the right of every certificate. The left is reserved for the diocese
+                  logo.
+                </p>
+                <div className="form-actions__buttons">
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={removeSeal}
+                    disabled={sealBusy === 'remove'}
+                  >
+                    {sealBusy === 'remove' ? 'Removing…' : 'Remove seal'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <PhotoDrop
+                onFiles={uploadSeal}
+                accept="image/jpeg,image/png"
+                busy={sealBusy === 'upload'}
+                lead="Drag the parish seal here"
+                hint="JPEG or PNG, up to 1 MB. A square image on a plain background prints best."
+              />
+            )}
+          </section>
+
+          <section className="card">
             <p className="eyebrow">Clergy</p>
             {priests.length === 0 ? (
               <p className="empty">No active priest is assigned to this parish.</p>
@@ -435,6 +745,12 @@ export default function ParishProfile() {
               </ul>
             )}
           </section>
+
+          <FacebookPageCard
+            parish={parish}
+            onChanged={setParish}
+            onSessionEnd={endSession}
+          />
 
           <section className="card">
             <p className="eyebrow">Registry</p>

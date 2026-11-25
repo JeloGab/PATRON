@@ -1,9 +1,11 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import { AppError } from '../../lib/appError.js'
 import { requireAuth, requirePasswordChanged, requireRole } from '../auth/auth.middleware.js'
-import { createParish, getParishes, setParishStatus, provisionPriest, getPriests, setPriestStatus,resetPriestPassword,} from './admin.services.js'
+import { createParish, getParishes, setParishStatus, provisionPriest, getPriests, setPriestStatus,resetPriestPassword, saveLogo, removeLogo, getLogo, LOGO_TYPES } from './admin.services.js'
 
 const router = Router()
+
+const logoUpload = express.raw({ type: LOGO_TYPES, limit: '1mb' })
 
 router.use(requireAuth, requirePasswordChanged, requireRole('sysadmin'))
 
@@ -65,6 +67,26 @@ router.post('/priests/:userId/reactivate', async (req, res) => {
 
 router.post('/priests/:userId/reset-password', async (req, res) => {
   res.json({ ok: true, ...(await resetPriestPassword(req.params.userId)) })
+})
+
+router.get('/diocese/logo', async (_req, res) => {
+  const logo = await getLogo()
+  res.type(logo.contentType)
+  res.send(logo.content)
+})
+
+router.post('/diocese/logo', logoUpload, async (req, res) => {
+  res.status(201).json({
+    ok: true,
+    diocese: await saveLogo(req.user, {
+      buffer: req.body,
+      typeAccepted: req.is(LOGO_TYPES) !== false,
+    }),
+  })
+})
+
+router.delete('/diocese/logo', async (req, res) => {
+  res.json({ ok: true, diocese: await removeLogo(req.user) })
 })
 
 export default router

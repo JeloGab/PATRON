@@ -34,7 +34,17 @@ export default function EventTable({
 
   return (
     <div>
-      <div className="filters">
+      <div className={`filters ${showSearch ? 'filters--action' : ''}`}>
+        {showSearch && (
+          <label className="field filters__search">
+            <span>Search</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search title, priest or type"
+            />
+          </label>
+        )}
         <label className="field filters__type">
           <span>Type</span>
           <select value={type} onChange={(event) => setType(event.target.value)}>
@@ -56,16 +66,6 @@ export default function EventTable({
             ))}
           </select>
         </label>
-        {showSearch && (
-          <label className="field filters__search">
-            <span>Search</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search title, priest or type"
-            />
-          </label>
-        )}
       </div>
 
       {rows.length === 0 ? (

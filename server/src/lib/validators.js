@@ -19,7 +19,12 @@ export const LIMITS = {
   invoiceNo: { min: 3, max: 40 },
   officeHours: { max: 300 },
   massSchedule: { max: 600 },
-   content: { min: 5, max: 5000 }
+  patronSaint: { max: 60 },
+  feastDay: { max: 40 },
+  yearEstablished: { min: 1521 },
+  history: { max: 1200 },
+   content: { min: 5, max: 5000 },
+  facebookPageToken: { max: 500 },
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -295,4 +300,69 @@ export function optionalOfficeHours(value) {
 
 export function optionalMassSchedule(value) {
   return optionalMultiline(value, 'INVALID_MASS_SCHEDULE', LIMITS.massSchedule.max)
+}
+
+export function optionalPatronSaint(value) {
+  const name = squeeze(value)
+  if (!name) return null
+  if (name.length > LIMITS.patronSaint.max) throw new AppError('INVALID_PATRON_SAINT', 400)
+  return name
+}
+
+export function optionalFeastDay(value) {
+  const day = squeeze(value)
+  if (!day) return null
+  if (day.length > LIMITS.feastDay.max) throw new AppError('INVALID_FEAST_DAY', 400)
+  return day
+}
+
+export function optionalYearEstablished(value) {
+  const text = squeeze(value)
+  if (!text) return null
+  if (!/^\d{4}$/.test(text)) throw new AppError('INVALID_YEAR_ESTABLISHED', 400)
+
+  const year = Number(text)
+  const thisYear = Number(todayInParish().slice(0, 4))
+  if (year < LIMITS.yearEstablished.min) throw new AppError('INVALID_YEAR_ESTABLISHED', 400)
+  if (year > thisYear) throw new AppError('INVALID_YEAR_ESTABLISHED', 400)
+
+  return year
+}
+
+export function optionalHistory(value) {
+  return optionalMultiline(value, 'INVALID_HISTORY', LIMITS.history.max)
+}
+
+// A page access token is opaque: Facebook documents no format and has changed its
+// prefix before, so anything validating its SHAPE will reject a valid token some day.
+// This checks only what cannot be wrong. Whether it WORKS is answered by Facebook, and
+// the answer is sync_status.
+export function requireFacebookToken(value) {
+  const text = clean(value)
+  if (!text) throw new AppError('INVALID_FACEBOOK_TOKEN', 400)
+  if (/\s/.test(text)) throw new AppError('INVALID_FACEBOOK_TOKEN', 400)
+  if (text.length > LIMITS.facebookPageToken.max) throw new AppError('INVALID_FACEBOOK_TOKEN', 400)
+  return text
+}
+
+// The person typing this has the page's URL in front of them and nothing else, so a
+// pasted URL is the normal input and the handle is what is stored.
+//
+//   https://facebook.com/StJosephLibmanan?ref=x  ->  StJosephLibmanan
+//   facebook.com/profile.php?id=10012345         ->  10012345
+//   10012345                                     ->  10012345
+export function optionalFacebookPage(value) {
+  const text = clean(value)
+  if (!text) return null
+
+  const numericId = text.match(/[?&]id=(\d+)/)
+  if (numericId) return numericId[1]
+
+  const withoutScheme = text.replace(/^https?:\/\//i, '').replace(/^(www\.|m\.|web\.)/i, '')
+  const path = withoutScheme.replace(/^facebook\.com\//i, '').replace(/^fb\.com\//i, '')
+  const handle = path.split(/[/?#]/)[0].trim()
+
+  if (!handle) throw new AppError('INVALID_FACEBOOK_PAGE', 400)
+  if (!/^[A-Za-z0-9.\-]{1,100}$/.test(handle)) throw new AppError('INVALID_FACEBOOK_PAGE', 400)
+  return handle
 }

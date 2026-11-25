@@ -151,16 +151,23 @@ export async function updateEvent(actor, eventId, { patch, resetApproval }) {
 
 export async function decideEvent(actor, eventId, { status, reason }) {
   return withActor(actor, async (client) => {
-    const { rowCount } = await client.query(
-      `update public.parish_event
-          set status = $2,
-              status_reason = $3,
-              approved_by = case when $2 = 'approved' then $4::uuid else approved_by end,
-              approved_at = case when $2 = 'approved' then now() else approved_at end
-        where event_id = $1 and status = 'pending'`,
-      [eventId, status, reason, actor.userId]
-    )
-    return rowCount > 0
+    try {
+      const { rowCount } = await client.query(
+        `update public.parish_event
+            set status = $2,
+                status_reason = $3,
+                approved_by = case when $2 = 'approved' then $4::uuid else approved_by end,
+                approved_at = case when $2 = 'approved' then now() else approved_at end,
+                updated_by = $4::uuid,
+                updated_at = now()
+          where event_id = $1 and status = 'pending'`,
+        [eventId, status, reason, actor.userId]
+      )
+      return rowCount > 0
+    } catch (err) {
+      if (err.code === '42501') throw new AppError('FORBIDDEN', 403)
+      throw err
+    }
   })
 }
 
@@ -168,9 +175,12 @@ export async function closeEvent(actor, eventId, { status, reason, fromStatuses 
   return withActor(actor, async (client) => {
     const { rowCount } = await client.query(
       `update public.parish_event
-          set status = $2, status_reason = $3
+          set status = $2,
+              status_reason = $3,
+              updated_by = $5::uuid,
+              updated_at = now()
         where event_id = $1 and status = any($4)`,
-      [eventId, status, reason, fromStatuses]
+      [eventId, status, reason, fromStatuses, actor.userId]
     )
     return rowCount > 0
   })

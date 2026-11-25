@@ -2,7 +2,7 @@
 
 const MESSAGES = {
   NETWORK_ERROR:
-    'Cannot reach the server. Check that the API is running on port 4000 and that this page is on http://localhost:5173.',
+    'Cannot reach the server. Check your internet connection, then try again.',
   REQUEST_FAILED: 'Something went wrong. Please try again.',
   MISSING_FIELDS: 'Some required fields are missing.',
   INVALID_NAME: 'That name is not valid — 2 to 50 characters.',
@@ -10,6 +10,12 @@ const MESSAGES = {
   INVALID_ADDRESS: 'Address must be at least 5 characters.',
   INVALID_CONTACT: 'Contact number must be a PH mobile number, e.g. 09171234567.',
   INVALID_EMAIL: 'That email address is not valid.',
+  INVALID_OFFICE_HOURS: 'Office hours must be 300 characters or fewer.',
+  INVALID_MASS_SCHEDULE: 'Mass schedule must be 600 characters or fewer.',
+  INVALID_PATRON_SAINT: 'Patron saint must be 60 characters or fewer.',
+  INVALID_FEAST_DAY: 'Feast day must be 40 characters or fewer.',
+  INVALID_YEAR_ESTABLISHED: 'Enter a four-digit year between 1521 and this year.',
+  INVALID_HISTORY: 'History must be 1,200 characters or fewer.',
   INVALID_USERNAME: 'That username is not valid.',
   INVALID_PARISH_ID: 'That parish reference is not valid.',
   INVALID_USER_ID: 'That account reference is not valid.',
@@ -103,10 +109,29 @@ const MESSAGES = {
     'This announcement is published or archived, so it can no longer be edited. Archive it and write a new one.',
   IMAGE_LIMIT_REACHED: 'An announcement can carry at most four images.',
   IMAGE_NOT_FOUND: 'That image no longer exists.',
+  GALLERY_FULL: 'This parish already has four photos. Remove one first.',
   MISSING_FILE: 'No file was received. Try choosing it again.',
   INVALID_FILE_TYPE: 'That file is not an accepted image — JPEG or PNG only.',
   FILE_TOO_LARGE: 'That file is too large.',
   INVALID_CONTENT: 'Write the message of the announcement.',
+  ANNOUNCEMENT_NOT_PUBLISHED: 'Only a published announcement can be posted to Facebook.',
+
+  INVALID_FACEBOOK_TOKEN:
+    "That doesn't look like a page access token. Paste it again with no line breaks.",
+  INVALID_FACEBOOK_PAGE: "Paste the page's URL, for example facebook.com/YourParish.",
+  FACEBOOK_PAGE_REQUIRED: 'Set the Facebook page first, then connect the token.',
+  FACEBOOK_NOT_CONNECTED:
+    'This parish has no Facebook page connected. Connect one on the parish profile first.',
+  FACEBOOK_LOGIN_UNAVAILABLE: 'Connecting a page is not set up on this server yet.',
+  INVALID_CONNECT_STATE:
+    'That connection attempt expired or did not come from here. Start again.',
+  FACEBOOK_CONNECT_FAILED: 'Facebook could not complete the connection. Try again.',
+  FACEBOOK_NO_PAGE_GRANTED:
+    "No page was granted. Start again and select the parish's page.",
+  FACEBOOK_MULTIPLE_PAGES:
+    "You granted more than one page. Start again and select only the parish's page.",
+  FACEBOOK_TOKEN_NOT_PERMANENT:
+    'Facebook issued a temporary key. Start again, and if it repeats, reconnect from Facebook’s settings.',
 
   PROVISIONING_FAILED: 'The account could not be created. Please try again.',
   AUTH_PROVIDER_ERROR: 'The sign-in service is not responding. Please try again shortly.',

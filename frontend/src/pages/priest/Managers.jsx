@@ -1,6 +1,7 @@
 // The priest's managers; POST /api/users/managers takes only { fullName }.
 
 import { useCallback, useEffect, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import Loading from '../../components/Loading.jsx'
 import StaffProvisionModal from '../../components/StaffProvisionModal.jsx'
@@ -19,6 +20,7 @@ function StatusPill({ status }) {
 
 export default function Managers() {
   const navigate = useNavigate()
+  const { ask, notify } = useConfirm()
   const [managers, setManagers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -81,7 +83,14 @@ export default function Managers() {
   }
 
   async function managerAction(manager, action) {
-    if (action === 'deactivate' && !window.confirm(`Deactivate ${manager.fullName}?`)) return
+    if (action === 'deactivate') {
+      const ok = await ask({
+        title: 'Deactivate manager',
+        message: `Deactivate ${manager.fullName}? Their record entries stay on file and they are signed out.`,
+        confirmLabel: 'Deactivate',
+      })
+      if (!ok) return
+    }
     setBusyUserId(manager.userId)
     const result = await authed({
       method: 'POST',
@@ -100,9 +109,11 @@ export default function Managers() {
 
     await load()
     if (action === 'reset-password') {
-      window.alert(
-        `Temporary password for ${manager.fullName}:\n\n${result.json.tempPassword}\n\nShown once. They must change it at next sign in.`,
-      )
+      await notify({
+        title: 'Temporary password',
+        message: `Give this to ${manager.fullName}. It is shown once, and they must change it at next sign in.`,
+        copyText: result.json.tempPassword,
+      })
       return
     }
     showNotice(

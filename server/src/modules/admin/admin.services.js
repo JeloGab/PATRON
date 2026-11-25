@@ -1,7 +1,11 @@
 import { AppError } from '../../lib/appError.js'
 import { suggestUsername, isValidUsername, isUuid, createTempCredential, resolveUsername } from '../../lib/credentials.js'
 import { clean, requireFullName, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
-import { insertParish, listParishes, findParishById, insertStaff, listStaffByRole, setUserStatus, setStaffPassword, updateParishStatus } from './admin.queries.js'
+import { insertParish, listParishes, findParishById, insertStaff, listStaffByRole, setUserStatus, setStaffPassword, updateParishStatus, setDioceseLogo, clearDioceseLogo, findDioceseLogo } from './admin.queries.js'
+import { sniffContentType } from '../../lib/fileType.js'
+
+export const LOGO_TYPES = ['image/png', 'image/jpeg']
+const MAX_LOGO_BYTES = 1 * 1024 * 1024
 
 
 
@@ -85,4 +89,32 @@ export async function resetPriestPassword(userId) {
   if (!user) throw new AppError('USER_NOT_FOUND', 404)
 
   return { user, tempPassword }
+}
+
+export async function saveLogo(actor, { buffer, typeAccepted = true }) {
+  if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)
+  if (buffer.length > MAX_LOGO_BYTES) throw new AppError('FILE_TOO_LARGE', 413)
+
+  const contentType = sniffContentType(buffer)
+  if (!LOGO_TYPES.includes(contentType)) throw new AppError('INVALID_FILE_TYPE', 400)
+
+  const diocese = await setDioceseLogo({ contentType, content: buffer, userId: actor.userId })
+  if (!diocese) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  return { hasLogo: true, updatedAt: diocese.updatedAt }
+}
+
+export async function removeLogo(actor) {
+  const diocese = await clearDioceseLogo(actor.userId)
+  if (!diocese) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  return { hasLogo: false, updatedAt: diocese.updatedAt }
+}
+
+export async function getLogo() {
+  const logo = await findDioceseLogo()
+  if (!logo) throw new AppError('IMAGE_NOT_FOUND', 404)
+
+  return logo
 }

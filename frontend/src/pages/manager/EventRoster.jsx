@@ -1,9 +1,11 @@
 // An event's participants and their frozen requirement checklists.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import CompleteEventModal from '../../components/CompleteEventModal.jsx'
 import EventCertificates from '../../components/EventCertificates.jsx'
+import EventTable from '../../components/EventTable.jsx'
 import Loading from '../../components/Loading.jsx'
 import RequirementChecklist from '../../components/RequirementChecklist.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -36,6 +38,7 @@ export default function EventRoster() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const eventId = params.get('eventId') ?? ''
+  const { ask } = useConfirm()
   const [events, setEvents] = useState(null)
   const [participants, setParticipants] = useState(null)
   const [priests, setPriests] = useState([])
@@ -94,6 +97,13 @@ export default function EventRoster() {
     [events, eventId],
   )
 
+  function selectEvent(next) {
+    setParams(next ? { eventId: next } : {})
+    setParticipants(null)
+    closeForm()
+    setNotice('')
+  }
+
   const loadRoster = useCallback(async () => {
     if (!eventId) {
       setParticipants(null)
@@ -121,8 +131,7 @@ export default function EventRoster() {
   const canAdd = rosterAcceptsAdditions(event)
   const canEdit = rosterIsOpen(event)
   const warning = event && participants ? marriageWarning(event, participants) : null
-  const canComplete =
-    event?.status === 'approved' && event.eventDate <= todayISO() && event.eventType === 'sacramental'
+  const canComplete = event?.status === 'approved' && event.eventDate <= todayISO()
   const cleared = (participants ?? []).filter((person) => person.status === 'cleared').length
 
   function update(field) {
@@ -209,7 +218,12 @@ export default function EventRoster() {
   }
 
   async function withdraw(person) {
-    if (!window.confirm(`Withdraw ${person.participantName} from this event?`)) return
+    const ok = await ask({
+      title: 'Withdraw participant',
+      message: `Withdraw ${person.participantName} from this event? Only cleared participants are recorded when the event completes.`,
+      confirmLabel: 'Withdraw',
+    })
+    if (!ok) return
     setBusy(person.participantId)
     setError('')
     const r = await authed({
@@ -256,37 +270,30 @@ export default function EventRoster() {
       )}
       {notice && <p className="notice">{notice}</p>}
 
-      <div className="toolbar">
-        <label className="field">
-          <span>Event</span>
-          <select
-            value={eventId}
-            onChange={(changed) => {
-              const next = changed.target.value
-              setParams(next ? { eventId: next } : {})
-              setParticipants(null)
-              closeForm()
-              setNotice('')
-            }}
-          >
-            <option value="">Choose an event…</option>
-            {(events ?? []).map((item) => (
-              <option key={item.eventId} value={item.eventId}>
-                {formatLongDate(item.eventDate)} · {item.title} · {eventTypeLabel(item)} ·{' '}
-                {STATUS_LABEL[item.status]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {!eventId ? (
-        <p className="empty">
-          Choose an event to see its roster. Events from today through the next three months are
-          listed.
-        </p>
-      ) : !event ? (
-        <p className="empty">That event is not in the current window. Choose another.</p>
+      {!eventId || !event ? (
+        <section className="panel">
+          <div className="panel__head">
+            <div>
+              <h2>Choose an event</h2>
+              <p className="muted panel__note">
+                {eventId && !event && events !== null
+                  ? 'That event is not in the current window. Choose another.'
+                  : 'Events from today through the next three months. Search by title, priest or type, or filter the list.'}
+              </p>
+            </div>
+          </div>
+          {events === null ? (
+            <Loading label="Loading events…" />
+          ) : (
+            <EventTable
+              events={events}
+              empty="No event falls in the next three months."
+              showSearch
+              selectedId={eventId}
+              onSelect={(item) => selectEvent(item.eventId)}
+            />
+          )}
+        </section>
       ) : (
         <>
           <section className="panel">
@@ -299,6 +306,9 @@ export default function EventRoster() {
                 </p>
               </div>
               <div className="panel__actions">
+                <button type="button" className="btn btn--ghost" onClick={() => selectEvent('')}>
+                  Choose another event
+                </button>
                 {canAdd && (
                   <button type="button" className="btn btn--gold" onClick={startAdd}>
                     Add participant
@@ -310,7 +320,7 @@ export default function EventRoster() {
                     className="btn btn--gold"
                     onClick={() => setCompleting(true)}
                   >
-                    Complete and issue
+                    {event.eventType === 'sacramental' ? 'Complete and issue' : 'Mark complete'}
                   </button>
                 )}
               </div>
@@ -334,7 +344,7 @@ export default function EventRoster() {
                 <p className="eyebrow">{editingId ? 'Correct a participant' : 'New participant'}</p>
                 <div className="form-grid">
                   <label className="field">
-                    <span>Full name *</span>
+                    <span>Full name<b className="req">*</b></span>
                     <input
                       value={form.participantName}
                       onChange={update('participantName')}
@@ -342,7 +352,7 @@ export default function EventRoster() {
                     />
                   </label>
                   <label className="field">
-                    <span>Gender *</span>
+                    <span>Gender<b className="req">*</b></span>
                     <select value={form.gender} onChange={update('gender')}>
                       {GENDERS.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -352,7 +362,7 @@ export default function EventRoster() {
                     </select>
                   </label>
                   <label className="field">
-                    <span>Date of birth {rules.birthDate ? '*' : ''}</span>
+                    <span>Date of birth{rules.birthDate && <b className="req">*</b>}</span>
                     <input
                       type="date"
                       value={form.participantDateOfBirth}
@@ -361,7 +371,7 @@ export default function EventRoster() {
                     />
                   </label>
                   <label className="field">
-                    <span>Contact {rules.contact ? '*' : ''}</span>
+                    <span>Contact{rules.contact && <b className="req">*</b>}</span>
                     <input
                       value={form.participantContact}
                       onChange={update('participantContact')}

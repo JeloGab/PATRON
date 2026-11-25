@@ -15,7 +15,9 @@ import PriestPhoto from '../../components/PriestPhoto.jsx'
 import { BASE, authed, call, isSessionError } from '../../lib/api.js'
 import { formatLongDate, formatMonth, formatWeekdayDate, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
-import { accentFor, municipalityFromAddress } from '../../lib/parishes.js'
+import useReveal from '../../lib/useReveal.js'
+import Icon from '../../components/Icon.jsx'
+import { accentFor, municipalityFromAddress, feastParts } from '../../lib/parishes.js'
 import { eventTypeLabel, groupByDate, monthWindow, timeRange } from '../../lib/schedule.js'
 import { clearSession } from '../../lib/session.js'
 
@@ -61,11 +63,7 @@ export default function ChurchDetail() {
     }
   }, [id])
 
-  // The calendar is fetched on its own, not appended to the effect above, for two
-  // reasons: a slow month must not hold up the parish name, and month navigation
-  // refetches — reusing the page-level `loading` would blank the whole page on every
-  // flip. `monthWindow` returns the span of the rendered grid, not the calendar
-  // month, so the leading and trailing days of adjacent months are populated too.
+  
   const { from, to } = monthWindow(cursor.year, cursor.month)
 
   useEffect(() => {
@@ -80,9 +78,7 @@ export default function ChurchDetail() {
       })
       if (!live) return
 
-      // Only NO_TOKEN, INVALID_TOKEN and SESSION_REVOKED end a session — not every
-      // 401. This is the one authenticated call on the page, so it is the only one
-      // that can strand a signed-out parishioner here.
+      
       if (isSessionError(r)) {
         clearSession()
         navigate('/login', { replace: true })
@@ -109,6 +105,7 @@ export default function ChurchDetail() {
     [calendar]
   )
   const reservedDates = useMemo(() => new Set(calendar?.reservedDates ?? []), [calendar])
+  const stage = useReveal([parish, announcements])
 
   const dayEvents = eventsByDate.get(selectedDate) ?? []
   const dayBlocks = parishBlocksByDate.get(selectedDate) ?? []
@@ -144,11 +141,15 @@ export default function ChurchDetail() {
   const municipality = municipalityFromAddress(parish.address)
 
   const priests = Array.isArray(parish.priests) ? parish.priests : []
+  const hasPhotographs = (parish.galleryImageIds ?? []).length > 0
+  const hasSchedule = Boolean(parish.officeHours || parish.massSchedule)
+  const feast = feastParts(parish.feastDay)
+  const age = parish.yearEstablished ? new Date().getFullYear() - parish.yearEstablished : null
 
   return (
-    <div className="page">
+    <div className="page" ref={stage}>
       <Link to="/user" className="back">
-        ← All parishes
+        <Icon name="chevronLeft" /> All parishes
       </Link>
 
       <article className="detail">
@@ -160,16 +161,179 @@ export default function ChurchDetail() {
           alt={parish.name}
         >
           <div className="detail__banner-shade">
-            {municipality && <p className="eyebrow eyebrow--light">{municipality}</p>}
+            {municipality && (
+              <p className="eyebrow eyebrow--light">
+                <Icon name="shield" /> {municipality}
+              </p>
+            )}
             <h1>{parish.name}</h1>
+            {parish.patronSaint && (
+              <p className="detail__banner-patron">
+                under the patronage of {parish.patronSaint}
+              </p>
+            )}
             <p>{parish.address}</p>
           </div>
         </ChurchMedia>
 
+
+        {priests.length > 0 && (
+          <section className="card clergy-band">
+            <p className="eyebrow">
+              <Icon name="users" /> The priests of this parish
+            </p>
+            <div className="clergy-band__grid">
+              {priests.map((priest) => (
+                <article key={priest.userId} className="cleric">
+                  <PriestPhoto
+                    parishId={parish.parishId}
+                    userId={priest.userId}
+                    name={priest.fullName}
+                    hasPhoto={priest.hasPhoto}
+                    variant="band"
+                  />
+                  <h3 className="cleric__name">{priest.fullName}</h3>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="band-pair">
+          <section className="card cta-band card--guilloche">
+            <div className="cta-band__inner">
+              <p className="eyebrow">
+                <Icon name="certificate" /> Online issuance
+              </p>
+              <h2 className="cta-band__title">Request a certificate</h2>
+              <p className="cta-band__lede">
+                Baptismal, confirmation, marriage and death certificates, issued by this parish
+                from its own register.
+              </p>
+              <div className="cta-band__rule" />
+              <p className="cta-band__action">
+                <Link
+                  to={`/user/parish/${parish.parishId}/request`}
+                  className="btn btn--gold btn--lg"
+                >
+                  <Icon name="certificate" /> Request a certificate
+                </Link>
+              </p>
+            </div>
+          </section>
+
+          <section className="card cta-band card--vellum">
+            <div className="cta-band__inner">
+              <p className="eyebrow">
+                <Icon name="shield" /> Verification
+              </p>
+              <h2 className="cta-band__title">Verify a document</h2>
+              <p className="cta-band__lede">
+                Every certificate carries a reference and a QR code that anyone can check
+                without an account.
+              </p>
+              <div className="cta-band__rule" />
+              <p className="cta-band__action">
+                <Link to="/verify" className="btn btn--ghost btn--lg">
+                  <Icon name="shield" /> Verify a document
+                </Link>
+              </p>
+            </div>
+          </section>
+        </div>
+
         <div className="detail__grid">
           <div className="stack">
-            <section className="card">
-              <p className="eyebrow">Parish office</p>
+            {parish.history ? (
+              <section className="card watermarked tracery">
+                {parish.yearEstablished && (
+                  <span className="watermark" aria-hidden="true">
+                    {parish.yearEstablished}
+                  </span>
+                )}
+                <p className="eyebrow">
+                  <Icon name="book" /> About this parish
+                </p>
+                <div className="fleuron">
+                  <Icon name="cross" />
+                </div>
+                <p className="illuminated schedule-text">{parish.history}</p>
+              </section>
+            ) : (
+              !hasPhotographs &&
+              !hasSchedule && (
+                <section className="card">
+                  <p className="eyebrow">
+                    <Icon name="book" /> About this parish
+                  </p>
+                  <p className="empty">
+                    This parish has not added a description yet. Its office details are on the
+                    right.
+                  </p>
+                </section>
+              )
+            )}
+
+            {hasPhotographs && (
+              <section className="card">
+                <p className="eyebrow">
+                  <Icon name="image" /> Photographs of the church
+                </p>
+                <ul className="church-gallery">
+                  {parish.galleryImageIds.map((imageId) => (
+                    <li key={imageId}>
+                      <img
+                        src={`${BASE}/api/parishes/${parish.parishId}/gallery/${imageId}`}
+                        alt={parish.name}
+                        loading="lazy"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {hasSchedule && (
+              <section className="card">
+                <p className="eyebrow">
+                  <Icon name="clock" /> Office hours and Mass schedule
+                </p>
+                <dl className="facts facts--stacked">
+                  {parish.officeHours && (
+                    <div>
+                      <dt>Office hours</dt>
+                      <dd className="schedule-text">{parish.officeHours}</dd>
+                    </div>
+                  )}
+                  {parish.massSchedule && (
+                    <div>
+                      <dt>Mass schedule</dt>
+                      <dd className="schedule-text">{parish.massSchedule}</dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+            )}
+          </div>
+
+          <aside className="stack">
+            {parish.hasSeal && (
+              <section className="card rail-card card--rays">
+                <p className="eyebrow">
+                  <Icon name="shield" /> Parish seal
+                </p>
+                <img
+                  className="seal-preview"
+                  src={`${BASE}/api/parishes/${parish.parishId}/seal`}
+                  alt={`Seal of ${parish.name}`}
+                />
+              </section>
+            )}
+
+            <section className="card rail-card card--vellum">
+              <p className="eyebrow">
+                <Icon name="church" /> Parish information
+              </p>
               <dl className="facts">
                 <div>
                   <dt>Address</dt>
@@ -195,73 +359,78 @@ export default function ChurchDetail() {
                     )}
                   </dd>
                 </div>
+                {parish.patronSaint && (
+                  <div>
+                    <dt>Patron saint</dt>
+                    <dd>{parish.patronSaint}</dd>
+                  </div>
+                )}
               </dl>
             </section>
 
-            {(parish.officeHours || parish.massSchedule) && (
-              <section className="card">
-                <p className="eyebrow">Schedule</p>
-                <dl className="facts facts--stacked">
-                  {parish.officeHours && (
-                    <div>
-                      <dt>Office hours</dt>
-                      <dd className="schedule-text">{parish.officeHours}</dd>
+            {parish.feastDay && (
+              <section className="card rail-card card--nimbus">
+                <p className="eyebrow">
+                  <Icon name="calendar" /> Titular feast
+                </p>
+                {feast ? (
+                  <div className="leaf-row">
+                    <div className="leaf">
+                      <div className="leaf__top">Feast</div>
+                      <div className="leaf__day">{feast.day}</div>
+                      <div className="leaf__mon">{feast.month}</div>
                     </div>
-                  )}
-                  {parish.massSchedule && (
                     <div>
-                      <dt>Mass schedule</dt>
-                      <dd className="schedule-text">{parish.massSchedule}</dd>
+                      {parish.patronSaint && (
+                        <p className="leaf-row__name">{parish.patronSaint}</p>
+                      )}
+                      <p className="muted leaf-row__note">Patronal title of the parish</p>
                     </div>
-                  )}
-                </dl>
+                  </div>
+                ) : (
+                  <p className="detail__stat">{parish.feastDay}</p>
+                )}
               </section>
             )}
-          </div>
 
-          <aside className="stack">
-            <section className="card cta-card">
-              <p className="eyebrow">Online issuance</p>
-              <h2 className="cta-card__title">Request a document</h2>
-              <p className="muted">
-                Apply for a baptismal, confirmation, marriage or death certificate from this
-                parish. A request is pending until the office processes it and a priest approves
-                it.
-              </p>
-              <Link
-                to={`/user/parish/${parish.parishId}/request`}
-                className="btn btn--gold btn--block"
-              >
-                Open application form
-              </Link>
-            </section>
-
-            <section className="card">
-              <p className="eyebrow">Certificates</p>
-              <p className="muted">
-                Every certificate PATRON issues carries a reference and a QR code that anyone can
-                check without an account.
-              </p>
-              <Link to="/verify" className="btn btn--ghost btn--block">
-                Verify a document
-              </Link>
-            </section>
+            {parish.yearEstablished && (
+              <section className="card rail-card founded-row">
+                <div>
+                  <p className="eyebrow">
+                    <Icon name="hourglass" /> Founded
+                  </p>
+                  <p className="muted founded-row__sub">
+                    Established {parish.yearEstablished}
+                  </p>
+                </div>
+                <p className="stat">
+                  <b>{age}</b>
+                  <span>{age === 1 ? 'year' : 'years'}</span>
+                </p>
+              </section>
+            )}
           </aside>
         </div>
 
         <section className="card" aria-labelledby="parish-calendar-heading">
           <div className="panel__head">
             <div>
-              <p className="eyebrow">Parish calendar</p>
+              <p className="eyebrow">
+              <Icon name="calendar" /> Parish calendar
+            </p>
               <h2 id="parish-calendar-heading">{formatMonth(cursor.year, cursor.month)}</h2>
             </div>
-            <div className="panel__actions">
+            <div className="panel__actions month-nav">
               <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(-1)}>
-                Previous
+                ← Previous
               </button>
+              <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
+                Next →
+              </button>
+              <span className="month-nav__sep" aria-hidden="true" />
               <button
                 type="button"
-                className="btn btn--ghost"
+                className="btn"
                 onClick={() => {
                   const current = new Date()
                   setCursor({ year: current.getFullYear(), month: current.getMonth() })
@@ -269,9 +438,6 @@ export default function ChurchDetail() {
                 }}
               >
                 Today
-              </button>
-              <button type="button" className="btn btn--ghost" onClick={() => shiftMonth(1)}>
-                Next
               </button>
             </div>
           </div>
@@ -347,27 +513,10 @@ export default function ChurchDetail() {
           </div>
         </section>
 
-        {priests.length > 0 && (
-          <section className="card">
-            <p className="eyebrow">Priests</p>
-            <ul className="clergy">
-              {priests.map((priest) => (
-                <li key={priest.userId} className="clergy__row">
-                  <PriestPhoto
-                    parishId={parish.parishId}
-                    userId={priest.userId}
-                    name={priest.fullName}
-                    hasPhoto={priest.hasPhoto}
-                  />
-                  <span className="clergy__name">{priest.fullName}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
         <section className="card">
-          <p className="eyebrow">Announcements</p>
+          <p className="eyebrow">
+            <Icon name="book" /> Announcements
+          </p>
           {announcements.length === 0 ? (
             <p className="empty">This parish has no announcements right now.</p>
           ) : (

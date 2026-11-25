@@ -167,7 +167,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
             </p>
           )}
           <label className="field">
-            <span>Date</span>
+            <span>Date<b className="req">*</b></span>
             <input
               type="date"
               value={form.eventDate}
@@ -175,7 +175,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
             />
           </label>
           <label className="field">
-            <span>Start</span>
+            <span>Start<b className="req">*</b></span>
             <input
               type="time"
               value={form.startTime}
@@ -183,7 +183,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
             />
           </label>
           <label className="field">
-            <span>End</span>
+            <span>End<b className="req">*</b></span>
             <input
               type="time"
               value={form.endTime}
@@ -204,7 +204,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
           )}
 
           <label className="field">
-            <span>Assigned priest</span>
+            <span>Assigned priest{isSacramental && <b className="req">*</b>}</span>
             <select
               value={form.assignedPriestId}
               onChange={(e) => setForm((c) => ({ ...c, assignedPriestId: e.target.value }))}
@@ -250,7 +250,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
       {asking && (
         <div className="form-grid">
           <label className="field field--full">
-            <span>Reason (optional)</span>
+            <span>Reason</span>
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}

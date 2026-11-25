@@ -4,7 +4,7 @@ import { clean, requireEventType, requireSacramentType, requireTitle, optionalDe
 import { findActivePriest, listActivePriests } from '../parish/parish.queries.js'
 import { mintVerificationCode } from '../../lib/verificationCode.js'
 import { buildSnapshot, renderCertificatePdf } from '../documents/documents.services.js'
-import { findEventCertificates, findEventCertificate, findCertificateSignature } from '../documents/documents.queries.js'
+import { findEventCertificates, findEventCertificate, findCertificateMarks } from '../documents/documents.queries.js'
 import { roleFor, checkDates } from '../records/records.services.js'
 import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, countPriestEventsInMonth, findCalendarEvents, findReservedDates, findParishBlockDates } from './events.queries.js'
 import {completeEventAndIssue} from './events.issuance.js'
@@ -348,8 +348,8 @@ export async function getEventCertificatePdf(actor, { eventId, certificateId }) 
   })
   if (!certificate) throw new AppError('CERTIFICATE_NOT_FOUND', 404)
 
-  const signature = await findCertificateSignature(actor, certificate.certificateId)
-  return renderCertificatePdf(certificate, signature)
+  const marks = await findCertificateMarks(actor, certificate.certificateId)
+  return renderCertificatePdf(certificate, marks)
 }
 
 export async function suggestPriest(actor, query) {

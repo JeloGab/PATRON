@@ -1,6 +1,7 @@
 // The sysadmin registry: parishes, and the priests provisioned at each.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
 import Loading from '../../components/Loading.jsx'
@@ -23,6 +24,7 @@ function StatusPill({ status }) {
 
 export default function RegisteredParishes() {
   const navigate = useNavigate()
+  const { ask, notify } = useConfirm()
   const [parishes, setParishes] = useState([])
   const [priests, setPriests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -135,13 +137,14 @@ export default function RegisteredParishes() {
   }
 
   async function parishAction(parish, action) {
-    if (
-      action === 'deactivate' &&
-      !window.confirm(
-        `Deactivate ${parish.name}?\n\nIt disappears from the public directory, feed and calendar, and its priests and managers are signed out. Open certificate requests must be settled first.`,
-      )
-    ) {
-      return
+    if (action === 'deactivate') {
+      const ok = await ask({
+        title: `Deactivate ${parish.name}?`,
+        message:
+          'It disappears from the public directory, feed and calendar, and its priests and managers are signed out. Open certificate requests must be settled first.',
+        confirmLabel: 'Deactivate',
+      })
+      if (!ok) return
     }
 
     setBusyParishId(parish.parishId)
@@ -167,7 +170,14 @@ export default function RegisteredParishes() {
   }
 
   async function priestAction(priest, action) {
-    if (action === 'deactivate' && !window.confirm(`Deactivate ${priest.fullName}?`)) return
+    if (action === 'deactivate') {
+      const ok = await ask({
+        title: 'Deactivate priest',
+        message: `Deactivate ${priest.fullName}? Their approvals stay on record and they are signed out.`,
+        confirmLabel: 'Deactivate',
+      })
+      if (!ok) return
+    }
     setBusyUserId(priest.userId)
     const result = await authed({
       method: 'POST',
@@ -186,9 +196,11 @@ export default function RegisteredParishes() {
 
     await load()
     if (action === 'reset-password') {
-      window.alert(
-        `Temporary password for ${priest.fullName}:\n\n${result.json.tempPassword}\n\nShown once. They must change it at next sign in.`,
-      )
+      await notify({
+        title: 'Temporary password',
+        message: `Give this to ${priest.fullName}. It is shown once, and they must change it at next sign in.`,
+        copyText: result.json.tempPassword,
+      })
       return
     }
     showNotice(

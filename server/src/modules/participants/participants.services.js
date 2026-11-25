@@ -4,8 +4,10 @@ import { clean, requireSubjectName, requireGender, optionalContact, optionalPast
 import { findEvent } from '../events/events.queries.js'
 import { findRecord } from '../records/records.queries.js'
 import { findParticipant, findParticipants, insertParticipant, updateParticipant, setParticipantStatus,  materialiseRequirements, findRequirements, findRequirement, updateRequirement,
-  findMatchingRecordIds, clearParticipant, } from './participants.queries.js'
+  findMatchingRecordIds, clearParticipant, findSeminarAttendance, } from './participants.queries.js'
 
+const MAX_SEARCH_WORDS = 5
+const SEMINAR_RESULT_LIMIT = 20
 const NEEDS_BIRTH_DATE = ['baptism', 'confirmation']
 const NEEDS_CONTACT = ['seminar', 'general']
 const FINAL_EVENT_STATUSES = ['rejected', 'cancelled', 'completed']
@@ -158,6 +160,17 @@ export async function listRequirements(actor, participantId) {
   const id = requireId(participantId, 'INVALID_PARTICIPANT_ID')
   await loadParticipant(actor, id)
   return findRequirements(actor, id)
+}
+
+// Evidence for a seminar requirement, which no register holds. Read-only: it answers
+// "was this name on a seminar roster, and which seminar" and nothing more. The manager
+// still decides, so the status it leads to is `verified` - never `auto_verified`, which
+// means the system matched name AND birth date against the register.
+export async function searchSeminarAttendance(actor, query) {
+  const words = clean(query?.name).split(/\s+/).filter(Boolean).slice(0, MAX_SEARCH_WORDS)
+  if (words.length === 0) throw new AppError('MISSING_FIELDS', 400)
+
+  return findSeminarAttendance(actor, { words, limit: SEMINAR_RESULT_LIMIT })
 }
 
 export async function decideRequirement(actor, participantId, requirementId, body) {

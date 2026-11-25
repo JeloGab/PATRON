@@ -1,6 +1,7 @@
 // Blocked dates: 'parish' closes the day for all, 'priest' for one. Saving warns.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useConfirm } from './ConfirmProvider.jsx'
 import Loading from './Loading.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { formatLongDate, formatWeekdayDate, isoOffset, todayISO } from '../lib/dates.js'
@@ -11,6 +12,7 @@ const LIST_DAYS = 91
 
 export default function BlockDates({ scope, priests = [], selfId, selfName, onSessionEnd }) {
   const isParishScope = scope === 'parish'
+  const { ask } = useConfirm()
   const [form, setForm] = useState({
     type: isParishScope ? 'parish' : 'priest',
     priestId: selfId ?? '',
@@ -123,7 +125,12 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
   }
 
   async function remove(block) {
-    if (!window.confirm(`Remove the block on ${formatLongDate(block.date)}?`)) return
+    const ok = await ask({
+      title: 'Remove block',
+      message: `Remove the block on ${formatLongDate(block.date)}?`,
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setBusyId(block.blockedDateId)
     setError('')
     setNotice('')
@@ -180,7 +187,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
         <div className="form-grid">
           {isParishScope && (
             <label className="field">
-              <span>Scope *</span>
+              <span>Scope<b className="req">*</b></span>
               <select value={form.type} onChange={update('type')}>
                 <option value="parish">The whole parish</option>
                 <option value="priest">One priest only</option>
@@ -195,7 +202,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
           {form.type === 'priest' &&
             (isParishScope ? (
               <label className="field">
-                <span>Priest *</span>
+                <span>Priest<b className="req">*</b></span>
                 <select value={form.priestId} onChange={update('priestId')}>
                   <option value="">Choose…</option>
                   {priests.map((priest) => (
@@ -214,7 +221,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
             ))}
 
           <label className="field">
-            <span>From *</span>
+            <span>From<b className="req">*</b></span>
             <input
               type="date"
               value={form.fromDate}

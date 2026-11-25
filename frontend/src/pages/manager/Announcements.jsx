@@ -1,12 +1,18 @@
 // The office's announcements: compose, edit and attach images until a priest approves.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
+import FacebookSync from '../../components/FacebookSync.jsx'
 import Loading from '../../components/Loading.jsx'
+import Modal from '../../components/Modal.jsx'
+import PhotoDrop from '../../components/PhotoDrop.jsx'
 import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
+  IMAGE_ACCEPT,
+  MAX_IMAGES,
+  MAX_IMAGE_BYTES,
   STATUSES,
   STATUS_HINT,
   STATUS_LABEL,
@@ -27,11 +33,13 @@ export default function Announcements() {
   const [status, setStatus] = useState('pending')
   const [draft, setDraft] = useState(EMPTY)
   const [composing, setComposing] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [openId, setOpenId] = useState(null)
+  const [detailId, setDetailId] = useState(null)
+  const [staged, setStaged] = useState([])
+  const [formError, setFormError] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState('')
+  const stagedUrls = useRef([])
 
   const endSession = useCallback(() => {
     clearSession()
@@ -57,6 +65,13 @@ export default function Announcements() {
     load()
   }, [load])
 
+  useEffect(
+    () => () => {
+      stagedUrls.current.forEach((url) => URL.revokeObjectURL(url))
+    },
+    [],
+  )
+
   const rows = useMemo(
     () => (announcements ?? []).filter((item) => item.status === status),
     [announcements, status],
@@ -67,51 +82,187 @@ export default function Announcements() {
     return map
   }, [announcements])
 
+  const detail = useMemo(
+    () => (announcements ?? []).find((item) => item.announcementId === detailId) ?? null,
+    [announcements, detailId],
+  )
+  const editable = detail ? isOpen(detail) : true
+
+  function clearStaged() {
+    staged.forEach((item) => URL.revokeObjectURL(item.url))
+    stagedUrls.current = stagedUrls.current.filter((url) => !staged.some((i) => i.url === url))
+    setStaged([])
+  }
+
+  function openCompose() {
+    setDraft(EMPTY)
+    setDetailId(null)
+    setFormError('')
+    clearStaged()
+    setComposing(true)
+  }
+
+  function openDetail(item) {
+    setDraft({ title: item.title, content: item.content })
+    setComposing(false)
+    setFormError('')
+    clearStaged()
+    setDetailId(item.announcementId)
+  }
+
   function closeForm() {
     setComposing(false)
-    setEditingId(null)
+    setDetailId(null)
     setDraft(EMPTY)
+    setFormError('')
+    clearStaged()
+  }
+
+  function stage(files) {
+    setFormError('')
+    const room = MAX_IMAGES - staged.length
+    if (room <= 0) {
+      setFormError(`Up to ${MAX_IMAGES} images.`)
+      return
+    }
+
+    const accepted = []
+    for (const file of Array.from(files).slice(0, room)) {
+      if (file.size > MAX_IMAGE_BYTES) {
+        setFormError(`${file.name} is larger than 2 MB.`)
+        continue
+      }
+      if (!IMAGE_ACCEPT.split(',').includes(file.type)) {
+        setFormError('Announcement images must be JPEG or PNG.')
+        continue
+      }
+      const url = URL.createObjectURL(file)
+      stagedUrls.current.push(url)
+      accepted.push({ id: `${file.name}-${file.size}-${Math.random()}`, file, url })
+    }
+    if (accepted.length > 0) setStaged((current) => [...current, ...accepted])
+  }
+
+  function unstage(id) {
+    setStaged((current) => {
+      const gone = current.find((item) => item.id === id)
+      if (gone) URL.revokeObjectURL(gone.url)
+      return current.filter((item) => item.id !== id)
+    })
+  }
+
+  async function uploadImage(announcementId, file) {
+    return authed({
+      method: 'POST',
+      path: `/api/announcements/${announcementId}/images`,
+      raw: file,
+      headers: {
+        'Content-Type': file.type,
+        'X-File-Name': encodeURIComponent(file.name),
+      },
+    })
   }
 
   async function submit(submitEvent) {
     submitEvent.preventDefault()
-    setError('')
+    setFormError('')
     setNotice('')
 
     const title = draft.title.trim()
     const content = draft.content.trim()
     if (!title || !content) {
-      setError('Give the announcement a title and a message.')
+      setFormError('Give the announcement a title and a message.')
       return
     }
 
     setBusy('save')
-    const r = editingId
-      ? await authed({
-          method: 'PATCH',
-          path: `/api/announcements/${editingId}`,
-          body: { title, content },
-        })
-      : await authed({ method: 'POST', path: '/api/announcements', body: { title, content } })
-    setBusy('')
 
-    if (isSessionError(r)) {
+    if (detailId) {
+      const r = await authed({
+        method: 'PATCH',
+        path: `/api/announcements/${detailId}`,
+        body: { title, content },
+      })
+      setBusy('')
+
+      if (isSessionError(r)) {
+        endSession()
+        return
+      }
+      if (!r.ok) {
+        setFormError(messageFor(r))
+        return
+      }
+
+      setNotice('The announcement was updated.')
+      closeForm()
+      load()
+      return
+    }
+
+    const created = await authed({
+      method: 'POST',
+      path: '/api/announcements',
+      body: { title, content },
+    })
+
+    if (isSessionError(created)) {
+      setBusy('')
       endSession()
       return
     }
-    if (!r.ok) {
-      setError(messageFor(r))
+    if (!created.ok) {
+      setBusy('')
+      setFormError(messageFor(created))
       return
     }
 
-    setNotice(
-      editingId
-        ? 'The announcement was updated.'
-        : 'Submitted for the priest to approve. It is not on the public feed yet.',
-    )
+    const announcementId = created.json.announcement.announcementId
+    const failed = []
+
+    for (const item of staged) {
+      const r = await uploadImage(announcementId, item.file)
+      if (isSessionError(r)) {
+        setBusy('')
+        endSession()
+        return
+      }
+      if (!r.ok) failed.push(item.file.name)
+    }
+
+    setBusy('')
     closeForm()
     setStatus('pending')
     load()
+
+    if (failed.length === 0) {
+      setNotice(
+        staged.length === 0
+          ? 'Submitted for the priest to approve. It is not on the public feed yet.'
+          : `Submitted for the priest to approve, with ${staged.length} image${
+              staged.length === 1 ? '' : 's'
+            }. It is not on the public feed yet.`,
+      )
+      return
+    }
+
+    setError(
+      `The announcement was submitted, but ${failed.length} image${
+        failed.length === 1 ? '' : 's'
+      } could not be attached (${failed.join(', ')}). Open it and try again — images can still be changed until a priest approves it.`,
+    )
+  }
+
+  // The sync route answers with getAnnouncement(), whose column list carries no
+  // image_count — so imageCount arrives as 0 and the image controls would disappear.
+  function patch(next) {
+    setAnnouncements((list) =>
+      (list ?? []).map((item) =>
+        item.announcementId === next.announcementId
+          ? { ...item, ...next, imageCount: item.imageCount }
+          : item,
+      ),
+    )
   }
 
   async function act(announcement, action) {
@@ -153,16 +304,8 @@ export default function Announcements() {
             <strong>{announcements ? counts.pending : '—'}</strong>
             waiting on a priest
           </p>
-          <button
-            type="button"
-            className="btn btn--gold"
-            onClick={() => {
-              setDraft(EMPTY)
-              setEditingId(null)
-              setComposing((open) => !open)
-            }}
-          >
-            {composing ? 'Close' : 'New announcement'}
+          <button type="button" className="btn btn--gold" onClick={openCompose}>
+            New announcement
           </button>
         </div>
       </header>
@@ -174,49 +317,6 @@ export default function Announcements() {
         </p>
       )}
 
-      {(composing || editingId) && (
-        <form className="card editor" onSubmit={submit}>
-          <p className="eyebrow">{editingId ? 'Edit announcement' : 'New announcement'}</p>
-          <div className="form-grid">
-            <label className="field field--full">
-              <span>Title *</span>
-              <input
-                value={draft.title}
-                onChange={(changed) =>
-                  setDraft((current) => ({ ...current, title: changed.target.value }))
-                }
-                placeholder="e.g. Schedule of Simbang Gabi"
-              />
-            </label>
-            <label className="field field--full">
-              <span>Message *</span>
-              <textarea
-                rows={6}
-                value={draft.content}
-                onChange={(changed) =>
-                  setDraft((current) => ({ ...current, content: changed.target.value }))
-                }
-                placeholder="Written for parishioners. No names or personal details — the feed is public."
-              />
-            </label>
-          </div>
-          <div className="form-actions">
-            <p className="muted form-hint">
-              The feed is public and unauthenticated, so it carries no personal details of any
-              parishioner.
-            </p>
-            <div className="form-actions__buttons">
-              <button type="button" className="btn btn--ghost" onClick={closeForm}>
-                Cancel
-              </button>
-              <button type="submit" className="btn btn--gold" disabled={busy === 'save'}>
-                {busy === 'save' ? 'Saving…' : editingId ? 'Save changes' : 'Submit for approval'}
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
-
       <Seg label="Announcement status">
         {TABS.map((tab) => (
           <button
@@ -224,10 +324,7 @@ export default function Announcements() {
             type="button"
             className={`seg__btn ${status === tab ? 'is-active' : ''}`}
             aria-pressed={status === tab}
-            onClick={() => {
-              setStatus(tab)
-              setOpenId(null)
-            }}
+            onClick={() => setStatus(tab)}
           >
             {STATUS_LABEL[tab]}
             {announcements && counts[tab] > 0 ? ` (${counts[tab]})` : ''}
@@ -260,27 +357,12 @@ export default function Announcements() {
               <p className="muted">{STATUS_HINT[item.status]}</p>
               {item.statusReason && <p className="alert">Reason: {item.statusReason}</p>}
 
+              <FacebookSync announcement={item} onChanged={patch} onSessionEnd={endSession} />
+
               <div className="form-actions__buttons">
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  onClick={() => setOpenId(openId === item.announcementId ? null : item.announcementId)}
-                >
-                  {openId === item.announcementId ? 'Hide images' : 'Images'}
+                <button type="button" className="btn btn--ghost" onClick={() => openDetail(item)}>
+                  {isOpen(item) ? 'Open' : 'View images'}
                 </button>
-                {isOpen(item) && (
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={() => {
-                      setDraft({ title: item.title, content: item.content })
-                      setEditingId(item.announcementId)
-                      setComposing(false)
-                    }}
-                  >
-                    Edit
-                  </button>
-                )}
                 {canArchive(item, 'manager') && (
                   <button
                     type="button"
@@ -292,19 +374,123 @@ export default function Announcements() {
                   </button>
                 )}
               </div>
-
-              {openId === item.announcementId && (
-                <AnnouncementImages
-                  announcement={item}
-                  canWrite={isOpen(item)}
-                  onChanged={load}
-                  onSessionEnd={endSession}
-                />
-              )}
             </li>
           ))}
         </ul>
       )}
+
+      <Modal
+        title={composing ? 'New announcement' : editable ? 'Edit announcement' : detail?.title || ''}
+        open={composing || Boolean(detail)}
+        onClose={closeForm}
+      >
+        <form className="editor" onSubmit={submit}>
+          {formError && (
+            <p className="alert" role="alert">
+              {formError}
+            </p>
+          )}
+
+          {editable ? (
+            <div className="form-grid">
+              <label className="field field--full">
+                <span>Title<b className="req">*</b></span>
+                <input
+                  value={draft.title}
+                  onChange={(changed) =>
+                    setDraft((current) => ({ ...current, title: changed.target.value }))
+                  }
+                  placeholder="e.g. Schedule of Simbang Gabi"
+                />
+              </label>
+              <label className="field field--full">
+                <span>Message<b className="req">*</b></span>
+                <textarea
+                  rows={6}
+                  value={draft.content}
+                  onChange={(changed) =>
+                    setDraft((current) => ({ ...current, content: changed.target.value }))
+                  }
+                  placeholder="Written for parishioners. No names or personal details — the feed is public."
+                />
+              </label>
+            </div>
+          ) : (
+            <p className="feed__body">{detail?.content}</p>
+          )}
+
+          {detail ? (
+            <AnnouncementImages
+              announcement={detail}
+              canWrite={editable}
+              onChanged={load}
+              onSessionEnd={endSession}
+            />
+          ) : (
+            <>
+              <h3 className="eyebrow">Images</h3>
+              {staged.length === 0 ? (
+                <p className="empty">No image attached.</p>
+              ) : (
+                <ul className="priest-list">
+                  {staged.map((item) => (
+                    <li key={item.id} className="priest-list__row">
+                      <div>
+                        <strong>{item.file.name}</strong>
+                        <p className="muted">
+                          {item.file.type} · {Math.max(1, Math.round(item.file.size / 1024))} KB
+                        </p>
+                        <img className="feed__image" src={item.url} alt={item.file.name} />
+                      </div>
+                      <div className="form-actions__buttons">
+                        <button
+                          type="button"
+                          className="btn btn--ghost priest-list__remove"
+                          onClick={() => unstage(item.id)}
+                          disabled={busy === 'save'}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <PhotoDrop
+                onFiles={stage}
+                accept={IMAGE_ACCEPT}
+                multiple
+                disabled={staged.length >= MAX_IMAGES || busy === 'save'}
+                lead="Drag an image here"
+                hint={`JPEG or PNG, up to 2 MB. ${
+                  MAX_IMAGES - staged.length
+                } of ${MAX_IMAGES} remaining. They are attached when the announcement is submitted.`}
+              />
+            </>
+          )}
+
+          <div className="form-actions">
+            <p className="muted form-hint">
+              The feed is public and unauthenticated, so it carries no personal details of any
+              parishioner.
+            </p>
+            <div className="form-actions__buttons">
+              <button type="button" className="btn btn--ghost" onClick={closeForm}>
+                {editable ? 'Cancel' : 'Close'}
+              </button>
+              {editable && (
+                <button type="submit" className="btn btn--gold" disabled={busy === 'save'}>
+                  {busy === 'save'
+                    ? 'Saving…'
+                    : detailId
+                      ? 'Save changes'
+                      : 'Submit for approval'}
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

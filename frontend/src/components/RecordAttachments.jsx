@@ -1,12 +1,14 @@
 // Ledger photos on a saved entry: raw-body upload, bytes fetched with the token.
 
 import { useEffect, useRef, useState } from 'react'
+import { useConfirm } from './ConfirmProvider.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { messageFor } from '../lib/errors.js'
 import { checkPhoto, contentTypeFor, MAX_PER_RECORD } from '../lib/fileCheck.js'
 import PhotoDrop from './PhotoDrop.jsx'
 
 export default function RecordAttachments({ record, canWrite, onRecordChange, onSessionEnd }) {
+  const { ask } = useConfirm()
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -91,7 +93,12 @@ export default function RecordAttachments({ record, canWrite, onRecordChange, on
   }
 
   async function remove(attachment) {
-    if (!window.confirm(`Remove ${attachment.fileName}?`)) return
+    const ok = await ask({
+      title: 'Remove ledger photo',
+      message: `Remove ${attachment.fileName}?`,
+      confirmLabel: 'Remove',
+    })
+    if (!ok) return
     setBusyId(attachment.attachmentId)
     setError('')
     const r = await authed({

@@ -121,7 +121,7 @@ export default function StaffProvisionModal({
           )}
 
           <label className="field field--full">
-            <span>Full name</span>
+            <span>Full name<b className="req">*</b></span>
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}

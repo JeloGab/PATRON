@@ -186,7 +186,7 @@ export default function CompleteEventModal({ event, participants, signatory, onC
               <h3 className="eyebrow">Register</h3>
               <div className="form-grid">
                 <label className="field">
-                  <span>Book *</span>
+                  <span>Book<b className="req">*</b></span>
                   <input
                     value={registry.bookNo}
                     onChange={(changed) =>
@@ -196,7 +196,7 @@ export default function CompleteEventModal({ event, participants, signatory, onC
                   />
                 </label>
                 <label className="field">
-                  <span>Page *</span>
+                  <span>Page<b className="req">*</b></span>
                   <input
                     value={registry.pageNo}
                     onChange={(changed) =>
@@ -289,7 +289,13 @@ export default function CompleteEventModal({ event, participants, signatory, onC
                 className="btn btn--gold"
                 disabled={pending || signatoryBlocked}
               >
-                {pending ? 'Writing the register…' : 'Complete and issue'}
+                {pending
+                  ? sacramental
+                    ? 'Writing the register…'
+                    : 'Completing…'
+                  : sacramental
+                    ? 'Complete and issue'
+                    : 'Mark complete'}
               </button>
             </div>
           </div>

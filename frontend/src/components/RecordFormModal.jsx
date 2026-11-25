@@ -2,6 +2,12 @@
 
 import { useState } from 'react'
 import { checkPhoto } from '../lib/fileCheck.js'
+import {
+  OFFICIANT_MAX,
+  OFFICIANT_TITLES,
+  joinOfficiant,
+  officiantNameLimit,
+} from '../lib/officiant.js'
 import Modal from './Modal.jsx'
 import PhotoDrop from './PhotoDrop.jsx'
 
@@ -33,6 +39,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
   const [entryNo, setEntryNo] = useState('')
   const [recordDate, setRecordDate] = useState('')
   const [dateOfDeath, setDateOfDeath] = useState('')
+  const [officiantTitle, setOfficiantTitle] = useState('Rev. Fr.')
   const [officiantName, setOfficiantName] = useState('')
   const [subjects, setSubjects] = useState([emptySubject()])
   const [photo, setPhoto] = useState(null)
@@ -49,6 +56,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
     setEntryNo('')
     setRecordDate('')
     setDateOfDeath('')
+    setOfficiantTitle('Rev. Fr.')
     setOfficiantName('')
     setSubjects([emptySubject()])
     setPhoto(null)
@@ -106,6 +114,10 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
       setError("The officiant's name is required.")
       return
     }
+    if (joinOfficiant(officiantTitle, officiantName).length > OFFICIANT_MAX) {
+      setError(`The title and name together cannot be longer than ${OFFICIANT_MAX} characters.`)
+      return
+    }
     if (subjects.some((row) => !row.fullName.trim())) {
       setError('Every subject needs a full name.')
       return
@@ -132,7 +144,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
       pageNo: pageNo.trim(),
       entryNo: entryNo.trim(),
       recordDate,
-      officiantName: officiantName.trim(),
+      officiantName: joinOfficiant(officiantTitle, officiantName),
       subjects: subjects.map((row) => {
         const subject = { fullName: row.fullName.trim(), gender: row.gender }
         if (row.dateOfBirth) subject.dateOfBirth = row.dateOfBirth
@@ -171,7 +183,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
         )}
 
         <label className="field">
-          <span>Register</span>
+          <span>Register<b className="req">*</b></span>
           <select value={recordType} onChange={(e) => changeType(e.target.value)}>
             {RECORD_TYPES.map((item) => (
               <option key={item.value} value={item.value}>
@@ -182,39 +194,55 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
         </label>
 
         <label className="field">
-          <span>Date of sacrament</span>
+          <span>Date of sacrament<b className="req">*</b></span>
           <input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)} />
         </label>
 
         <label className="field">
-          <span>Book no.</span>
+          <span>Book no.<b className="req">*</b></span>
           <input value={bookNo} onChange={(e) => setBookNo(e.target.value)} placeholder="XII" />
         </label>
         <label className="field">
-          <span>Page no.</span>
+          <span>Page no.<b className="req">*</b></span>
           <input value={pageNo} onChange={(e) => setPageNo(e.target.value)} placeholder="48" />
         </label>
         <label className="field">
-          <span>Entry no.</span>
+          <span>Entry no.<b className="req">*</b></span>
           <input value={entryNo} onChange={(e) => setEntryNo(e.target.value)} placeholder="12" />
         </label>
 
-        <label className="field field--full">
-          <span>Officiant</span>
-          <input
-            value={officiantName}
-            onChange={(e) => setOfficiantName(e.target.value)}
-            placeholder="Rev. Fr. Juan dela Cruz"
-          />
+        <div className="field field--full">
+          <span>Officiant<b className="req">*</b></span>
+          <div className="officiant-row">
+            <select
+              aria-label="Officiant's title"
+              value={officiantTitle}
+              onChange={(e) => setOfficiantTitle(e.target.value)}
+            >
+              <option value="">No title</option>
+              {OFFICIANT_TITLES.map((title) => (
+                <option key={title} value={title}>
+                  {title}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Officiant's name"
+              value={officiantName}
+              onChange={(e) => setOfficiantName(e.target.value)}
+              maxLength={officiantNameLimit(officiantTitle)}
+              placeholder="Juan dela Cruz"
+            />
+          </div>
           <span className="form-hint">
-            Free text, not a list of current priests — old ledgers name priests who were never in
-            the system.
+            The name is free text, not a list of current priests — old ledgers name priests who
+            were never in the system. Choose <em>No title</em> to type the whole thing yourself.
           </span>
-        </label>
+        </div>
 
         {recordType === 'death' && (
           <label className="field field--full">
-            <span>Date of death (optional)</span>
+            <span>Date of death</span>
             <input
               type="date"
               value={dateOfDeath}
@@ -230,7 +258,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
             </legend>
             <div className="form-grid">
               <label className="field field--full">
-                <span>Full name</span>
+                <span>Full name<b className="req">*</b></span>
                 <input
                   value={row.fullName}
                   onChange={(e) => updateSubject(index, { fullName: e.target.value })}
@@ -238,7 +266,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
               </label>
 
               <label className="field">
-                <span>Gender</span>
+                <span>Gender<b className="req">*</b></span>
                 <select
                   value={row.gender}
                   onChange={(e) => updateSubject(index, { gender: e.target.value })}
@@ -254,7 +282,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
               </label>
 
               <label className="field">
-                <span>Date of birth{needsBirthDate ? '' : ' (optional)'}</span>
+                <span>Date of birth{needsBirthDate && <b className="req">*</b>}</span>
                 <input
                   type="date"
                   value={row.dateOfBirth}
@@ -263,7 +291,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
               </label>
 
               <label className="field field--full">
-                <span>Place of birth (optional)</span>
+                <span>Place of birth</span>
                 <input
                   value={row.placeOfBirth}
                   onChange={(e) => updateSubject(index, { placeOfBirth: e.target.value })}
@@ -271,14 +299,14 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
               </label>
 
               <label className="field">
-                <span>Father (optional)</span>
+                <span>Father</span>
                 <input
                   value={row.fatherName}
                   onChange={(e) => updateSubject(index, { fatherName: e.target.value })}
                 />
               </label>
               <label className="field">
-                <span>Mother (optional)</span>
+                <span>Mother</span>
                 <input
                   value={row.motherName}
                   onChange={(e) => updateSubject(index, { motherName: e.target.value })}
@@ -286,7 +314,7 @@ export default function RecordFormModal({ open, onClose, onCreate }) {
               </label>
 
               <label className="field field--full">
-                <span>Sponsors (optional)</span>
+                <span>Sponsors</span>
                 <input
                   value={row.sponsorNames}
                   onChange={(e) => updateSubject(index, { sponsorNames: e.target.value })}

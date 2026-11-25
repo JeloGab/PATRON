@@ -3,10 +3,14 @@ import { withActor } from '../../db/withTenant.js'
 
 const COLUMNS = `parish_id, name, address, contact_no, email,
                  facebook_page_id, status, created_at, photo_content_type,
-                 office_hours, mass_schedule`
+                 office_hours, mass_schedule,
+                 patron_saint, feast_day, year_established, history,
+                 seal_content_type,
+                 public.current_parish_has_page_token() as has_facebook_token`
 
 const DIRECTORY_COLUMNS = `parish_id, name, address, contact_no, email,
-                           office_hours, mass_schedule`
+                           office_hours, mass_schedule,
+                           patron_saint, feast_day, year_established, history`
 
 const EDITABLE = [
   ['name', 'name'],
@@ -16,6 +20,10 @@ const EDITABLE = [
   ['facebookPageId', 'facebook_page_id'],
   ['officeHours', 'office_hours'],
   ['massSchedule', 'mass_schedule'],
+  ['patronSaint', 'patron_saint'],
+  ['feastDay', 'feast_day'],
+  ['yearEstablished', 'year_established'],
+  ['history', 'history'],
 ]
 
 function mapParish(row) {
@@ -31,6 +39,12 @@ function mapParish(row) {
     hasPhoto: row.photo_content_type !== null && row.photo_content_type !== undefined,
     officeHours: row.office_hours,
     massSchedule: row.mass_schedule,
+    patronSaint: row.patron_saint,
+    feastDay: row.feast_day,
+    yearEstablished: row.year_established,
+    history: row.history,
+    hasSeal: row.seal_content_type !== null && row.seal_content_type !== undefined,
+    hasFacebookToken: row.has_facebook_token === true,
   }
 }
 
@@ -43,6 +57,10 @@ function mapDirectoryEntry(row) {
     email: row.email,
     officeHours: row.office_hours,
     massSchedule: row.mass_schedule,
+    patronSaint: row.patron_saint,
+    feastDay: row.feast_day,
+    yearEstablished: row.year_established,
+    history: row.history,
   }
 }
 
@@ -85,6 +103,72 @@ export async function clearParishPhoto(actor) {
         where parish_id = public.current_parish_id()`
     )
     return rowCount
+  })
+}
+
+export async function setParishPageToken(actor, token) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_token = $1
+        where parish_id = public.current_parish_id()`,
+      [token]
+    )
+    return rowCount
+  })
+}
+
+export async function clearParishPageToken(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_token = null
+        where parish_id = public.current_parish_id()`
+    )
+    return rowCount
+  })
+}
+
+// Cleared on any CHANGE of page, not only on a clear. The token authorises exactly one
+// page, so keeping it across a change left posts going to the old page while the profile
+// named the new one. `is distinct from` because either side can be null, and one
+// statement rather than a read-then-compare so two saves cannot interleave. A rowCount
+// of 0 means the page did not change, which is the ordinary case and not an error.
+export async function clearParishPageTokenIfPageChanged(actor, nextPageId) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_token = null
+        where parish_id = public.current_parish_id()
+          and facebook_page_id is distinct from $1`,
+      [nextPageId]
+    )
+    return rowCount
+  })
+}
+
+// Both columns in ONE statement, because parish_page_token_needs_page forbids a token
+// with no page - writing them separately would either violate the constraint or leave a
+// window where the parish has a token for a page it does not name.
+export async function setParishPageConnection(actor, { pageId, token }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set facebook_page_id = $1,
+              facebook_page_token = $2
+        where parish_id = public.current_parish_id()`,
+      [pageId, token]
+    )
+    return rowCount
+  })
+}
+
+// The security definer function is the only thing in the database that can see the
+// column; patron_app cannot select it.
+export async function findOwnPageToken(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query('select public.current_parish_page_token() as token')
+    return rows[0]?.token ?? null
   })
 }
 
@@ -189,4 +273,115 @@ export async function findPublicClergyPhoto(parishId, userId) {
   )
   if (rows.length === 0) return null
   return { contentType: rows[0].photo_content_type, content: rows[0].photo }
+}
+
+export async function setParishSeal(actor, { contentType, content }) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set seal = $1,
+              seal_content_type = $2
+        where parish_id = public.current_parish_id()`,
+      [content, contentType]
+    )
+    return rowCount
+  })
+}
+
+export async function clearParishSeal(actor) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `update public.parish
+          set seal = null,
+              seal_content_type = null
+        where parish_id = public.current_parish_id()`
+    )
+    return rowCount
+  })
+}
+
+export async function findPublicParishSeal(parishId) {
+  const { rows } = await pool.query(
+    `select seal_content_type, seal
+       from public.parish_seal_public
+      where parish_id = $1`,
+    [parishId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].seal_content_type, content: rows[0].seal }
+}
+
+function mapGalleryImage(row) {
+  return {
+    imageId: row.image_id,
+    fileName: row.file_name,
+    contentType: row.content_type,
+    byteSize: row.byte_size,
+    uploadedAt: row.uploaded_at,
+  }
+}
+
+const GALLERY_LIST = `select image_id, file_name, content_type, byte_size, uploaded_at
+                        from public.parish_gallery_image
+                       order by uploaded_at, image_id`
+
+export async function listGalleryImages(actor) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(GALLERY_LIST)
+    return rows.map(mapGalleryImage)
+  })
+}
+
+export async function insertGalleryImage(actor, { fileName, contentType, content, max }) {
+  return withActor(actor, async (client) => {
+    const counted = await client.query(
+      `select count(*)::int as total from public.parish_gallery_image`
+    )
+    if (counted.rows[0].total >= max) return { full: true, images: null }
+
+    await client.query(
+      `insert into public.parish_gallery_image
+         (parish_id, file_name, content_type, byte_size, content, uploaded_by)
+       values (public.current_parish_id(), $1, $2, $3, $4, public.current_user_id())`,
+      [fileName, contentType, content.length, content]
+    )
+
+    const { rows } = await client.query(GALLERY_LIST)
+    return { full: false, images: rows.map(mapGalleryImage) }
+  })
+}
+
+export async function deleteGalleryImage(actor, imageId) {
+  return withActor(actor, async (client) => {
+    const { rowCount } = await client.query(
+      `delete from public.parish_gallery_image where image_id = $1`,
+      [imageId]
+    )
+    if (rowCount === 0) return null
+
+    const { rows } = await client.query(GALLERY_LIST)
+    return rows.map(mapGalleryImage)
+  })
+}
+
+export async function listPublicGalleryIds(parishId) {
+  const { rows } = await pool.query(
+    `select image_id
+       from public.parish_gallery_public
+      where parish_id = $1
+      order by uploaded_at, image_id`,
+    [parishId]
+  )
+  return rows.map((row) => row.image_id)
+}
+
+export async function findPublicGalleryImage(parishId, imageId) {
+  const { rows } = await pool.query(
+    `select content_type, content
+       from public.parish_gallery_public
+      where parish_id = $1 and image_id = $2`,
+    [parishId, imageId]
+  )
+  if (rows.length === 0) return null
+  return { contentType: rows[0].content_type, content: rows[0].content }
 }

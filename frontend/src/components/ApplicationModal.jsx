@@ -414,7 +414,7 @@ export default function ApplicationModal({ request, role, onClose, onChange, onS
       {canReject && rejecting && (
         <div className="form-grid">
           <label className="field field--full">
-            <span>Reason (optional)</span>
+            <span>Reason</span>
             <input
               value={reason}
               onChange={(event) => setReason(event.target.value)}

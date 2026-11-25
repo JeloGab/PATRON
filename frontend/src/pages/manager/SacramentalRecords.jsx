@@ -98,8 +98,9 @@ export default function SacramentalRecords() {
   )
 
   useEffect(() => {
-    search(1)
-  }, [])
+    const timer = window.setTimeout(() => search(1), 300)
+    return () => window.clearTimeout(timer)
+  }, [search])
 
   async function openRecord(recordId) {
     setDetailLoading(true)
@@ -185,16 +186,8 @@ export default function SacramentalRecords() {
         </p>
       )}
 
-      {canWrite && (
-        <div className="page__actions">
-          <button type="button" className="btn btn--gold" onClick={() => setCreateOpen(true)}>
-            Encode entry
-          </button>
-        </div>
-      )}
-
       <section className="panel">
-        <form className="filters" onSubmit={onSubmitSearch}>
+        <form className="filters filters--action" onSubmit={onSubmitSearch}>
           <label className="field filters__search">
             <span>Subject name</span>
             <input
@@ -214,9 +207,17 @@ export default function SacramentalRecords() {
               ))}
             </select>
           </label>
-          <button type="submit" className="btn" disabled={loading}>
-            {loading ? 'Searching…' : 'Search'}
-          </button>
+          {canWrite && (
+            <div className="filters__actions">
+              <button
+                type="button"
+                className="btn btn--gold"
+                onClick={() => setCreateOpen(true)}
+              >
+                Encode entry
+              </button>
+            </div>
+          )}
         </form>
 
         {results.length === 0 ? (
