@@ -11,9 +11,17 @@ function initial(name) {
   return letter || '✝'
 }
 
-export default function PriestPhoto({ parishId, userId, name, hasPhoto = false, variant = 'row' }) {
-  const [failed, setFailed] = useState(false)
-  const show = hasPhoto && parishId && userId && !failed
+export default function PriestPhoto({
+  parishId,
+  userId,
+  name,
+  hasPhoto = false,
+  variant = 'row',
+  version,
+}) {
+  const [failedKey, setFailedKey] = useState(null)
+  const key = `${parishId ?? ''}:${userId ?? ''}:${version ?? ''}`
+  const show = hasPhoto && parishId && userId && failedKey !== key
   const band = variant === 'band'
 
   if (!show) {
@@ -27,9 +35,10 @@ export default function PriestPhoto({ parishId, userId, name, hasPhoto = false, 
     )
   }
 
+  const query = version ? `?v=${encodeURIComponent(version)}` : ''
   const src = `${BASE}/api/parishes/${encodeURIComponent(parishId)}/priests/${encodeURIComponent(
     userId
-  )}/photo`
+  )}/photo${query}`
 
   return (
     <img
@@ -37,7 +46,7 @@ export default function PriestPhoto({ parishId, userId, name, hasPhoto = false, 
       src={src}
       alt={name ?? ''}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setFailedKey(key)}
     />
   )
 }

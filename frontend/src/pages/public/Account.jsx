@@ -9,6 +9,7 @@ import PhotoDrop from '../../components/PhotoDrop.jsx'
 import SignaturePad from '../../components/SignaturePad.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
+import { announcePhotoChange } from '../../lib/photoBus.js'
 import { contentTypeFor } from '../../lib/fileCheck.js'
 import { clearSession, getSession, landingFor, patchSession } from '../../lib/session.js'
 
@@ -41,7 +42,7 @@ export default function Account() {
   }, [navigate])
 
   const loadSignature = useCallback(async () => {
-    const r = await authed({ path: '/api/users/signature', as: 'blob' })
+    const r = await authed({ path: `/api/users/signature?v=${Date.now()}`, as: 'blob' })
     if (!r.ok) {
       setSignatureState('none')
       return
@@ -54,7 +55,7 @@ export default function Account() {
   }, [])
 
   const loadPhoto = useCallback(async () => {
-    const r = await authed({ path: '/api/auth/photo', as: 'blob' })
+    const r = await authed({ path: `/api/auth/photo?v=${Date.now()}`, as: 'blob' })
     if (!r.ok) {
       setPhotoState('none')
       return
@@ -239,6 +240,7 @@ export default function Account() {
     }
 
     patchSession({ hasPhoto: true })
+    announcePhotoChange()
     setNotice('Your photo was saved.')
     loadPhoto()
   }
@@ -270,6 +272,7 @@ export default function Account() {
     })
     setPhotoState('none')
     patchSession({ hasPhoto: false })
+    announcePhotoChange()
     setNotice('Your photo was removed.')
   }
 
