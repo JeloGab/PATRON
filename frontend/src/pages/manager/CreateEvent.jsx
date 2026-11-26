@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import DatePickerModal from '../../components/DatePickerModal.jsx'
 import PriestSuggestion from '../../components/PriestSuggestion.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatWeekdayDate, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
-import { CHECK_MESSAGES, EVENT_TYPES, SACRAMENT_TYPES } from '../../lib/schedule.js'
+import {
+  CHECK_MESSAGES,
+  EVENT_TYPES,
+  OUTSIDE_OFFICIANT_TYPES,
+  SACRAMENT_TYPES,
+} from '../../lib/schedule.js'
 import { clearSession } from '../../lib/session.js'
 
 const EMPTY = {
@@ -18,6 +24,7 @@ const EMPTY = {
   startTime: '08:00',
   endTime: '09:00',
   assignedPriestId: '',
+  officiantName: '',
 }
 
 function seedForm(search) {
@@ -36,6 +43,7 @@ export default function CreateEvent() {
   const [multi, setMulti] = useState(false)
   const [dates, setDates] = useState([])
   const [results, setResults] = useState(null)
+  const [picking, setPicking] = useState(false)
 
   const endSession = useCallback(() => {
     clearSession()
@@ -58,10 +66,11 @@ export default function CreateEvent() {
       setPriests(r.json.priests)
 
       if (r.json.priests.length > 0) {
-        setForm((current) => ({
-          ...current,
-          assignedPriestId: current.assignedPriestId || r.json.priests[0].userId,
-        }))
+        setForm((current) =>
+          current.eventType === 'sacramental'
+            ? { ...current, assignedPriestId: current.assignedPriestId || r.json.priests[0].userId }
+            : current
+        )
       }
     }
     load()
@@ -75,13 +84,21 @@ export default function CreateEvent() {
   }
 
   const sacramental = form.eventType === 'sacramental'
+  const outsideAllowed = sacramental && OUTSIDE_OFFICIANT_TYPES.includes(form.sacramentType)
+  const outside = outsideAllowed && form.officiantName.trim().length > 0
 
   function changeType(event) {
     const eventType = event.target.value
-    setForm((current) => ({ ...current, eventType }))
-    if (eventType === 'sacramental') {
-      setMulti(false)
-      setDates([])
+    const toSacramental = eventType === 'sacramental'
+    setForm((current) => ({
+      ...current,
+      eventType,
+      assignedPriestId: toSacramental
+        ? current.assignedPriestId || priests[0]?.userId || ''
+        : '',
+      officiantName: toSacramental ? current.officiantName : '',
+    }))
+    if (toSacramental) {
       setResults(null)
     }
   }
@@ -91,29 +108,25 @@ export default function CreateEvent() {
     setMulti(on)
     setResults(null)
     setError('')
-    if (!on) setDates([])
+    if (!on) {
+      setDates([])
+      return
+    }
+    if (form.eventDate && form.eventDate >= todayISO()) {
+      setDates((current) =>
+        current.includes(form.eventDate) ? current : [...current, form.eventDate].sort()
+      )
+    }
+    setForm((current) => ({ ...current, eventDate: '' }))
   }
 
-  function addDate() {
-    const date = form.eventDate
+
+  function toggleDate(date) {
     setResults(null)
-
-    if (!date) {
-      setError('Pick a date to add.')
-      return
-    }
-    if (date < todayISO()) {
-      setError('An event can only be scheduled for today or later.')
-      return
-    }
-    if (dates.includes(date)) {
-      setError('That date is already on the list.')
-      return
-    }
-
     setError('')
-    setDates((current) => [...current, date].sort())
-    setForm((current) => ({ ...current, eventDate: '' }))
+    setDates((current) =>
+      current.includes(date) ? current.filter((item) => item !== date) : [...current, date].sort()
+    )
   }
 
   function removeDate(date) {
@@ -168,6 +181,7 @@ export default function CreateEvent() {
     if (sacramental) body.sacramentType = form.sacramentType
     if (form.description.trim()) body.description = form.description.trim()
     if (form.assignedPriestId) body.assignedPriestId = form.assignedPriestId
+    if (outsideAllowed && form.officiantName.trim()) body.officiantName = form.officiantName.trim()
 
     if (unadded.length > 0) setForm((current) => ({ ...current, eventDate: '' }))
 
@@ -209,8 +223,11 @@ export default function CreateEvent() {
     }
 
     setDates(unsaved)
+    setForm((current) => ({ ...current, eventDate: '' }))
     setResults(outcome)
   }
+
+  const needsApproval = sacramental || Boolean(form.assignedPriestId)
 
   const saved = results ? results.filter((item) => item.ok).length : 0
 
@@ -228,8 +245,12 @@ export default function CreateEvent() {
           <h1>Create an event</h1>
           <p className="lede">
             {sacramental
-              ? 'A sacramental event is saved as For approval and sent to its assigned priest.'
-              : 'General and seminar events are approved as soon as they are created. One that runs on several dates is saved as one event per date, each checked on its own.'}
+              ? multi
+                ? 'Each date is saved as its own sacramental event, and each goes to the assigned priest for approval separately.'
+                : 'A sacramental event is saved as For approval and sent to its assigned priest.'
+              : form.assignedPriestId
+                ? 'Naming a priest sends this event to him for approval, because it goes on his calendar. Leave the priest blank and it is approved as soon as it is created. One that runs on several dates is saved as one event per date, each checked on its own.'
+                : 'With no priest named, this event is approved as soon as it is created. One that runs on several dates is saved as one event per date, each checked on its own.'}
           </p>
         </div>
       </header>
@@ -302,27 +323,19 @@ export default function CreateEvent() {
             />
           </label>
 
-          {!sacramental && (
-            <label className="check-line field--full">
-              <input type="checkbox" checked={multi} onChange={toggleMulti} />
-              <span className="check-line__text">
-                Several dates — the same event, saved once for each date you add
-              </span>
-            </label>
-          )}
+          <label className="check-line field--full">
+            <input type="checkbox" checked={multi} onChange={toggleMulti} />
+            <span className="check-line__text">
+              Several dates. The same details, saved as a separate event for each date you add.
+            </span>
+          </label>
 
           {multi ? (
             <div className="field field--full">
               <span>Dates<b className="req">*</b></span>
               <div className="date-add">
-                <input
-                  type="date"
-                  value={form.eventDate}
-                  min={todayISO()}
-                  onChange={update('eventDate')}
-                />
-                <button type="button" className="btn btn--ghost" onClick={addDate}>
-                  Add date
+                <button type="button" className="btn btn--ghost" onClick={() => setPicking(true)}>
+                  {dates.length > 0 ? 'Add or change dates' : 'Add date'}
                 </button>
               </div>
               {dates.length > 0 ? (
@@ -338,8 +351,8 @@ export default function CreateEvent() {
                 </ul>
               ) : (
                 <span className="form-hint">
-                  Pick a day and press Add date. They all share this title, these times and this
-                  priest.
+                  Press Add date to open the calendar. It shows what is already on each day. Every
+                  date you pick shares this title, these times and this priest.
                 </span>
               )}
             </div>
@@ -365,7 +378,7 @@ export default function CreateEvent() {
             <input type="time" value={form.endTime} onChange={update('endTime')} />
           </label>
 
-          {sacramental && (
+          {sacramental && !outside && (
             <div className="field field--full">
               <PriestSuggestion
                 eventDate={form.eventDate}
@@ -377,8 +390,28 @@ export default function CreateEvent() {
             </div>
           )}
 
+          {outsideAllowed && (
+            <label className="field field--full">
+              <span>Outside officiant</span>
+              <input
+                value={form.officiantName}
+                onChange={update('officiantName')}
+                maxLength={100}
+                placeholder="Optional. A visiting priest, by name — he needs no account here."
+              />
+              <small className="muted">
+                Leave this blank if a priest of this parish officiates. Naming someone here records
+                him as the officiating minister on the certificate, and stops this booking being
+                checked against the assigned priest’s own calendar — he is not the one presiding.
+              </small>
+            </label>
+          )}
+
           <label className="field">
-            <span>Assigned priest{sacramental && <b className="req">*</b>}</span>
+            <span>
+              {outside ? 'Parish priest responsible' : 'Assigned priest'}
+              {sacramental && <b className="req">*</b>}
+            </span>
             <select value={form.assignedPriestId} onChange={update('assignedPriestId')}>
               {!sacramental && <option value="">No priest assigned</option>}
               {priests.map((priest) => (
@@ -388,6 +421,12 @@ export default function CreateEvent() {
                 </option>
               ))}
             </select>
+            {outside && (
+              <small className="muted">
+                He approves the booking and signs the register extract. The certificate attests that
+                it matches the parish register, not that he administered the rite.
+              </small>
+            )}
           </label>
 
           <label className="field field--full">
@@ -403,9 +442,15 @@ export default function CreateEvent() {
 
         <div className="form-actions">
           <p className="muted form-hint">
-            {multi
-              ? 'Every date is checked on its own — parish blocked dates, then the priest’s own unavailability, then his other events. A date that clashes is refused and stays on the list; the others are still created.'
-              : 'The date is checked against parish blocked dates, then the priest’s own unavailability, then his other events — a clash is refused, not warned about, and touching times count as a clash. A funeral is recorded in the death register once completed.'}
+            {outside
+              ? `${
+                  multi ? 'Every date is checked on its own: parish' : 'The date is checked against parish'
+                } blocked dates, then whether another event already occupies the slot. The assigned priest’s own unavailability and his other events are not checked, because the officiant you named is the one presiding. A clash is refused rather than warned about, and touching times count as a clash.`
+              : multi
+                ? `Every date is checked on its own: parish blocked dates, then the priest’s own unavailability, then his other events. A date that clashes is refused and stays on the list, and the others are still created.${
+                    needsApproval ? ' Each date is a separate event, so each one needs its own approval.' : ''
+                  }`
+                : 'The date is checked against parish blocked dates, then the priest’s own unavailability, then his other events. A clash is refused rather than warned about, and touching times count as a clash. A funeral is recorded in the death register once completed.'}
           </p>
           <div className="form-actions__buttons">
             <Link to="/manager/schedule" className="btn btn--ghost">
@@ -423,6 +468,17 @@ export default function CreateEvent() {
           </div>
         </div>
       </form>
+
+      <DatePickerModal
+        open={picking}
+        selected={dates}
+        startTime={form.startTime}
+        endTime={form.endTime}
+        priestId={form.assignedPriestId}
+        onToggle={toggleDate}
+        onClose={() => setPicking(false)}
+        onSessionEnd={endSession}
+      />
     </div>
   )
 }

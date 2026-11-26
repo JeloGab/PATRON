@@ -35,8 +35,10 @@ export function isOpen(announcement) {
   return announcement?.status === 'pending' || announcement?.status === 'rejected'
 }
 
+const MANAGER_ARCHIVABLE = ['pending', 'rejected', 'approved']
+
 export function canArchive(announcement, role) {
   if (!announcement) return false
   if (role === 'priest') return announcement.status === 'approved'
-  return announcement.status === 'pending' || announcement.status === 'rejected'
+  return MANAGER_ARCHIVABLE.includes(announcement.status)
 }

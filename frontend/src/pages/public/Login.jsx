@@ -37,8 +37,6 @@ const MODES = {
 const WIDE = '(min-width: 900px)'
 const STILL = '(prefers-reduced-motion: reduce)'
 
-// The aside is display:none under 900px, but a <video> inside a hidden parent still
-// downloads, so the element is kept out of the tree rather than hidden by CSS.
 function useAsideVideo() {
   const [show, setShow] = useState(
     () => window.matchMedia(WIDE).matches && !window.matchMedia(STILL).matches,

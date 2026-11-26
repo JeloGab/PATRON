@@ -46,6 +46,7 @@ async function selectRoster(client, eventId) {
   const { rows } = await client.query(
     `select p.participant_id, p.participant_name, p.participant_date_of_birth,
             p.gender, p.sponsor_name, p.status,
+            p.father_name, p.mother_name, p.place_of_birth,
             (select count(*)
                from public.participant_requirement r
               where r.participant_id = p.participant_id
@@ -63,6 +64,9 @@ async function selectRoster(client, eventId) {
     gender: row.gender,
     sponsorName: row.sponsor_name,
     status: row.status,
+    fatherName: row.father_name,
+    motherName: row.mother_name,
+    placeOfBirth: row.place_of_birth,
     pendingCount: Number(row.pending_count),
   }))
 }
@@ -92,13 +96,15 @@ export async function completeEventAndIssue(
                 updated_at = now()
           where event_id = $1
             and status = 'approved'
-          returning event_type, sacrament_type, event_date, assigned_priest_id`,
+          returning event_type, sacrament_type, event_date, assigned_priest_id,
+                    officiant_name`,
         [eventId, actor.userId]
       )
       if (completed.rowCount === 0) return null
 
       const event = completed.rows[0]
       const recordType = RECORD_TYPE_FOR[event.sacrament_type]
+      const officiant = officiantName ?? event.officiant_name
       if (event.event_type !== 'sacramental' || !recordType) {
         return { records: 0, certificates: 0, warnings: [] }
       }
@@ -115,7 +121,7 @@ export async function completeEventAndIssue(
       const { drafts, warnings } = planRecords({
         recordType,
         eventDate: event.event_date,
-        officiantName: officiantName ?? context.signatory_name,
+        officiantName: officiant ?? context.signatory_name,
         registry,
         details,
         roster,
@@ -123,7 +129,7 @@ export async function completeEventAndIssue(
 
       if (context.signatory_status !== 'active') {
         warnings.push(
-          officiantName
+          officiant
             ? `${context.signatory_name} is no longer active — recorded as signatory anyway`
             : `${context.signatory_name} is no longer active — recorded as officiant and signatory anyway`
         )

@@ -1,11 +1,4 @@
 // Claims Facebook's ?code= from the query string before HashRouter mounts.
-// The sibling of authFragment.js, and it keeps that file's three rules:
-//   1. claim before the router mounts, or the route wins and the parameters are lost;
-//   2. reads are NON-DESTRUCTIVE — StrictMode renders twice, and a read-and-clear
-//      hands the second render nothing;
-//   3. every sessionStorage access is wrapped, because a private window throws.
-// Easier than the Supabase case: ?code= sits in the query string, before the hash, so it
-// never collides with the route.
 
 import { getSession } from './session.js'
 
@@ -35,9 +28,6 @@ function drop(key) {
   }
 }
 
-// Strips the query string and lands on the profile, keeping the path. The parish profile
-// is two different routes to the same page, so the role decides which — and a visitor
-// with no session goes to login, where the stash survives until they reach the profile.
 function landOnProfile() {
   const role = getSession()?.role
   const route = role === 'priest' || role === 'manager' ? `/${role}/parish` : '/login'
@@ -56,9 +46,6 @@ export function consumeOauthReturn() {
   const params = new URLSearchParams(search)
   const code = params.get('code')
 
-  // Facebook sends error_reason=user_denied when the priest presses Cancel. That is not
-  // a failure to report as one, but the profile should still say the connection did not
-  // happen rather than silently looking unchanged.
   const failure =
     params.get('error_description') || params.get('error_reason') || params.get('error')
 

@@ -60,16 +60,10 @@ const MONTHS = [
   'December',
 ]
 
-// feast_day is free text by design — "December 8", "Second Sunday of October", "Easter
-// Monday" are all legitimate. The calendar leaf needs a day and a month, so this returns
-// them only when both are unambiguous and the caller falls back to the raw text.
 export function feastParts(value) {
   const text = String(value ?? '').trim()
   if (!text) return null
 
-  // Matched word by word, and a word counts only when it is a prefix of the month name:
-  // "Mary" and "Mark" both contain "mar", so a substring test over months in calendar
-  // order turned every Marian feast into March. "Sept" still matches September.
   const words = text.toLowerCase().match(/[a-z]+/g) ?? []
   const month = MONTHS.find((name) => {
     const lower = name.toLowerCase()

@@ -2,6 +2,7 @@ import { withActor } from '../../db/withTenant.js'
 
 const COLUMNS = `p.participant_id, p.event_id, p.participant_name, p.participant_contact,
                  p.participant_date_of_birth, p.gender, p.sponsor_name, p.status,
+                 p.father_name, p.mother_name, p.place_of_birth,
                  p.created_at, p.updated_at,
                  creator.full_name as created_by_name,
                  editor.full_name as updated_by_name`
@@ -38,6 +39,9 @@ const EDITABLE = [
   ['participantDateOfBirth', 'participant_date_of_birth'],
   ['gender', 'gender'],
   ['sponsorName', 'sponsor_name'],
+  ['fatherName', 'father_name'],
+  ['motherName', 'mother_name'],
+  ['placeOfBirth', 'place_of_birth'],
 ]
 
 function mapParticipant(row) {
@@ -50,6 +54,9 @@ function mapParticipant(row) {
     gender: row.gender,
     sponsorName: row.sponsor_name,
     status: row.status,
+    fatherName: row.father_name,
+    motherName: row.mother_name,
+    placeOfBirth: row.place_of_birth,
     createdByName: row.created_by_name,
     createdAt: row.created_at,
     updatedByName: row.updated_by_name,
@@ -57,9 +64,6 @@ function mapParticipant(row) {
   }
 }
 
-// The two seeded templates whose evidence is a seminar roster rather than a register.
-// requirement_template is seeded and read-only, so these names cannot drift without a
-// migration - and a migration that adds a third seminar template must add it here.
 export const SEMINAR_REQUIREMENTS = ['Confirmation Seminar', 'Pre-Cana Seminar']
 
 function mapRequirement(row) {
@@ -113,8 +117,10 @@ export async function insertParticipant(actor, participant) {
     const { rows } = await client.query(
       `insert into public.event_participant
          (parish_id, event_id, participant_name, participant_contact,
-          participant_date_of_birth, gender, sponsor_name, created_by)
-       values (public.current_parish_id(), $1, $2, $3, $4, $5, $6, public.current_user_id())
+          participant_date_of_birth, gender, sponsor_name,
+          father_name, mother_name, place_of_birth, created_by)
+       values (public.current_parish_id(), $1, $2, $3, $4, $5, $6, $7, $8, $9,
+               public.current_user_id())
        returning participant_id`,
       [
         participant.eventId,
@@ -123,6 +129,9 @@ export async function insertParticipant(actor, participant) {
         participant.participantDateOfBirth,
         participant.gender,
         participant.sponsorName,
+        participant.fatherName,
+        participant.motherName,
+        participant.placeOfBirth,
       ],
     )
     return rows[0].participant_id
@@ -202,7 +211,6 @@ export async function findRequirement(actor, requirementId) {
   })
 }
 
-
 export async function updateRequirement(actor, requirementId, { status, matchedRecordId, notes, manual }) {
   return withActor(actor, async (client) => {
     const { rowCount } = await client.query(
@@ -236,17 +244,8 @@ export async function findMatchingRecordIds(actor, { recordType, normalisedName,
   })
 }
 
-// Mirrors the escape in records.queries.js. A pasted name holding % or _ would
-// otherwise widen the search instead of narrowing it.
 const escapeSeminarLike = (word) => word.replace(/[\\%_]/g, '\\$&')
 
-// Word-by-word ILIKE in any order - the same rule as record search, deliberately, so a
-// manager gets the behaviour they already know from Sacramental Records. RLS scopes
-// this to the caller's own parish, so another parish's seminars are unreachable.
-//
-// Returns seminars that have NOT yet been held as well, flagged, because telling a
-// manager "no attendance found" for someone enrolled in next week's batch is worse
-// than showing it and letting them see the date.
 export async function findSeminarAttendance(actor, { words, limit }) {
   const conditions = [`e.event_type = 'seminar'`, `p.status <> 'withdrawn'`]
   const values = []

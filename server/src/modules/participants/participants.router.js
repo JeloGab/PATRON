@@ -12,8 +12,6 @@ router.get('/', async (req, res) => {
   res.json({ ok: true, participants: await listParticipants(req.user, req.query) })
 })
 
-// Must stay ABOVE /:participantId, or Express matches it as a participant id - the
-// same trap as events/priest-suggestion.
 router.get('/seminar-attendance', async (req, res) => {
   res.json({ ok: true, attendance: await searchSeminarAttendance(req.user, req.query) })
 })

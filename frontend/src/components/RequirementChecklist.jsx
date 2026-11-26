@@ -6,7 +6,7 @@ import { formatLongDate } from '../lib/dates.js'
 import { RECORD_TYPE_LABEL } from '../lib/documents.js'
 import { messageFor } from '../lib/errors.js'
 import { REQUIREMENT_STATUS_LABEL, isSatisfied, requirementPill } from '../lib/roster.js'
-import Loading from './Loading.jsx'
+import Skeleton from './Skeleton.jsx'
 import Modal from './Modal.jsx'
 
 export default function RequirementChecklist({
@@ -54,9 +54,6 @@ export default function RequirementChecklist({
     setError('')
   }
 
-  // Evidence for a seminar requirement. The roster is the only place attendance is
-  // recorded, so this reads it and the manager decides from the seminar's own title —
-  // nothing here distinguishes a pre-Cana seminar from any other, and nothing should.
   async function searchSeminars() {
     setError('')
     setBusy('seminars')
@@ -133,7 +130,7 @@ export default function RequirementChecklist({
       )}
 
       {requirements === null ? (
-        <Loading label="Loading the checklist…" />
+        <Skeleton variant="rows" count={4} label="Loading the checklist…" />
       ) : requirements.length === 0 ? (
         <p className="empty">
           This event’s sacrament has no seeded requirements, so there is nothing to check.

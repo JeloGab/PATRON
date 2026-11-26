@@ -4,6 +4,7 @@ import { pool } from '../../db/pool.js'
 
 const COLUMNS = `e.event_id, e.title, e.description, e.event_type, e.sacrament_type,
                  e.event_date, e.start_time, e.end_time, e.assigned_priest_id,
+                 e.officiant_name,
                  e.status, e.status_reason, e.created_by, e.created_at,
                  e.approved_by, e.approved_at, e.updated_by, e.updated_at,
                  priest.full_name as assigned_priest_name,
@@ -22,8 +23,8 @@ const EDITABLE = [
   ['startTime', 'start_time'],
   ['endTime', 'end_time'],
   ['assignedPriestId', 'assigned_priest_id'],
+  ['officiantName', 'officiant_name'],
 ]
-
 
 function mapCalendarEvent(row) {
   return {
@@ -59,6 +60,7 @@ function mapEvent(row) {
     endTime: row.end_time,
     assignedPriestId: row.assigned_priest_id,
     assignedPriestName: row.assigned_priest_name,
+    officiantName: row.officiant_name,
     priestNeedsReassignment: row.assigned_priest_id !== null && row.assigned_priest_status !== 'active',
     status: row.status,
     statusReason: row.status_reason,
@@ -98,9 +100,9 @@ export async function insertEvent(actor, event) {
         `insert into public.parish_event
            (parish_id, title, description, event_type, sacrament_type,
             event_date, start_time, end_time, assigned_priest_id,
-            status, created_by, approved_by, approved_at)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                 case when $12::uuid is null then null else now() end)
+            officiant_name, status, created_by, approved_by, approved_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                 case when $13::uuid is null then null else now() end)
          returning event_id`,
         [
           actor.parishId,
@@ -112,6 +114,7 @@ export async function insertEvent(actor, event) {
           event.startTime,
           event.endTime,
           event.assignedPriestId,
+          event.officiantName,
           event.status,
           actor.userId,
           event.approvedBy,
@@ -125,7 +128,7 @@ export async function insertEvent(actor, event) {
   })
 }
 
-export async function updateEvent(actor, eventId, { patch, resetApproval }) {
+export async function updateEvent(actor, eventId, { patch, resetApproval, grantApproval }) {
   const present = EDITABLE.filter(([jsKey]) => Object.hasOwn(patch, jsKey))
 
   return withActor(actor, async (client) => {
@@ -137,6 +140,11 @@ export async function updateEvent(actor, eventId, { patch, resetApproval }) {
 
     if (resetApproval) {
       assignments.push(`status = 'pending'`, 'approved_by = null', 'approved_at = null')
+    }
+
+    if (grantApproval) {
+      assignments.push(`status = 'approved'`, `approved_by = $${values.length + 2}`, 'approved_at = now()')
+      values.push(actor.userId)
     }
 
     const { rowCount } = await client.query(
@@ -221,6 +229,23 @@ export async function findScheduleConflict(actor, { eventDate, startTime, endTim
   })
 }
 
+export async function findVenueConflict(actor, { eventDate, startTime, endTime, excludeEventId }) {
+  return withActor(actor, async (client) => {
+    const { rows } = await client.query(
+      `select ${COLUMNS} ${SOURCE}
+        where e.event_date = $1
+          and e.status in ('approved', 'completed')
+          and e.start_time <= $3
+          and $2 <= e.end_time
+          and ($4::uuid is null or e.event_id <> $4)
+        limit 1`,
+      [eventDate, startTime, endTime, excludeEventId]
+    )
+    if (rows.length === 0) return null
+    return mapEvent(rows[0])
+  })
+}
+
 export async function findEventsOnDates(actor, { dates, priestId }) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
@@ -251,8 +276,6 @@ export async function countPriestEventsInMonth(actor, { eventDate }) {
   })
 }
 
-
-
 export async function findCalendarEvents({ parishId, from, to }) {
   const { rows } = await pool.query(
     `select ${CALENDAR_COLUMNS}
@@ -264,7 +287,6 @@ export async function findCalendarEvents({ parishId, from, to }) {
   )
   return rows.map(mapCalendarEvent)
 }
-
 
 export async function findReservedDates({ parishId, from, to }) {
   const { rows } = await pool.query(

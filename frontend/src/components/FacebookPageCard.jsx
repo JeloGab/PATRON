@@ -1,7 +1,4 @@
-// The parish's Facebook page. Facebook Login for Business is the normal path; pasting a
-// page token is the fallback.
-// GET /api/parish/facebook/connect-url · POST /api/parish/facebook/connect
-// POST /api/parish/facebook-token · DELETE /api/parish/facebook-token
+// The parish's Facebook page: connect by Login for Business, or paste a page token.
 
 import { useEffect, useRef, useState } from 'react'
 import { authed, isSessionError } from '../lib/api.js'
@@ -20,9 +17,6 @@ export default function FacebookPageCard({ parish, onChanged, onSessionEnd }) {
   const hasPage = Boolean(parish.facebookPageId)
   const connected = parish.hasFacebookToken === true
 
-  // An OAuth code is single-use at Facebook, and StrictMode invokes effects twice — so
-  // without this ref the second run would exchange a spent code and report a failure
-  // over a connection that actually succeeded. Set synchronously, before any await.
   useEffect(() => {
     if (claimed.current) return
     const returned = peekFacebookReturn()
@@ -71,8 +65,6 @@ export default function FacebookPageCard({ parish, onChanged, onSessionEnd }) {
     setError('')
   }
 
-  // Leaving the app is the point — this is a full redirect, not a popup, so the return
-  // lands on a URL Facebook has whitelisted and oauthReturn.js can claim.
   async function startLogin() {
     setError('')
     setNotice('')
@@ -98,9 +90,6 @@ export default function FacebookPageCard({ parish, onChanged, onSessionEnd }) {
     const r = await authed({ method, path: '/api/parish/facebook-token', body })
     setBusy('')
 
-    // Cleared whatever the answer. A page token is pasted, never typed, so there is
-    // nothing to correct by hand — and the commonest rejection is a newline picked up in
-    // the copy, which only a fresh paste fixes.
     setToken('')
 
     if (isSessionError(r)) {

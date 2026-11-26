@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useConfirm } from './ConfirmProvider.jsx'
-import Loading from './Loading.jsx'
+import DatePickerModal from './DatePickerModal.jsx'
+import Skeleton from './Skeleton.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { formatLongDate, formatWeekdayDate, isoOffset, todayISO } from '../lib/dates.js'
 import { messageFor } from '../lib/errors.js'
 import { STATUS_LABEL, clock, eventTypeLabel, timeRange } from '../lib/schedule.js'
 
 const LIST_DAYS = 91
+const MAX_DATES = 31
 
 export default function BlockDates({ scope, priests = [], selfId, selfName, onSessionEnd }) {
   const isParishScope = scope === 'parish'
@@ -28,6 +30,11 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
   const [busyId, setBusyId] = useState(null)
+  const [several, setSeveral] = useState(false)
+  const [dates, setDates] = useState([])
+  const [picking, setPicking] = useState(false)
+
+  const timed = form.type === 'priest'
 
   const load = useCallback(async () => {
     const from = todayISO()
@@ -59,46 +66,148 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
     return (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
   }
 
+  function toggleSeveral(event) {
+    const on = event.target.checked
+    setSeveral(on)
+    setError('')
+
+    if (!on) return
+    if (form.fromDate) {
+      setDates((current) =>
+        current.includes(form.fromDate) ? current : [...current, form.fromDate].sort()
+      )
+    }
+    setForm((current) => ({ ...current, fromDate: '', toDate: '' }))
+  }
+
+  function toggleDate(iso) {
+    setError('')
+    setDates((current) => {
+      if (current.includes(iso)) return current.filter((date) => date !== iso)
+      if (current.length >= MAX_DATES) {
+        setError(MAX_DATES + ' dates at a time is the limit. Save these, then pick more.')
+        return current
+      }
+      return [...current, iso].sort()
+    })
+  }
+
+  function changeType(event) {
+    const type = event.target.value
+    setForm((current) => ({
+      ...current,
+      type,
+      startTime: type === 'priest' ? current.startTime : '',
+      endTime: type === 'priest' ? current.endTime : '',
+    }))
+  }
+
+  async function submitSeveral(shared) {
+    const chosen = [...dates].sort()
+    const saved = []
+    const failures = []
+    const found = new Map()
+
+    setPending(true)
+    for (const date of chosen) {
+      const r = await authed({
+        method: 'POST',
+        path: '/api/blocked-dates',
+        body: { ...shared, fromDate: date },
+      })
+
+      if (isSessionError(r)) {
+        setPending(false)
+        onSessionEnd()
+        return
+      }
+      if (!r.ok) {
+        failures.push({ date, message: messageFor(r) })
+        continue
+      }
+
+      saved.push(date)
+      for (const item of r.json.warnings ?? []) found.set(item.eventId, item)
+    }
+    setPending(false)
+
+    setDates(chosen.filter((date) => !saved.includes(date)))
+    setWarnings([...found.values()])
+
+    if (saved.length === 0) {
+      setError(failures[0]?.message ?? 'Nothing was blocked.')
+      return
+    }
+
+    setNotice(
+      failures.length === 0
+        ? saved.length + ' day' + (saved.length === 1 ? '' : 's') + ' blocked.'
+        : saved.length +
+            ' of ' +
+            chosen.length +
+            ' days blocked. The ones that failed are still listed on the form.'
+    )
+    if (failures.length > 0) setError(failures[0].message)
+    setForm((current) => ({ ...current, reason: '' }))
+    load()
+  }
+
   async function submit(event) {
     event.preventDefault()
     setError('')
     setNotice('')
     setWarnings([])
 
-    if (!form.fromDate) {
-      setError('Choose the date to block.')
-      return
-    }
-    if (form.fromDate < todayISO()) {
-      setError('Only today or a later date can be blocked.')
-      return
-    }
-    if (form.toDate && form.toDate < form.fromDate) {
-      setError('The last day of the range cannot be before the first.')
-      return
+    if (several) {
+      if (dates.length === 0) {
+        setError('Pick at least one date to block.')
+        return
+      }
+    } else {
+      if (!form.fromDate) {
+        setError('Choose the date to block.')
+        return
+      }
+      if (form.fromDate < todayISO()) {
+        setError('Only today or a later date can be blocked.')
+        return
+      }
+      if (form.toDate && form.toDate < form.fromDate) {
+        setError('The last day of the range cannot be before the first.')
+        return
+      }
     }
 
-    if (Boolean(form.startTime) !== Boolean(form.endTime)) {
-      setError('Give both a start and an end time, or leave both empty for the whole day.')
-      return
-    }
-    if (form.startTime && form.startTime >= form.endTime) {
-      setError('The end time must be later than the start time.')
-      return
+    if (timed) {
+      if (Boolean(form.startTime) !== Boolean(form.endTime)) {
+        setError('Give both a start and an end time, or leave both empty for the whole day.')
+        return
+      }
+      if (form.startTime && form.startTime >= form.endTime) {
+        setError('The end time must be later than the start time.')
+        return
+      }
     }
     if (form.type === 'priest' && !form.priestId) {
       setError('Choose which priest is unavailable.')
       return
     }
 
-    const body = { type: form.type, fromDate: form.fromDate }
-    if (form.toDate) body.toDate = form.toDate
-    if (form.startTime) {
-      body.startTime = form.startTime
-      body.endTime = form.endTime
+    const shared = { type: form.type }
+    if (timed && form.startTime) {
+      shared.startTime = form.startTime
+      shared.endTime = form.endTime
     }
-    if (form.reason.trim()) body.reason = form.reason.trim()
-    if (form.type === 'priest') body.priestId = form.priestId
+    if (form.reason.trim()) shared.reason = form.reason.trim()
+    if (form.type === 'priest') shared.priestId = form.priestId
+
+    if (several) {
+      await submitSeveral(shared)
+      return
+    }
+
+    const body = { ...shared, fromDate: form.fromDate }
+    if (form.toDate) body.toDate = form.toDate
 
     setPending(true)
     const r = await authed({ method: 'POST', path: '/api/blocked-dates', body })
@@ -188,13 +297,13 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
           {isParishScope && (
             <label className="field">
               <span>Scope<b className="req">*</b></span>
-              <select value={form.type} onChange={update('type')}>
+              <select value={form.type} onChange={changeType}>
                 <option value="parish">The whole parish</option>
                 <option value="priest">One priest only</option>
               </select>
               <span className="form-hint">
-                A parish block closes the day for everyone. A priest block only affects events
-                assigned to him.
+                A parish block closes the whole day for everyone. A priest block affects only
+                the events assigned to him, and may cover part of a day.
               </span>
             </label>
           )}
@@ -220,39 +329,87 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
               </label>
             ))}
 
-          <label className="field">
-            <span>From<b className="req">*</b></span>
-            <input
-              type="date"
-              value={form.fromDate}
-              min={todayISO()}
-              onChange={update('fromDate')}
-            />
-          </label>
-
-          <label className="field">
-            <span>To</span>
-            <input
-              type="date"
-              value={form.toDate}
-              min={form.fromDate || todayISO()}
-              onChange={update('toDate')}
-            />
-            <span className="form-hint">
-              Leave empty for a single day. A range is stored one day at a time, up to 31 days.
+          <label className="check-line field--full">
+            <input type="checkbox" checked={several} onChange={toggleSeveral} />
+            <span className="check-line__text">
+              Several dates that are not in a row. The same scope, hours and reason, saved as a
+              separate block for each date you pick.
             </span>
           </label>
 
-          <label className="field">
-            <span>From time</span>
-            <input type="time" value={form.startTime} onChange={update('startTime')} />
-          </label>
+          {several ? (
+            <div className="field field--full">
+              <span>Dates<b className="req">*</b></span>
+              <div className="date-add">
+                <button type="button" className="btn btn--ghost" onClick={() => setPicking(true)}>
+                  {dates.length > 0 ? 'Add or change dates' : 'Pick dates'}
+                </button>
+              </div>
+              {dates.length > 0 ? (
+                <ul className="date-list">
+                  {dates.map((date) => (
+                    <li key={date}>
+                      <span className="date-list__text">{formatWeekdayDate(date)}</span>
+                      <button type="button" className="text-btn" onClick={() => toggleDate(date)}>
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="form-hint">
+                  Press Pick dates to open the calendar. It shows what is already on each day, and
+                  which events a block would land on.
+                </span>
+              )}
+            </div>
+          ) : (
+            <>
+              <label className="field">
+                <span>From<b className="req">*</b></span>
+                <input
+                  type="date"
+                  value={form.fromDate}
+                  min={todayISO()}
+                  onChange={update('fromDate')}
+                />
+              </label>
 
-          <label className="field">
-            <span>To time</span>
-            <input type="time" value={form.endTime} onChange={update('endTime')} />
-            <span className="form-hint">Leave both empty to block the whole day.</span>
-          </label>
+              <label className="field">
+                <span>To</span>
+                <input
+                  type="date"
+                  value={form.toDate}
+                  min={form.fromDate || todayISO()}
+                  onChange={update('toDate')}
+                />
+                <span className="form-hint">
+                  Leave empty for a single day. A range is stored one day at a time, up to 31
+                  days, and must be consecutive.
+                </span>
+              </label>
+            </>
+          )}
+
+          {timed ? (
+            <>
+              <label className="field">
+                <span>From time</span>
+                <input type="time" value={form.startTime} onChange={update('startTime')} />
+              </label>
+
+              <label className="field">
+                <span>To time</span>
+                <input type="time" value={form.endTime} onChange={update('endTime')} />
+                <span className="form-hint">Leave both empty for the whole day.</span>
+              </label>
+            </>
+          ) : (
+            <p className="muted form-hint field--full">
+              A parish block always covers the whole day. To free part of a day, block the
+              priest instead.
+            </p>
+          )}
 
           <label className="field field--full">
             <span>Reason</span>
@@ -272,7 +429,11 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
             on.
           </p>
           <button type="submit" className="btn btn--gold" disabled={pending}>
-            {pending ? 'Saving…' : 'Block these dates'}
+            {pending
+              ? 'Saving…'
+              : several && dates.length > 0
+                ? 'Block ' + dates.length + ' date' + (dates.length === 1 ? '' : 's')
+                : 'Block these dates'}
           </button>
         </div>
       </form>
@@ -283,7 +444,7 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
         </div>
 
         {shown === null ? (
-          <Loading label="Loading…" />
+          <Skeleton variant="lines" label="Loading blocked dates…" />
         ) : shown.length === 0 ? (
           <p className="empty">
             {isParishScope
@@ -328,6 +489,16 @@ export default function BlockDates({ scope, priests = [], selfId, selfName, onSe
           </div>
         )}
       </section>
+
+      <DatePickerModal
+        open={picking}
+        intent="block"
+        selected={dates}
+        priestId={form.type === 'priest' ? form.priestId || null : null}
+        onToggle={toggleDate}
+        onClose={() => setPicking(false)}
+        onSessionEnd={onSessionEnd}
+      />
     </>
   )
 }

@@ -39,8 +39,6 @@ export function RecordEditForm({ record, onSave, onCancel }) {
     setForm((current) => ({ ...current, [key]: value }))
   }
 
-  // form.officiantName stays the joined string, so diff() below keeps comparing like with
-  // like and an untouched officiant never shows up in the patch.
   function setOfficiantPart(part, value) {
     const next = { ...officiant, [part]: value }
     setOfficiant(next)

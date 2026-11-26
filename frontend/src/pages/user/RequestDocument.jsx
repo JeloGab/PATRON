@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import { authed, call, isSessionError } from '../../lib/api.js'
 import {
   EARLIEST_SACRAMENT_YEAR,
@@ -78,7 +78,7 @@ export default function RequestDocument() {
   if (loading) {
     return (
       <div className="page">
-        <Loading label="Loading the request form…" />
+        <Skeleton variant="form" label="Loading the request form…" />
       </div>
     )
   }

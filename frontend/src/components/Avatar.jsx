@@ -6,12 +6,6 @@ import { authed } from '../lib/api.js'
 export default function Avatar({ initial, hasPhoto = false }) {
   const [url, setUrl] = useState(null)
 
-  // `hasPhoto` is a refresh signal, never a gate. It comes from the session, which is a
-  // snapshot taken at login - and the login lookup (auth_lookup_staff) does not return
-  // it, so it was false for everyone until a visit to Account called /api/auth/me and
-  // patched it. That is why the photograph only appeared after that detour. Fetching
-  // unconditionally costs one request that 404s for an account with no photograph, and
-  // the initial simply stays put.
   useEffect(() => {
     let live = true
     let created = null

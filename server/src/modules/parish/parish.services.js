@@ -1,12 +1,12 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireParishName, requireAddress, requireMobile, optionalEmail, optionalOfficeHours, optionalMassSchedule, optionalPatronSaint, optionalFeastDay, optionalYearEstablished, optionalHistory, requireFacebookToken, optionalFacebookPage } from '../../lib/validators.js'
+import { clean, requireParishName, requireAddress, requireContactNo, optionalEmail, optionalOfficeHours, optionalMassSchedule, optionalPatronSaint, optionalFeastDay, optionalYearEstablished, optionalHistory, requireFacebookToken, optionalFacebookPage } from '../../lib/validators.js'
 import { sniffContentType, sanitizeFileName } from '../../lib/fileType.js'
 import { findOwnParish, updateOwnParish, listParishDirectory, findDirectoryEntry, listActivePriests, setParishPhoto, clearParishPhoto, findPublicParishPhoto, listPublicClergy, findPublicClergyPhoto, setParishSeal, clearParishSeal, findPublicParishSeal, listGalleryImages, insertGalleryImage, deleteGalleryImage, listPublicGalleryIds, findPublicGalleryImage, setParishPageToken, clearParishPageToken, clearParishPageTokenIfPageChanged, setParishPageConnection } from './parish.queries.js'
 import { isLoginConfigured, dialogUrl, connectPageFromCode } from '../../integrations/facebook.js'
 import { signConnectState, verifyConnectState } from './parish.state.js'
 
-const REDIRECT_URI = `${process.env.CLIENT_ORIGIN}/`
+const REDIRECT_URI = `${(process.env.CLIENT_ORIGIN ?? '').replace(/\/$/, '')}/`
 
 export const PHOTO_TYPES = ['image/jpeg', 'image/png']
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024
@@ -17,8 +17,6 @@ const MAX_SEAL_BYTES = 1 * 1024 * 1024
 export const GALLERY_TYPES = ['image/jpeg', 'image/png']
 const MAX_GALLERY_BYTES = 5 * 1024 * 1024
 const MAX_GALLERY_IMAGES = 4
-
-
 
 export async function getOwnParish(actor) {
   const parish = await findOwnParish(actor)
@@ -32,7 +30,7 @@ export async function editOwnParish(actor, body) {
 
   if (body.name !== undefined) patch.name = requireParishName(body.name)
   if (body.address !== undefined) patch.address = requireAddress(body.address)
-  if (body.contactNo !== undefined) patch.contactNo = requireMobile(body.contactNo)
+  if (body.contactNo !== undefined) patch.contactNo = requireContactNo(body.contactNo)
   if (body.email !== undefined) patch.email = optionalEmail(body.email)
   if (body.facebookPageId !== undefined) patch.facebookPageId = optionalFacebookPage(body.facebookPageId)
   if (body.officeHours !== undefined) patch.officeHours = optionalOfficeHours(body.officeHours)
@@ -44,11 +42,6 @@ export async function editOwnParish(actor, body) {
 
   if (Object.keys(patch).length === 0) throw new AppError('NO_FIELDS_TO_UPDATE', 400)
 
-  // parish_page_token_needs_page forbids a token with no page, so clearing the page would
-  // raise 23514 - a constraint violation the client cannot act on. Cleared in its own
-  // statement so the credential never enters EDITABLE, and BEFORE the update so the
-  // constraint holds at every point: a null token is always legal. Any change of page
-  // clears it, not only a clear to null.
   if (body.facebookPageId !== undefined) {
     await clearParishPageTokenIfPageChanged(actor, patch.facebookPageId)
   }
@@ -104,8 +97,6 @@ export async function connectFacebookPage(actor, body) {
     throw new AppError('FACEBOOK_CONNECT_FAILED', 502)
   }
 
-  // A parish has one page, so more than one granted is refused rather than
-  // disambiguated - a picker would need the page tokens held between two requests.
   if (result.pages) {
     throw new AppError(
       result.pages.length === 0 ? 'FACEBOOK_NO_PAGE_GRANTED' : 'FACEBOOK_MULTIPLE_PAGES',
@@ -172,7 +163,6 @@ export async function getPublicPhoto(parishId) {
 
   return photo
 }
-
 
 export async function getPublicClergyPhoto(parishId, userId) {
   const parish = clean(parishId)

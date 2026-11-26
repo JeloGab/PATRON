@@ -202,8 +202,7 @@ select {
   color: var(--muted);
 }
 
-/* The required marker. A <b>, not a <span>, because `.field span` above would win on
-   specificity and render it muted. */
+/* The required marker. A <b>, not a <span>, which `.field span` would mute. */
 .req {
   margin-left: 0.15rem;
   color: var(--required);
@@ -741,10 +740,7 @@ textarea:focus {
   white-space: nowrap;
 }
 
-/* The parishioner calendar's sacramental marker. Deliberately NOT .cal__unavailable
-   — that gold chip is the designed look for a priest's personal unavailability on the
-   staff calendars (backlog, 2026-10-17), and reusing it here would collide with that
-   fix when it lands. Muted rather than alarming: a reserved day is simply taken. */
+/* The parishioner calendar's sacramental marker. Deliberately not .cal__unavailable. */
 .cal__reserved {
   display: block;
   margin-top: 0.25rem;
@@ -948,8 +944,7 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
-/* The officiant's title beside the name. One grid cell each, stacking on a narrow screen so
-   the name box never shrinks below something a full name fits in. */
+/* The officiant's title beside the name. One grid cell each, stacking when narrow. */
 .officiant-row {
   display: grid;
   gap: 0.5rem;
@@ -1206,9 +1201,7 @@ textarea:focus {
   font-weight: 600;
 }
 
-/* The video behind the login aside. The aside's own gradient stays underneath as the
-   fallback, so a missing file, a narrow screen or a reduced-motion visitor sees the
-   panel exactly as it was before. */
+/* The video behind the login aside. The aside's own gradient is the fallback. */
 .login__media {
   position: absolute;
   inset: 0;
@@ -1313,9 +1306,7 @@ textarea:focus {
     grid-template-columns: 1.05fr 0.95fr;
   }
 
-  /* The confirmation and expired-link states render .login__main with no aside
-     beside it. Without this the card lands in column 1 and centres in the left
-     52.5% of the viewport rather than the whole of it. */
+  /* The confirmation and expired-link states render .login__main with no aside. */
   .login__main:only-child {
     grid-column: 1 / -1;
   }
@@ -1988,6 +1979,33 @@ dd {
   padding-inline: 0.85rem;
 }
 
+.roster__withdrawn {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.roster__withdrawn > summary {
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  color: var(--muted);
+  padding: 0.3rem 0.1rem;
+  border-radius: 6px;
+}
+
+.roster__withdrawn > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.roster__withdrawn[open] > summary {
+  margin-bottom: 0.6rem;
+}
+
+.roster__withdrawn .priest-list__row {
+  opacity: 0.72;
+}
+
 /* Signature pad */
 .signature {
   margin: 0.6rem 0 0;
@@ -2371,6 +2389,127 @@ h3.eyebrow:not(:first-child) {
   }
 }
 
+/* Skeleton placeholders — components/Skeleton.jsx. Every one also carries .skeleton. */
+
+.skel {
+  display: block;
+}
+
+.skel__line {
+  display: block;
+  height: 0.8rem;
+  margin: 0 0 0.5rem;
+  border-radius: 6px;
+}
+
+.skel__line--tall {
+  height: 1.15rem;
+}
+
+.skel__lines .skel__line:last-child,
+.skel__card .skel__line:last-child {
+  margin-bottom: 0;
+}
+
+.skel__card {
+  display: block;
+}
+
+.skel__thumb {
+  display: block;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 0.8rem;
+  border-radius: 10px;
+}
+
+.skel__rowcard .skel__line:last-child {
+  margin-bottom: 0;
+}
+
+/* Date picker modal — components/DatePickerModal.jsx */
+
+.datepick__month {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+
+.datepick .cal__day {
+  min-height: 74px;
+  cursor: pointer;
+}
+
+.datepick .cal__date {
+  width: 100%;
+  text-align: left;
+}
+
+.skel__panel {
+  padding: 0.9rem 1rem;
+}
+
+.skel__row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.skel__row:last-child {
+  border-bottom: 0;
+}
+
+.skel__row .skel__line {
+  margin: 0;
+}
+
+.skel__row--head .skel__line {
+  height: 0.65rem;
+}
+
+.skel__cell {
+  min-height: 92px;
+  border-radius: 12px;
+}
+
+.skel__cal .skel__line {
+  margin: 0;
+}
+
+.skel__field {
+  margin-bottom: 1rem;
+}
+
+.skel__input {
+  display: block;
+  height: 2.6rem;
+  border-radius: 10px;
+}
+
+.skel__banner {
+  display: block;
+  aspect-ratio: 3 / 1;
+  margin-bottom: 1rem;
+  border-radius: 14px;
+}
+
+.skel__media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.skel__frame {
+  display: block;
+  flex: 0 0 auto;
+  width: 160px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+}
+
 /* Empty states */
 
 .empty-card__title {
@@ -2624,10 +2763,7 @@ h3.eyebrow:not(:first-child) {
   border-top: 1px solid var(--line);
 }
 
-/* ── The Facebook sync strip, under an approved announcement ───────────────
-   Appended at the end of the file on purpose: .fb-sync__hint renders ordinary
-   sentence-case text, and the second copy of `.field span` around line 1290
-   uppercases anything it can reach. See css_inventory.md §9. */
+/* The Facebook sync strip, under an approved announcement. See css_inventory.md §9. */
 
 .fb-sync {
   margin-top: 0.7rem;
@@ -2643,6 +2779,18 @@ h3.eyebrow:not(:first-child) {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
+}
+
+.confirm__check {
+  margin-top: 0.7rem;
+}
+
+.fb-sync__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
 }
 
 .fb-sync__link {
@@ -2668,8 +2816,7 @@ h3.eyebrow:not(:first-child) {
   margin-left: auto;
 }
 
-/* The connected lamp on the parish profile card. The token itself never leaves the
-   database, so this dot is the entire read-back the UI is given. */
+/* The connected lamp on the parish profile card. */
 .fb-card__dot {
   display: inline-block;
   width: 0.58rem;
@@ -2685,8 +2832,7 @@ h3.eyebrow:not(:first-child) {
   box-shadow: 0 0 0 2px rgba(53, 90, 40, 0.18);
 }
 
-/* The quiet fallback link under the Facebook card's primary button — a real <button>
-   styled as a link, because it toggles a form rather than navigating. */
+/* The quiet fallback link under the Facebook card's primary button. */
 .fb-card__alt {
   margin-top: 0.6rem;
   font-size: 0.82rem;
@@ -2801,9 +2947,7 @@ h3.eyebrow:not(:first-child) {
   border-radius: 10px;
 }
 
-/* One photograph is a showcase, not a thumbnail: it takes the full width of the
-   column and a wider crop. Three photographs leave the third spanning both cells
-   rather than sitting alone beside a gap. */
+/* One photograph is a showcase, not a thumbnail; three leave the third spanning. */
 .church-gallery:has(li:only-child) {
   grid-template-columns: 1fr;
 }
@@ -2952,11 +3096,7 @@ img.cleric__frame {
   border-radius: 12px;
 }
 
-/* Scroll reveal — public pages only. The hidden state exists only under .is-armed,
-   which useReveal sets; without the script nothing is ever hidden.
-   Opacity finishes in 420ms on purpose: a card still fading in cannot be seen to slide,
-   so the glide has to happen while it is already solid. The standalone translate
-   property, not transform, so .parish-card's hover lift composes instead of fighting. */
+/* Scroll reveal — public pages only. Hidden only under .is-armed, which useReveal sets. */
 
 .is-armed .reveal {
   opacity: 0;
@@ -3274,7 +3414,7 @@ img.cleric__frame {
   display: block;
   width: 100%;
   max-width: 200px;
-  margin: 0.7rem 0 0.9rem;
+  margin: 0.7rem auto 0.9rem;
   aspect-ratio: 1 / 1;
   object-fit: contain;
   background: #fff;

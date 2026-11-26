@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
   RELATIONSHIP_LABEL,
@@ -140,7 +140,7 @@ export default function MyRequests() {
       )}
 
       {requests === null ? (
-        <Loading label="Loading your requests…" />
+        <Skeleton variant="rows" label="Loading your requests…" />
       ) : requests.length === 0 ? (
         <div className="card empty-card">
           <p className="empty">You have not requested any documents yet.</p>

@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import Modal from './Modal.jsx'
-
-const MOBILE = /^09\d{9}$/
+import { CONTACT_ERROR, CONTACT_HINT, isContactNo } from '../lib/phone.js'
 
 export default function RegisterParishModal({ open, onClose, onRegister }) {
   const [name, setName] = useState('')
@@ -47,8 +46,8 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
       setError('Address must be at least 5 characters.')
       return
     }
-    if (!MOBILE.test(trimmedContact)) {
-      setError('Contact number must be a PH mobile number, e.g. 09171234567.')
+    if (!isContactNo(trimmedContact)) {
+      setError(CONTACT_ERROR)
       return
     }
 
@@ -106,9 +105,10 @@ export default function RegisterParishModal({ open, onClose, onRegister }) {
           <input
             value={contactNo}
             onChange={(e) => setContactNo(e.target.value)}
-            placeholder="09171234567"
-            inputMode="numeric"
+            placeholder="09171234567 or (054) 472-1234"
+            inputMode="tel"
           />
+          <small className="muted">{CONTACT_HINT}</small>
         </label>
 
         <label className="field">

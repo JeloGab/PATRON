@@ -19,6 +19,15 @@ function emptyDetail() {
   return { fatherName: '', motherName: '', placeOfBirth: '', dateOfDeath: '' }
 }
 
+function detailFrom(person) {
+  return {
+    fatherName: person.fatherName ?? '',
+    motherName: person.motherName ?? '',
+    placeOfBirth: person.placeOfBirth ?? '',
+    dateOfDeath: '',
+  }
+}
+
 export default function CompleteEventModal({ event, participants, signatory, onClose, onDone, onSessionEnd }) {
   const sacramental = event.eventType === 'sacramental'
   const register = REGISTER_FOR[event.sacramentType]
@@ -27,9 +36,9 @@ export default function CompleteEventModal({ event, participants, signatory, onC
   const signatoryBlocked = sacramental && signatory?.hasSignature === false
 
   const [registry, setRegistry] = useState({ bookNo: '', pageNo: '' })
-  const [officiant, setOfficiant] = useState('')
+  const [officiant, setOfficiant] = useState(event.officiantName ?? '')
   const [details, setDetails] = useState(() =>
-    Object.fromEntries(cleared.map((person) => [person.participantId, emptyDetail()])),
+    Object.fromEntries(cleared.map((person) => [person.participantId, detailFrom(person)])),
   )
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -60,10 +69,12 @@ export default function CompleteEventModal({ event, participants, signatory, onC
 
       body.participants = cleared.map((person) => {
         const detail = details[person.participantId] ?? emptyDetail()
-        const entry = { participantId: person.participantId }
-        if (detail.fatherName.trim()) entry.fatherName = detail.fatherName.trim()
-        if (detail.motherName.trim()) entry.motherName = detail.motherName.trim()
-        if (detail.placeOfBirth.trim()) entry.placeOfBirth = detail.placeOfBirth.trim()
+        const entry = {
+          participantId: person.participantId,
+          fatherName: detail.fatherName.trim(),
+          motherName: detail.motherName.trim(),
+          placeOfBirth: detail.placeOfBirth.trim(),
+        }
         if (register === 'death' && detail.dateOfDeath) entry.dateOfDeath = detail.dateOfDeath
         return entry
       })

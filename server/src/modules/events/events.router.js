@@ -41,7 +41,6 @@ router.post('/:eventId/cancel', managerOnly, async (req, res) => {
   res.json({ ok: true, event: await cancelEvent(req.user, req.params.eventId, req.body ?? {}) })
 })
 
-
 router.post('/:eventId/complete', managerOnly, async (req, res) => {
   const { event, generated, warnings } = await completeEvent(req.user, req.params.eventId, req.body ?? {})
   res.json({ ok: true, event, generated, warnings })

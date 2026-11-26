@@ -44,7 +44,6 @@ router.get('/:applicationId/certificate.pdf', async (req, res) => {
   res.send(file.buffer)
 })
 
-
 const idUpload = express.raw({ type: ATTACHMENT_TYPES, limit: '5mb' })
 
 router.post('/:applicationId/id-file', submissionLimiter, idUpload, async (req, res) => {

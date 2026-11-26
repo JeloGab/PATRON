@@ -1,19 +1,20 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish, requireRegistryPart, optionalSubjectName, optionalPlaceOfBirth, optionalPastDate, requireOfficiant } from '../../lib/validators.js'
+import { clean, requireEventType, requireSacramentType, requireTitle, optionalDescription, requireIsoDate, requireUpcomingDate, requireTime, optionalReason, todayInParish, requireRegistryPart, optionalSubjectName, optionalPlaceOfBirth, optionalPastDate, requireOfficiant, optionalOfficiant } from '../../lib/validators.js'
 import { findActivePriest, listActivePriests } from '../parish/parish.queries.js'
 import { mintVerificationCode } from '../../lib/verificationCode.js'
 import { buildSnapshot, renderCertificatePdf } from '../documents/documents.services.js'
 import { findEventCertificates, findEventCertificate, findCertificateMarks } from '../documents/documents.queries.js'
 import { roleFor, checkDates } from '../records/records.services.js'
-import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, countPriestEventsInMonth, findCalendarEvents, findReservedDates, findParishBlockDates } from './events.queries.js'
+import { findEvent, findEvents, insertEvent, updateEvent, decideEvent, closeEvent, findBlockConflict, findScheduleConflict, findVenueConflict, countPriestEventsInMonth, findCalendarEvents, findReservedDates, findParishBlockDates } from './events.queries.js'
 import {completeEventAndIssue} from './events.issuance.js'
 const MAX_WINDOW_DAYS = 92
 const EDITABLE_STATUSES = ['pending', 'approved']
-const RESCHEDULE_FIELDS = ['eventDate', 'startTime', 'endTime', 'assignedPriestId']
+const RESCHEDULE_FIELDS = ['eventDate', 'startTime', 'endTime', 'assignedPriestId', 'officiantName']
 const MAX_ISSUE_ATTEMPTS = 5
 const MARRIAGE_ROSTER = 2
-const NO_DETAIL = { fatherName: null, motherName: null, placeOfBirth: null, dateOfDeath: null }
+const OUTSIDE_OFFICIANT_TYPES = ['marriage', 'funeral']
+const NO_DETAIL = { dateOfDeath: null }
 
 function requireId(value, code) {
   const id = clean(value).toLowerCase()
@@ -40,14 +41,22 @@ function requireDetails(input) {
   const details = new Map()
   for (const raw of input) {
     const entry = raw ?? {}
-    details.set(requireId(entry.participantId, 'INVALID_PARTICIPANT_ID'), {
-      fatherName: optionalSubjectName(entry.fatherName),
-      motherName: optionalSubjectName(entry.motherName),
-      placeOfBirth: optionalPlaceOfBirth(entry.placeOfBirth),
-      dateOfDeath: optionalPastDate(entry.dateOfDeath, 'INVALID_DEATH_DATE'),
-    })
+    const detail = { dateOfDeath: optionalPastDate(entry.dateOfDeath, 'INVALID_DEATH_DATE') }
+
+    if (Object.hasOwn(entry, 'fatherName')) detail.fatherName = optionalSubjectName(entry.fatherName)
+    if (Object.hasOwn(entry, 'motherName')) detail.motherName = optionalSubjectName(entry.motherName)
+    if (Object.hasOwn(entry, 'placeOfBirth')) {
+      detail.placeOfBirth = optionalPlaceOfBirth(entry.placeOfBirth)
+    }
+
+    details.set(requireId(entry.participantId, 'INVALID_PARTICIPANT_ID'), detail)
   }
   return details
+}
+
+function fromDetail(detail, participant, key) {
+  if (Object.hasOwn(detail, key)) return detail[key]
+  return participant[key] ?? null
 }
 
 function subjectFor(participant, detail, recordType) {
@@ -55,10 +64,10 @@ function subjectFor(participant, detail, recordType) {
     role: roleFor(recordType, participant.gender),
     fullName: participant.participantName,
     dateOfBirth: participant.dateOfBirth,
-    placeOfBirth: detail.placeOfBirth,
+    placeOfBirth: fromDetail(detail, participant, 'placeOfBirth'),
     gender: participant.gender,
-    fatherName: detail.fatherName,
-    motherName: detail.motherName,
+    fatherName: fromDetail(detail, participant, 'fatherName'),
+    motherName: fromDetail(detail, participant, 'motherName'),
     sponsorNames: participant.sponsorName,
   }
 }
@@ -142,10 +151,31 @@ function planRecords({ recordType, eventDate, officiantName, registry, details, 
 
 }
 
+function requireOutsideOfficiant(value, eventType, sacramentType) {
+  const name = optionalOfficiant(value)
+  if (!name) return null
+  if (eventType !== 'sacramental' || !OUTSIDE_OFFICIANT_TYPES.includes(sacramentType)) {
+    throw new AppError('OFFICIANT_NOT_ALLOWED', 400)
+  }
+  return name
+}
+
 async function runChecks(actor, slot) {
-  const blocked = await findBlockConflict(actor, slot)
+  const outside = Boolean(slot.officiantName)
+
+  const blocked = await findBlockConflict(actor, {
+    ...slot,
+    priestId: outside ? null : slot.priestId,
+  })
   if (blocked === 'parish') throw new AppError('DATE_BLOCKED', 409)
   if (blocked === 'priest') throw new AppError('PRIEST_UNAVAILABLE', 409)
+
+  if (outside) {
+    const taken = await findVenueConflict(actor, slot)
+    if (taken) throw new AppError('PARISH_SLOT_TAKEN', 409)
+    return
+  }
+
   if (!slot.priestId) return
 
   const clash = await findScheduleConflict(actor, slot)
@@ -169,19 +199,31 @@ export async function createEvent(actor, body) {
     startTime: requireTime(body.startTime, 'INVALID_TIME_RANGE'),
     endTime: requireTime(body.endTime, 'INVALID_TIME_RANGE'),
     assignedPriestId: null,
-    status: sacramental ? 'pending' : 'approved',
-    approvedBy: sacramental ? null : actor.userId,
+    officiantName: null,
+    status: 'approved',
+    approvedBy: actor.userId,
   }
   requireSlotTimes(event.startTime, event.endTime)
+  event.officiantName = requireOutsideOfficiant(
+    body.officiantName,
+    event.eventType,
+    event.sacramentType
+  )
 
   if (sacramental) event.assignedPriestId = await requirePriest(actor, body.assignedPriestId)
   else if (clean(body.assignedPriestId)) event.assignedPriestId = await requirePriest(actor, body.assignedPriestId)
+
+  if (event.assignedPriestId) {
+    event.status = 'pending'
+    event.approvedBy = null
+  }
 
   await runChecks(actor, {
     eventDate: event.eventDate,
     startTime: event.startTime,
     endTime: event.endTime,
     priestId: event.assignedPriestId,
+    officiantName: event.officiantName,
     excludeEventId: null,
   })
 
@@ -223,6 +265,14 @@ export async function editEvent(actor, eventId, body) {
     }
   }
 
+  if (body.officiantName !== undefined) {
+    patch.officiantName = requireOutsideOfficiant(
+      body.officiantName,
+      current.eventType,
+      current.sacramentType
+    )
+  }
+
   if (Object.keys(patch).length === 0) throw new AppError('NO_FIELDS_TO_UPDATE', 400)
 
   const next = { ...current, ...patch }
@@ -238,13 +288,23 @@ export async function editEvent(actor, eventId, body) {
       startTime: next.startTime,
       endTime: next.endTime,
       priestId: next.assignedPriestId,
+      officiantName: next.officiantName,
       excludeEventId: current.eventId,
     })
   }
 
-  const resetApproval = rescheduled && next.eventType === 'sacramental' && current.status === 'approved'
+  const priestChanged =
+    Object.hasOwn(patch, 'assignedPriestId') && patch.assignedPriestId !== current.assignedPriestId
 
-  const changed = await updateEvent(actor, current.eventId, { patch, resetApproval })
+  const resetApproval =
+    current.status === 'approved' &&
+    Boolean(next.assignedPriestId) &&
+    (rescheduled || (priestChanged && Boolean(next.assignedPriestId)))
+
+  const grantApproval =
+    current.status === 'pending' && priestChanged && !next.assignedPriestId
+
+  const changed = await updateEvent(actor, current.eventId, { patch, resetApproval, grantApproval })
   if (!changed) throw new AppError('EVENT_NOT_FOUND', 404)
 
   return findEvent(actor, current.eventId)
@@ -259,6 +319,7 @@ export async function approveEvent(actor, eventId) {
     startTime: current.startTime,
     endTime: current.endTime,
     priestId: current.assignedPriestId,
+    officiantName: current.officiantName,
     excludeEventId: current.eventId,
   })
 

@@ -57,10 +57,9 @@ export default function StaffProvisionModal({
     setCredentials(result.credentials)
   }
 
-  async function copyCredentials() {
-    const text = `Username: ${credentials.username}\nTemporary password: ${credentials.tempPassword}`
+  async function copyPassword() {
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(credentials.tempPassword)
       setCopied(true)
     } catch {
       setCopied(false)
@@ -99,8 +98,8 @@ export default function StaffProvisionModal({
           </p>
 
           <div className="form-actions__buttons">
-            <button type="button" className="btn btn--ghost" onClick={copyCredentials}>
-              {copied ? 'Copied' : 'Copy'}
+            <button type="button" className="btn btn--ghost" onClick={copyPassword}>
+              {copied ? 'Copied' : 'Copy password'}
             </button>
             <button type="button" className="btn btn--gold" onClick={close}>
               Done

@@ -20,11 +20,6 @@ export function joinOfficiant(title, name) {
   return `${title} ${bare}`
 }
 
-// The contract is joinOfficiant(...splitOfficiant(stored)) === stored, for every value
-// already in officiant_name — including the arbitrary strings old ledgers hold. A title is
-// recognised only when exactly one space follows it, so "Rev. Fr.  Juan" keeps both spaces
-// by staying whole in the name box. Without that, opening a record and pressing Save would
-// silently reflow the register entry.
 export function splitOfficiant(stored) {
   const value = String(stored ?? '').trim()
 

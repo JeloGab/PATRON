@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import EventModal from '../../components/EventModal.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
 import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -118,7 +118,7 @@ export default function PendingApprovals() {
       </Seg>
 
       {events === null ? (
-        <Loading label="Loading your events…" />
+        <Skeleton variant="rows" label="Loading your events…" />
       ) : rows.length === 0 ? (
         <p className="empty">
           {filter === 'pending'

@@ -1,6 +1,6 @@
 import { AppError } from '../../lib/appError.js'
 import { isUuid } from '../../lib/credentials.js'
-import { clean, requireSubjectName, requireGender, optionalContact, optionalPastDate, optionalSponsorNames, optionalReason } from '../../lib/validators.js'
+import { clean, requireSubjectName, requireGender, optionalContact, optionalPastDate, optionalSponsorNames, optionalReason, optionalSubjectName, optionalPlaceOfBirth } from '../../lib/validators.js'
 import { findEvent } from '../events/events.queries.js'
 import { findRecord } from '../records/records.queries.js'
 import { findParticipant, findParticipants, insertParticipant, updateParticipant, setParticipantStatus,  materialiseRequirements, findRequirements, findRequirement, updateRequirement,
@@ -9,6 +9,7 @@ import { findParticipant, findParticipants, insertParticipant, updateParticipant
 const MAX_SEARCH_WORDS = 5
 const SEMINAR_RESULT_LIMIT = 20
 const NEEDS_BIRTH_DATE = ['baptism', 'confirmation']
+const FIXED_ROSTER = { marriage: 2 }
 const NEEDS_CONTACT = ['seminar', 'general']
 const FINAL_EVENT_STATUSES = ['rejected', 'cancelled', 'completed']
 const DECISIONS = ['verified', 'waived']
@@ -45,6 +46,16 @@ function requireRosterAcceptsAdditions(event) {
   }
 }
 
+async function requireRosterHasRoom(actor, event) {
+  if (event.eventType !== 'sacramental') return
+  const limit = FIXED_ROSTER[event.sacramentType]
+  if (limit === undefined) return
+
+  const roster = await findParticipants(actor, event.eventId)
+  const active = roster.filter((person) => person.status !== 'withdrawn')
+  if (active.length >= limit) throw new AppError('ROSTER_FULL', 409)
+}
+
 function requireContact(value, event) {
   const contact = optionalContact(value)
   if (!contact && NEEDS_CONTACT.includes(event.eventType)) throw new AppError('INVALID_CONTACT', 400)
@@ -66,10 +77,17 @@ function requireSponsor(value, event) {
   return sponsorName
 }
 
+function requireSubjectDetail(value, event, read) {
+  const detail = read(value)
+  if (detail && event.eventType !== 'sacramental') throw new AppError('DETAIL_NOT_ALLOWED', 400)
+  return detail
+}
+
 export async function addParticipant(actor, body) {
   const eventId = requireId(body.eventId, 'INVALID_EVENT_ID')
   const event = await loadEvent(actor, eventId)
   requireRosterAcceptsAdditions(event)
+  await requireRosterHasRoom(actor, event)
 
   const participantId = await insertParticipant(actor, {
     eventId,
@@ -78,6 +96,9 @@ export async function addParticipant(actor, body) {
     participantDateOfBirth: requireBirthDate(body.participantDateOfBirth, event),
     gender: requireGender(body.gender),
     sponsorName: requireSponsor(body.sponsorName, event),
+    fatherName: requireSubjectDetail(body.fatherName, event, optionalSubjectName),
+    motherName: requireSubjectDetail(body.motherName, event, optionalSubjectName),
+    placeOfBirth: requireSubjectDetail(body.placeOfBirth, event, optionalPlaceOfBirth),
   })
   const participant = await findParticipant(actor, participantId)
   await materialiseRequirements(actor, participantId, event.sacramentType)
@@ -133,6 +154,15 @@ export async function editParticipant(actor, participantId, body) {
   if (Object.hasOwn(body, 'participantDateOfBirth')) patch.participantDateOfBirth = requireBirthDate(body.participantDateOfBirth, event)
   if (Object.hasOwn(body, 'gender')) patch.gender = requireGender(body.gender)
   if (Object.hasOwn(body, 'sponsorName')) patch.sponsorName = requireSponsor(body.sponsorName, event)
+  if (Object.hasOwn(body, 'fatherName')) {
+    patch.fatherName = requireSubjectDetail(body.fatherName, event, optionalSubjectName)
+  }
+  if (Object.hasOwn(body, 'motherName')) {
+    patch.motherName = requireSubjectDetail(body.motherName, event, optionalSubjectName)
+  }
+  if (Object.hasOwn(body, 'placeOfBirth')) {
+    patch.placeOfBirth = requireSubjectDetail(body.placeOfBirth, event, optionalPlaceOfBirth)
+  }
 
   if (Object.keys(patch).length === 0) throw new AppError('NO_FIELDS_TO_UPDATE', 400)
 
@@ -162,10 +192,6 @@ export async function listRequirements(actor, participantId) {
   return findRequirements(actor, id)
 }
 
-// Evidence for a seminar requirement, which no register holds. Read-only: it answers
-// "was this name on a seminar roster, and which seminar" and nothing more. The manager
-// still decides, so the status it leads to is `verified` - never `auto_verified`, which
-// means the system matched name AND birth date against the register.
 export async function searchSeminarAttendance(actor, query) {
   const words = clean(query?.name).split(/\s+/).filter(Boolean).slice(0, MAX_SEARCH_WORDS)
   if (words.length === 0) throw new AppError('MISSING_FIELDS', 400)

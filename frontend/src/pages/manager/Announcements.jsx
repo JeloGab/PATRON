@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
 import FacebookSync from '../../components/FacebookSync.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import Modal from '../../components/Modal.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import Seg from '../../components/Seg.jsx'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
   IMAGE_ACCEPT,
@@ -21,6 +22,7 @@ import {
   statusPill,
 } from '../../lib/announcements.js'
 import { formatStamp } from '../../lib/documents.js'
+import { syncStateOf } from '../../lib/facebook.js'
 import { messageFor } from '../../lib/errors.js'
 import { clearSession } from '../../lib/session.js'
 
@@ -29,6 +31,7 @@ const EMPTY = { title: '', content: '' }
 
 export default function Announcements() {
   const navigate = useNavigate()
+  const { ask } = useConfirm()
   const [announcements, setAnnouncements] = useState(null)
   const [status, setStatus] = useState('pending')
   const [draft, setDraft] = useState(EMPTY)
@@ -253,8 +256,6 @@ export default function Announcements() {
     )
   }
 
-  // The sync route answers with getAnnouncement(), whose column list carries no
-  // image_count — so imageCount arrives as 0 and the image controls would disappear.
   function patch(next) {
     setAnnouncements((list) =>
       (list ?? []).map((item) =>
@@ -263,6 +264,26 @@ export default function Announcements() {
           : item,
       ),
     )
+  }
+
+  async function archive(announcement) {
+    const live = announcement.status === 'approved'
+    const onPage = live && syncStateOf(announcement) === 'synced'
+
+    const ok = await ask({
+      title: 'Archive this announcement',
+      message: live
+        ? `It leaves the public feed straight away.${
+            onPage
+              ? ' The Facebook post stays up — only the parish priest can remove that.'
+              : ''
+          } A correction is a new announcement, which the priest still has to approve.`
+        : 'This draft is filed away. It is not published, so nothing changes for anyone reading the feed.',
+      confirmLabel: 'Archive',
+    })
+
+    if (!ok) return
+    await act(announcement, 'archive')
   }
 
   async function act(announcement, action) {
@@ -333,7 +354,7 @@ export default function Announcements() {
       </Seg>
 
       {announcements === null ? (
-        <Loading label="Loading announcements…" />
+        <Skeleton variant="cards" label="Loading announcements…" />
       ) : rows.length === 0 ? (
         <p className="empty">No {STATUS_LABEL[status].toLowerCase()} announcement.</p>
       ) : (
@@ -367,7 +388,7 @@ export default function Announcements() {
                   <button
                     type="button"
                     className="btn btn--ghost"
-                    onClick={() => act(item, 'archive')}
+                    onClick={() => archive(item)}
                     disabled={busy === item.announcementId}
                   >
                     Archive

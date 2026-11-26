@@ -1,11 +1,10 @@
-// The diocese logo: one image, uploaded by the sysadmin, printed on every certificate
-// every parish issues. GET/POST/DELETE /api/admin/diocese/logo
+// The diocese logo: one image, uploaded by the sysadmin, printed on every certificate.
 
 import { useCallback, useEffect, useState } from 'react'
 import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
@@ -93,16 +92,14 @@ export default function DioceseLogo() {
     }
 
     setVersion((current) => current + 1)
-    setNotice(
-      'The diocese logo was updated. It prints on every certificate from every parish, including those already issued.',
-    )
+    setNotice('Logo updated. It applies to every certificate, including those already issued.')
   }
 
   async function remove() {
     const ok = await ask({
-      title: 'Remove diocese logo',
+      title: 'Remove logo',
       message:
-        'Every certificate is rendered on demand, so the logo disappears from certificates already issued as well as new ones.',
+        'Certificates render on demand, so it also disappears from those already issued.',
       confirmLabel: 'Remove',
     })
     if (!ok) return
@@ -122,13 +119,13 @@ export default function DioceseLogo() {
     }
 
     setVersion((current) => current + 1)
-    setNotice('The diocese logo was removed. Certificates print without it.')
+    setNotice('Logo removed. Certificates print without it.')
   }
 
   if (loading) {
     return (
       <div className="page">
-        <Loading label="Loading the diocese logo…" />
+        <Skeleton variant="media" label="Loading the logo…" />
       </div>
     )
   }
@@ -136,15 +133,11 @@ export default function DioceseLogo() {
   return (
     <div className="page">
       <header className="page__hero">
-        <p className="eyebrow">
-          <Icon name="shield" /> Diocese of Libmanan
-        </p>
         <h1>Diocese logo</h1>
         <p className="lede">
-          One logo for the whole diocese. It prints on the left of the header of every
-          certificate every parish issues, beside that parish&rsquo;s own seal. It is read
-          when a certificate is drawn rather than copied when one is issued, so replacing it
-          here corrects every certificate — including those already downloaded.
+          One logo for every parish. It prints beside the parish seal on each certificate,
+          and because certificates are drawn when they are downloaded, replacing it here
+          updates the ones already issued too.
         </p>
       </header>
 
@@ -179,16 +172,13 @@ export default function DioceseLogo() {
           </>
         ) : (
           <>
-            <p className="empty">
-              No diocese logo has been uploaded. Certificates print with the parish name
-              alone, which is how they look today.
-            </p>
+            <p className="empty">No logo uploaded. Certificates print without one.</p>
             <PhotoDrop
               onFiles={upload}
               accept="image/png,image/jpeg"
               busy={busy === 'upload'}
-              lead="Drag the diocese logo here"
-              hint="PNG or JPEG, up to 1 MB. A square image on a transparent or plain background prints best."
+              lead="Drag the logo here"
+              hint="PNG or JPEG, up to 1 MB. Square prints best."
             />
           </>
         )}

@@ -60,18 +60,43 @@ const NEEDS_BIRTH_DATE = ['baptism', 'confirmation']
 const NEEDS_CONTACT = ['seminar', 'general']
 
 export function fieldRules(event) {
-  if (!event) return { birthDate: false, contact: false, sponsor: false }
+  if (!event) return { birthDate: false, contact: false, sponsor: false, parents: false }
   return {
     birthDate: event.eventType === 'sacramental' && NEEDS_BIRTH_DATE.includes(event.sacramentType),
     contact: NEEDS_CONTACT.includes(event.eventType),
     sponsor: event.eventType === 'sacramental',
+    parents: event.eventType === 'sacramental',
   }
 }
 
-export function rosterAcceptsAdditions(event) {
+export const MARRIAGE_ROSTER = 2
+
+const FIXED_ROSTER = { marriage: MARRIAGE_ROSTER }
+
+export function rosterLimit(event) {
+  if (event?.eventType !== 'sacramental') return null
+  return FIXED_ROSTER[event.sacramentType] ?? null
+}
+
+export function activeParticipants(participants) {
+  return (participants ?? []).filter((person) => person.status !== 'withdrawn')
+}
+
+export function withdrawnParticipants(participants) {
+  return (participants ?? []).filter((person) => person.status === 'withdrawn')
+}
+
+export function rosterIsFull(event, participants) {
+  const limit = rosterLimit(event)
+  if (limit === null) return false
+  return activeParticipants(participants).length >= limit
+}
+
+export function rosterAcceptsAdditions(event, participants) {
   if (!event) return false
   if (['rejected', 'cancelled', 'completed'].includes(event.status)) return false
-  return !(event.eventType === 'sacramental' && event.status === 'approved')
+  if (event.eventType === 'sacramental' && event.status === 'approved') return false
+  return !rosterIsFull(event, participants)
 }
 
 export function rosterIsOpen(event) {

@@ -3,6 +3,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getSession } from '../lib/session.js'
 import Avatar from './Avatar.jsx'
+import { useConfirm } from './ConfirmProvider.jsx'
 import Logo from './Logo.jsx'
 import Tabs from './Tabs.jsx'
 
@@ -38,8 +39,19 @@ function isCurrent(item, pathname) {
 
 function SignOut() {
   const navigate = useNavigate()
+  const { ask } = useConfirm()
 
-  function signOut() {
+  async function signOut() {
+    const ok = await ask({
+      title: 'Sign out',
+      message:
+        'You will be returned to the sign-in page. Anything typed but not yet saved is lost.',
+      confirmLabel: 'Sign out',
+      cancelLabel: 'Stay signed in',
+      tone: 'gold',
+    })
+    if (!ok) return
+
     clearSession()
     navigate('/login', { replace: true })
   }

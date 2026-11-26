@@ -14,7 +14,6 @@ const EXTENSION = {
 export const ATTACHMENT_TYPES = Object.keys(EXTENSION)
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
-
 export function sniffContentType(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null
 

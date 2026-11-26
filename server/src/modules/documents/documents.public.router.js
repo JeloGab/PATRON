@@ -18,5 +18,4 @@ router.get('/', async (_req, res) => {
   res.json({ ok: true, documentTypes: await listDocumentTypes() })
 })
 
-
 export default router
