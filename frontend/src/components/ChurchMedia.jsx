@@ -9,14 +9,15 @@ function crestLetter(name) {
 }
 
 export default function ChurchMedia({ id, accent, className = '', children, alt = '', name, version }) {
-  const [failed, setFailed] = useState(false)
+  const [failedKey, setFailedKey] = useState(null)
+  const key = `${id ?? ''}:${version ?? ''}`
   const query = version ? `?v=${encodeURIComponent(version)}` : ''
-  const src = id && !failed ? `${BASE}/api/parishes/${id}/photo${query}` : null
+  const src = id && failedKey !== key ? `${BASE}/api/parishes/${id}/photo${query}` : null
 
   return (
     <div className={`${className} ${src ? 'has-photo' : ''}`.trim()} style={{ '--accent': accent }}>
       {src ? (
-        <img className="church-media__img" src={src} alt={alt} onError={() => setFailed(true)} />
+        <img className="church-media__img" src={src} alt={alt} onError={() => setFailedKey(key)} />
       ) : (
         <span className="church-media__crest" aria-hidden="true">
           {crestLetter(name ?? alt)}
