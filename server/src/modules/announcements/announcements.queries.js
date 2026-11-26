@@ -3,11 +3,12 @@ import { AppError } from '../../lib/appError.js'
 import { pool } from '../../db/pool.js'
 
 const COLUMNS = `announcement_id, parish_id, title, content, status, status_reason,
-                 facebook_post_id, sync_status, created_by, created_at,
-                 approved_by, approved_at`
+                 facebook_post_id, sync_status, facebook_checked_at,
+                 created_by, created_at, approved_by, approved_at`
 
 const LIST_COLUMNS = `a.announcement_id, a.parish_id, a.title, a.content, a.status,
                       a.status_reason, a.facebook_post_id, a.sync_status,
+                      a.facebook_checked_at,
                       a.created_by, a.created_at, a.approved_by, a.approved_at,
                       (select count(*) from public.announcement_image i
                         where i.announcement_id = a.announcement_id)::int as image_count`
@@ -34,6 +35,7 @@ function mapAnnouncement(row) {
     statusReason: row.status_reason,
     facebookPostId: row.facebook_post_id,
     syncStatus: row.sync_status,
+    facebookCheckedAt: row.facebook_checked_at,
     createdBy: row.created_by,
     createdAt: row.created_at,
     approvedBy: row.approved_by,
@@ -54,8 +56,6 @@ function mapImage(row) {
   }
 }
 
-// findImage() returns one image; the album post needs every image's bytes in slot
-// order, and list queries deliberately never select `content`.
 export async function findImageBytes(actor, announcementId) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
@@ -73,8 +73,6 @@ export async function findImageBytes(actor, announcementId) {
   })
 }
 
-// The only way to write sync_status or facebook_post_id. patron_app holds no update
-// grant on either column, so this function is not a convenience - it is the door.
 export async function recordSync(actor, { announcementId, syncStatus, postId = null }) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
@@ -270,8 +268,6 @@ export async function deleteImage(actor, { announcementId, imageId }) {
     return rowCount > 0
   })
 }
-
-// ── public: no actor, no token, straight at the views ────────────────────
 
 export async function listFeed({ parishId, limit, offset }) {
   const { rows } = await pool.query(

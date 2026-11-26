@@ -1,8 +1,4 @@
-// Replaces window.confirm and window.alert, which render as an OS dialog carrying the
-// browser's own wording and cannot be styled. Promise-based on purpose: every call site
-// was `if (!window.confirm(...)) return` inside an async handler, so `await ask(...)`
-// keeps the control flow identical instead of splitting each one into state plus a
-// pending action.
+// Replaces window.confirm and window.alert with a styled, promise-based dialog.
 
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import Modal from './Modal.jsx'
@@ -18,23 +14,26 @@ export function useConfirm() {
 export default function ConfirmProvider({ children }) {
   const [request, setRequest] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [ticked, setTicked] = useState(false)
   const resolver = useRef(null)
 
   function settle(answer) {
     const resolve = resolver.current
+    const wanted = request?.wantsChecked === true
+    const checked = ticked
     resolver.current = null
     setRequest(null)
     setCopied(false)
-    if (resolve) resolve(answer)
+    setTicked(false)
+    if (resolve) resolve(wanted ? { ok: answer === true, checked: answer === true && checked } : answer)
   }
 
-  // A second call while one is open would orphan the first promise, so the earlier one
-  // resolves false - the same outcome as dismissing it.
   const open = useCallback((options) => {
     return new Promise((resolve) => {
       if (resolver.current) resolver.current(false)
       resolver.current = resolve
       setCopied(false)
+      setTicked(options.checkedByDefault === true)
       setRequest(options)
     })
   }, [])
@@ -42,6 +41,30 @@ export default function ConfirmProvider({ children }) {
   const ask = useCallback(
     ({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'danger' }) =>
       open({ kind: 'confirm', title, message, confirmLabel, cancelLabel, tone }),
+    [open],
+  )
+
+  const askChecked = useCallback(
+    ({
+      title,
+      message,
+      checkboxLabel,
+      checkedByDefault = false,
+      confirmLabel = 'Confirm',
+      cancelLabel = 'Cancel',
+      tone = 'danger',
+    }) =>
+      open({
+        kind: 'confirm',
+        title,
+        message,
+        checkboxLabel,
+        checkedByDefault,
+        confirmLabel,
+        cancelLabel,
+        tone,
+        wantsChecked: true,
+      }),
     [open],
   )
 
@@ -63,7 +86,7 @@ export default function ConfirmProvider({ children }) {
   const isNotify = request?.kind === 'notify'
 
   return (
-    <ConfirmContext.Provider value={{ ask, notify }}>
+    <ConfirmContext.Provider value={{ ask, askChecked, notify }}>
       {children}
 
       <Modal
@@ -74,6 +97,17 @@ export default function ConfirmProvider({ children }) {
         {request ? (
           <div className="confirm">
             <p className="confirm__message">{request.message}</p>
+
+            {request.checkboxLabel ? (
+              <label className="check-line confirm__check">
+                <input
+                  type="checkbox"
+                  checked={ticked}
+                  onChange={(event) => setTicked(event.target.checked)}
+                />
+                <span className="check-line__text">{request.checkboxLabel}</span>
+              </label>
+            ) : null}
 
             {request.copyText ? (
               <div className="confirm__value">

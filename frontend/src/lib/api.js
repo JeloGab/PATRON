@@ -4,9 +4,6 @@ import { getToken } from './session.js'
 
 export const BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:4000').replace(/\/$/, '')
 
-// VITE_API_BASE is inlined at build time, so a deploy that forgot it points every
-// request at the visitor's own machine and fails as NETWORK_ERROR — whose sentence now
-// blames their connection. This is the only place that can still say otherwise.
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE) {
   console.error(
     `[api] VITE_API_BASE was not set when this was built, so requests go to ${BASE}. Set it and rebuild.`,

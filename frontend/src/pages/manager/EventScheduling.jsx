@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import EventModal from '../../components/EventModal.jsx'
 import EventTable from '../../components/EventTable.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
 import Modal from '../../components/Modal.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -208,7 +208,7 @@ export default function EventScheduling() {
         </div>
 
         {events === null ? (
-          <Loading label="Loading the month…" />
+          <Skeleton variant="calendar" label="Loading the month…" />
         ) : (
           <MonthGrid
             year={cursor.year}

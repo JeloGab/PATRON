@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import EventModal from '../../components/EventModal.jsx'
 import EventTable from '../../components/EventTable.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
 import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
@@ -88,8 +88,6 @@ export default function MyCalendar() {
   const dayParishBlocks = parishBlocksByDate.get(selectedDate) ?? []
   const dayMyBlocks = myBlocksByDate.get(selectedDate) ?? []
   const open = (events ?? []).find((item) => item.eventId === openId) ?? null
-  // Floored at today, because PendingApprovals windows its fetch from today — counting a
-  // past-dated pending event sends the priest to a page that will not list it.
   const today = todayISO()
   const myPending = (events ?? []).filter(
     (event) =>
@@ -185,7 +183,7 @@ export default function MyCalendar() {
         </div>
 
         {events === null ? (
-          <Loading label="Loading the month…" />
+          <Skeleton variant="calendar" label="Loading the month…" />
         ) : (
           <MonthGrid
             year={cursor.year}

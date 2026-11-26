@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import Logo from '../../components/Logo.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import SignaturePad from '../../components/SignaturePad.jsx'
@@ -308,7 +308,7 @@ export default function Account() {
           {notice && <p className="notice">{notice}</p>}
 
           {!me && !error ? (
-            <Loading label="Loading your account…" />
+            <Skeleton variant="form" label="Loading your account…" />
           ) : (
             <dl className="facts">
               <div>
@@ -346,7 +346,7 @@ export default function Account() {
           </p>
 
           {photoState === 'loading' ? (
-            <Loading label="Loading your photo…" />
+            <Skeleton variant="media" label="Loading your photo…" />
           ) : photoState === 'present' ? (
             <div className="account-photo">
               <img className="account-photo__img" src={photoUrl} alt="Your photo" />
@@ -391,7 +391,7 @@ export default function Account() {
               </p>
 
               {signatureState === 'loading' ? (
-                <Loading label="Loading your signature…" />
+                <Skeleton variant="media" label="Loading your signature…" />
               ) : signatureState === 'present' ? (
                 <>
                   <img className="signature__preview" src={signatureUrl} alt="Your signature" />

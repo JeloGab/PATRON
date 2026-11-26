@@ -63,7 +63,6 @@ router.post('/reset-password', loginLimiter, async (req, res) => {
   res.json({ ok: true, ...(await completePasswordReset({ accessToken, newPassword })) })
 })
 
-
 const photoUpload = express.raw({ type: PHOTO_TYPES, limit: '1mb' })
 
 router.post('/photo', requireAuth, photoUpload, async (req, res) => {

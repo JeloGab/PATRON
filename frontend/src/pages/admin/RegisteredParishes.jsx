@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import Modal from '../../components/Modal.jsx'
 import RegisterParishModal from '../../components/RegisterParishModal.jsx'
 import StaffProvisionModal from '../../components/StaffProvisionModal.jsx'
@@ -260,7 +260,7 @@ export default function RegisteredParishes() {
       </div>
 
       {loading && parishes.length === 0 ? (
-        <Loading label="Loading the registry…" />
+        <Skeleton variant="cards" label="Loading the registry…" />
       ) : list.length === 0 ? (
         <p className="empty">
           {parishes.length === 0

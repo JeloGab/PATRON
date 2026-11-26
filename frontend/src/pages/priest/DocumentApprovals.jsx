@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import ApplicationModal from '../../components/ApplicationModal.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import Seg from '../../components/Seg.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import {
@@ -129,7 +129,7 @@ export default function DocumentApprovals() {
       </Seg>
 
       {requests === null ? (
-        <Loading label="Loading requests…" />
+        <Skeleton variant="rows" label="Loading requests…" />
       ) : requests.length === 0 ? (
         <p className="empty">
           {status === 'verified'

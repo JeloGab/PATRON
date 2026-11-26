@@ -19,7 +19,12 @@ import {
 } from './announcements.queries.js'
 import { sniffContentType, sanitizeFileName } from '../../lib/fileType.js'
 import { findOwnPageToken } from '../parish/parish.queries.js'
-import { postAnnouncement } from '../../integrations/facebook.js'
+import {
+  postAnnouncement,
+  findPost,
+  findRecentPost,
+  deletePost,
+} from '../../integrations/facebook.js'
 
 const STATUSES = ['pending', 'approved', 'rejected', 'archived']
 export const IMAGE_TYPES = ['image/jpeg', 'image/png']
@@ -42,12 +47,6 @@ function pageOf(value) {
   return Number.isFinite(page) && page > 0 ? page : 1
 }
 
-// Runs AFTER the approval has committed, and never inside withActor. A Facebook post
-// cannot be rolled back, so a post made inside the transaction that then failed to
-// commit would be live on the page pointing at an announcement nobody approved.
-//
-// Nothing in here throws. The announcement is published in PATRON either way, and
-// sync_status is the entire report.
 async function publishToFacebook(actor, announcementId) {
   try {
     const token = await findOwnPageToken(actor)
@@ -59,12 +58,30 @@ async function publishToFacebook(actor, announcementId) {
     const announcement = await findAnnouncement(actor, announcementId)
     if (!announcement) return
 
+    if (announcement.syncStatus === 'failed') {
+      const already = await findRecentPost({ token, needle: announcement.title })
+      if (already.ok && already.postId) {
+        console.error('[facebook] retry found the post already there:', already.postId)
+        await recordSync(actor, { announcementId, syncStatus: 'synced', postId: already.postId })
+        return
+      }
+    }
+
     const posted = await postAnnouncement({
       token,
       title: announcement.title,
       content: announcement.content,
       images: await findImageBytes(actor, announcementId),
     })
+
+    if (!posted.ok) {
+      const landed = await findRecentPost({ token, needle: announcement.title })
+      if (landed.ok && landed.postId) {
+        console.error('[facebook] the call failed but the post landed:', landed.postId)
+        await recordSync(actor, { announcementId, syncStatus: 'synced', postId: landed.postId })
+        return
+      }
+    }
 
     await recordSync(actor, {
       announcementId,
@@ -128,9 +145,6 @@ export async function approveAnnouncement(actor, announcementId) {
   const decided = await decideAnnouncement(actor, id, { status: 'approved', reason: null })
   if (!decided) throw new AppError('ANNOUNCEMENT_NOT_FOUND', 404)
 
-  // Before getAnnouncement, so the response the priest's browser receives already
-  // carries the real syncStatus. Reversed, the UI would say "not posted" until a
-  // manual refresh.
   await publishToFacebook(actor, id)
   return getAnnouncement(actor, id)
 }
@@ -142,17 +156,44 @@ export async function syncAnnouncement(actor, announcementId) {
   if (!announcement) throw new AppError('ANNOUNCEMENT_NOT_FOUND', 404)
   if (announcement.status !== 'approved') throw new AppError('ANNOUNCEMENT_NOT_PUBLISHED', 409)
 
-  // Not an error. The button is only offered on `failed` and on the null state, so
-  // reaching this means a stale page - answering with the current state makes the
-  // button disappear, which is correct, and erroring would risk a double post.
   if (announcement.syncStatus === 'synced') return announcement
 
-  // Approval records `skipped` silently, because nobody asked it to post. A retry is a
-  // deliberate act, so a missing token is reported instead of swallowed.
   const token = await findOwnPageToken(actor)
   if (!token) throw new AppError('FACEBOOK_NOT_CONNECTED', 409)
 
   await publishToFacebook(actor, id)
+  return getAnnouncement(actor, id)
+}
+
+export async function checkFacebookPost(actor, announcementId) {
+  const id = requireId(announcementId)
+
+  const announcement = await findAnnouncement(actor, id)
+  if (!announcement) throw new AppError('ANNOUNCEMENT_NOT_FOUND', 404)
+  if (announcement.status !== 'approved') throw new AppError('ANNOUNCEMENT_NOT_PUBLISHED', 409)
+  if (!announcement.facebookPostId) throw new AppError('FACEBOOK_NOT_POSTED', 409)
+
+  const token = await findOwnPageToken(actor)
+  if (!token) throw new AppError('FACEBOOK_NOT_CONNECTED', 409)
+
+  const found = await findPost({
+    token,
+    postId: announcement.facebookPostId,
+    postedAt: announcement.approvedAt,
+  })
+  if (!found.ok) {
+    console.error('[facebook] post check failed for', id, found.detail)
+    if (found.tokenBad) throw new AppError('FACEBOOK_TOKEN_REJECTED', 409)
+    if (found.permission) throw new AppError('FACEBOOK_READ_NOT_PERMITTED', 409)
+    throw new AppError('FACEBOOK_CHECK_FAILED', 502)
+  }
+
+  await recordSync(actor, {
+    announcementId: id,
+    syncStatus: found.exists ? 'synced' : 'removed',
+    postId: announcement.facebookPostId,
+  })
+
   return getAnnouncement(actor, id)
 }
 
@@ -166,9 +207,34 @@ export async function rejectAnnouncement(actor, announcementId, body) {
   return getAnnouncement(actor, id)
 }
 
-export async function archiveAnnouncement(actor, announcementId) {
+async function removeFromFacebook(actor, announcement) {
+  const token = await findOwnPageToken(actor)
+  if (!token) return
+
+  const gone = await deletePost({ token, postId: announcement.facebookPostId })
+  if (!gone.ok) {
+    console.error('[facebook] could not delete the post for', announcement.announcementId, gone.detail)
+    return
+  }
+
+  await recordSync(actor, {
+    announcementId: announcement.announcementId,
+    syncStatus: 'removed',
+    postId: announcement.facebookPostId,
+  })
+}
+
+export async function archiveAnnouncement(actor, announcementId, body = {}) {
   const id = requireId(announcementId)
-  const fromStatuses = actor.role === 'priest' ? ['approved'] : ['pending', 'rejected']
+  const fromStatuses =
+    actor.role === 'priest' ? ['approved'] : ['pending', 'rejected', 'approved']
+
+  if (body.deletePost === true && actor.role === 'priest') {
+    const current = await findAnnouncement(actor, id)
+    if (current?.facebookPostId && current.status === 'approved') {
+      await removeFromFacebook(actor, current)
+    }
+  }
 
   const archived = await markArchived(actor, id, { fromStatuses })
   if (!archived) throw new AppError('ANNOUNCEMENT_NOT_FOUND', 404)
@@ -222,8 +288,6 @@ export async function removeImage(actor, { announcementId, imageId }) {
   })
   if (!removed) throw new AppError('IMAGE_NOT_FOUND', 404)
 }
-
-// ── public ────────────────────────────────────────────────────────────────
 
 export async function getPublicFeed(query) {
   const page = pageOf(query?.page)

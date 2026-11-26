@@ -1,15 +1,9 @@
-// One parish for a signed-in parishioner: office details, calendar, clergy and
-// approved announcements.
-//
-// The page sits behind RequireRole role="parishioner" (App.jsx), which is why the
-// calendar can live here with no guard of its own — every visitor already holds a
-// parishioner token. The parish and announcement routes it calls are public; the
-// calendar route is not.
+// One parish for a signed-in parishioner: office details, calendar, clergy and announcements.
 
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import MonthGrid from '../../components/MonthGrid.jsx'
 import PriestPhoto from '../../components/PriestPhoto.jsx'
 import { BASE, authed, call, isSessionError } from '../../lib/api.js'
@@ -30,7 +24,6 @@ export default function ChurchDetail() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  // `month` is 0-indexed, because MonthGrid compares it against Date#getMonth().
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const [selectedDate, setSelectedDate] = useState(todayISO())
   const [calendar, setCalendar] = useState(null)
@@ -119,7 +112,7 @@ export default function ChurchDetail() {
   if (loading) {
     return (
       <div className="page">
-        <Loading label="Loading parish…" />
+        <Skeleton variant="detail" label="Loading parish…" />
       </div>
     )
   }
@@ -175,7 +168,6 @@ export default function ChurchDetail() {
             <p>{parish.address}</p>
           </div>
         </ChurchMedia>
-
 
         {priests.length > 0 && (
           <section className="card clergy-band">
@@ -448,8 +440,6 @@ export default function ChurchDetail() {
             private, so no details are shown.
           </p>
 
-          {/* legend={false} on the grid below: the staff legend names Sacramental as a
-              titled chip, which is exactly what must not appear here. */}
           <div className="cal-legend">
             <span className="cal-legend__item cal-legend__item--general">General</span>
             <span className="cal-legend__item cal-legend__item--seminar">Seminar</span>
@@ -460,7 +450,7 @@ export default function ChurchDetail() {
           {calendarError && <p className="empty">{calendarError}</p>}
 
           {calendar === null ? (
-            <Loading label="Loading the month…" />
+            <Skeleton variant="calendar" label="Loading the month…" />
           ) : (
             <MonthGrid
               year={cursor.year}

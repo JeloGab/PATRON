@@ -1,5 +1,15 @@
 import { pool } from '../../db/pool.js'
 import { withActor } from '../../db/withTenant.js'
+import { AppError } from '../../lib/appError.js'
+
+const PAGE_TAKEN = 'parish_facebook_page_unique'
+
+function rethrow(err) {
+  if (err.code === '23505' && err.constraint === PAGE_TAKEN) {
+    throw new AppError('FACEBOOK_PAGE_TAKEN', 409)
+  }
+  throw err
+}
 
 const COLUMNS = `parish_id, name, address, contact_no, email,
                  facebook_page_id, status, created_at, photo_content_type,
@@ -129,11 +139,6 @@ export async function clearParishPageToken(actor) {
   })
 }
 
-// Cleared on any CHANGE of page, not only on a clear. The token authorises exactly one
-// page, so keeping it across a change left posts going to the old page while the profile
-// named the new one. `is distinct from` because either side can be null, and one
-// statement rather than a read-then-compare so two saves cannot interleave. A rowCount
-// of 0 means the page did not change, which is the ordinary case and not an error.
 export async function clearParishPageTokenIfPageChanged(actor, nextPageId) {
   return withActor(actor, async (client) => {
     const { rowCount } = await client.query(
@@ -147,24 +152,23 @@ export async function clearParishPageTokenIfPageChanged(actor, nextPageId) {
   })
 }
 
-// Both columns in ONE statement, because parish_page_token_needs_page forbids a token
-// with no page - writing them separately would either violate the constraint or leave a
-// window where the parish has a token for a page it does not name.
 export async function setParishPageConnection(actor, { pageId, token }) {
   return withActor(actor, async (client) => {
-    const { rowCount } = await client.query(
-      `update public.parish
-          set facebook_page_id = $1,
-              facebook_page_token = $2
-        where parish_id = public.current_parish_id()`,
-      [pageId, token]
-    )
-    return rowCount
+    try {
+      const { rowCount } = await client.query(
+        `update public.parish
+            set facebook_page_id = $1,
+                facebook_page_token = $2
+          where parish_id = public.current_parish_id()`,
+        [pageId, token]
+      )
+      return rowCount
+    } catch (err) {
+      return rethrow(err)
+    }
   })
 }
 
-// The security definer function is the only thing in the database that can see the
-// column; patron_app cannot select it.
 export async function findOwnPageToken(actor) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query('select public.current_parish_page_token() as token')
@@ -191,14 +195,18 @@ export async function updateOwnParish(actor, patch) {
   const values = present.map(([jsKey]) => patch[jsKey])
 
   return withActor(actor, async (client) => {
-    const { rows } = await client.query(
-      `update public.parish
-          set ${assignments.join(', ')}
-        returning ${COLUMNS}`,
-      values
-    )
-    if (rows.length === 0) return null
-    return mapParish(rows[0])
+    try {
+      const { rows } = await client.query(
+        `update public.parish
+            set ${assignments.join(', ')}
+          returning ${COLUMNS}`,
+        values
+      )
+      if (rows.length === 0) return null
+      return mapParish(rows[0])
+    } catch (err) {
+      return rethrow(err)
+    }
   })
 }
 

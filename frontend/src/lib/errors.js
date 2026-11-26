@@ -8,7 +8,8 @@ const MESSAGES = {
   INVALID_NAME: 'That name is not valid — 2 to 50 characters.',
   INVALID_PARISH_NAME: 'Parish name must be between 3 and 50 characters.',
   INVALID_ADDRESS: 'Address must be at least 5 characters.',
-  INVALID_CONTACT: 'Contact number must be a PH mobile number, e.g. 09171234567.',
+  INVALID_CONTACT:
+    'That contact number is not valid. A PH mobile or landline, e.g. 09171234567 or (054) 472-1234.',
   INVALID_EMAIL: 'That email address is not valid.',
   INVALID_OFFICE_HOURS: 'Office hours must be 300 characters or fewer.',
   INVALID_MASS_SCHEDULE: 'Mass schedule must be 600 characters or fewer.',
@@ -89,6 +90,8 @@ const MESSAGES = {
   EVENT_NOT_COMPLETABLE: 'Only an approved event on or after its own date can be completed.',
   INVALID_DATE_RANGE: 'That date range is not valid — at most 92 days, and the end cannot precede the start.',
   INVALID_BLOCK_DATE: 'Only today or a later date can be blocked.',
+  PARISH_BLOCK_WHOLE_DAY:
+    'A parish block always covers the whole day. To free part of a day, block the priest instead.',
   INVALID_BLOCK_ID: 'That blocked-date reference is not valid.',
   BLOCK_NOT_FOUND: 'That blocked date no longer exists. Refresh the list.',
   INVALID_PARTICIPANT_ID: 'That participant reference is not valid.',
@@ -98,7 +101,11 @@ const MESSAGES = {
   REQUIREMENT_NOT_FOUND: 'That requirement no longer exists. Reopen the checklist.',
   ROSTER_CLOSED:
     'This event is approved, so no new participant can be added. Corrections and withdrawals are still open.',
+  ROSTER_FULL:
+    'This roster is already complete. Withdraw someone first to put another name in their place.',
   SPONSOR_NOT_ALLOWED: 'A sponsor can only be recorded on a sacramental event.',
+  DETAIL_NOT_ALLOWED:
+    "Parents' names and a place of birth can only be recorded on a sacramental event.",
   RECORD_NOT_APPLICABLE:
     'This requirement is checked by hand — there is no register to attach an entry from.',
 
@@ -120,9 +127,18 @@ const MESSAGES = {
     "That doesn't look like a page access token. Paste it again with no line breaks.",
   INVALID_FACEBOOK_PAGE: "Paste the page's URL, for example facebook.com/YourParish.",
   FACEBOOK_PAGE_REQUIRED: 'Set the Facebook page first, then connect the token.',
+  FACEBOOK_PAGE_TAKEN:
+    'That Facebook page is already linked to another parish. Each page belongs to one parish only.',
   FACEBOOK_NOT_CONNECTED:
     'This parish has no Facebook page connected. Connect one on the parish profile first.',
   FACEBOOK_LOGIN_UNAVAILABLE: 'Connecting a page is not set up on this server yet.',
+  FACEBOOK_NOT_POSTED: 'This announcement has not been posted to Facebook, so there is nothing to check.',
+  FACEBOOK_READ_NOT_PERMITTED:
+    'The page key may post but may not read posts back, so the post could not be checked. Add the pages_read_engagement permission to the Facebook login configuration, then reconnect the page.',
+  FACEBOOK_CHECK_FAILED:
+    'Facebook did not answer the check, so the post was left exactly as it was. The server log holds the reason it gave.',
+  FACEBOOK_TOKEN_REJECTED:
+    'Facebook rejected the page key, so the post could not be checked. Reconnect the page on the parish profile.',
   INVALID_CONNECT_STATE:
     'That connection attempt expired or did not come from here. Start again.',
   FACEBOOK_CONNECT_FAILED: 'Facebook could not complete the connection. Try again.',

@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import AnnouncementImages from '../../components/AnnouncementImages.jsx'
 import FacebookSync from '../../components/FacebookSync.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import Seg from '../../components/Seg.jsx'
+import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { STATUS_HINT, STATUS_LABEL, canArchive, statusPill } from '../../lib/announcements.js'
 import { syncStateOf } from '../../lib/facebook.js'
@@ -25,6 +26,7 @@ const SYNC_NOTICE = {
 export default function AnnouncementApprovals() {
   const navigate = useNavigate()
   const { refresh } = useOutletContext()
+  const { askChecked } = useConfirm()
   const [announcements, setAnnouncements] = useState(null)
   const [status, setStatus] = useState('pending')
   const [rejectingId, setRejectingId] = useState(null)
@@ -64,10 +66,23 @@ export default function AnnouncementApprovals() {
   )
   const pendingCount = (announcements ?? []).filter((item) => item.status === 'pending').length
 
-  // The sync route answers with getAnnouncement(), whose column list carries no
-  // image_count — so imageCount arrives as 0 and would hide the "View images" button.
-  // The row is patched rather than reloaded, which also keeps FacebookSync mounted and
-  // its own error visible.
+  async function archive(item) {
+    const onPage = Boolean(item.facebookPostId) && syncStateOf(item) === 'synced'
+
+    const answer = await askChecked({
+      title: 'Archive this announcement',
+      message:
+        'It leaves the public feed. Approval is final, so a correction is a new announcement rather than an edit.',
+      checkboxLabel: onPage
+        ? 'Also delete the post on the Facebook page. That cannot be undone, and any comments, reactions and shares go with it.'
+        : undefined,
+      confirmLabel: 'Archive',
+    })
+
+    if (!answer.ok) return
+    await act(item, 'archive', answer.checked ? { deletePost: true } : {})
+  }
+
   function patch(next) {
     setAnnouncements((list) =>
       (list ?? []).map((item) =>
@@ -99,8 +114,6 @@ export default function AnnouncementApprovals() {
     }
 
     const said = { approve: 'published', reject: 'rejected', archive: 'archived' }[action]
-    // Approving posts to Facebook in the same request, so the answer already knows how
-    // that went. Saying it here is what the UAT task is scored on.
     const posted =
       action === 'approve' ? SYNC_NOTICE[syncStateOf(r.json.announcement ?? {})] : ''
     setNotice(`“${announcement.title}” was ${said}.${posted}`)
@@ -154,7 +167,7 @@ export default function AnnouncementApprovals() {
       </Seg>
 
       {announcements === null ? (
-        <Loading label="Loading announcements…" />
+        <Skeleton variant="cards" label="Loading announcements…" />
       ) : rows.length === 0 ? (
         <p className="empty">
           {status === 'pending'
@@ -219,7 +232,7 @@ export default function AnnouncementApprovals() {
                   <button
                     type="button"
                     className="btn btn--ghost"
-                    onClick={() => act(item, 'archive')}
+                    onClick={() => archive(item)}
                     disabled={busy === item.announcementId}
                   >
                     Archive

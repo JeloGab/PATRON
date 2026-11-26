@@ -39,7 +39,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
   const isPriest = role === 'priest'
   const open = EDITABLE_STATUSES.includes(event.status)
   const isSacramental = event.eventType === 'sacramental'
-  const canDecide = isPriest && isSacramental && event.status === 'pending'
+  const canDecide = isPriest && event.status === 'pending'
 
   async function act({ label, method = 'POST', path, body }) {
     setError('')
@@ -86,7 +86,7 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
     if (saved) setEditing(false)
   }
 
-  const willLoseApproval = isSacramental && event.status === 'approved'
+  const willLoseApproval = Boolean(form.assignedPriestId) && event.status === 'approved'
 
   return (
     <Modal open title={event.title} onClose={onClose}>
@@ -121,9 +121,15 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
           </dd>
         </div>
         <div>
-          <dt>Assigned priest</dt>
+          <dt>{event.officiantName ? 'Parish priest responsible' : 'Assigned priest'}</dt>
           <dd>{event.assignedPriestName || 'None'}</dd>
         </div>
+        {event.officiantName && (
+          <div>
+            <dt>Officiating minister</dt>
+            <dd>{event.officiantName}</dd>
+          </div>
+        )}
         {event.description && (
           <div>
             <dt>Description</dt>
@@ -283,10 +289,10 @@ export default function EventModal({ event, role, priests = [], onClose, onChang
         </div>
       )}
 
-      {isPriest && !isSacramental && (
+      {isPriest && !isSacramental && !event.assignedPriestId && (
         <p className="muted">
-          General and seminar events need no approval — they are approved when the office creates
-          them.
+          This event names no priest, so it needed no approval and was approved when the office
+          created it.
         </p>
       )}
       {!open && (

@@ -50,6 +50,7 @@ export async function createBlocks(actor, body) {
   const endTime = optionalTime(body.endTime, 'INVALID_TIME_RANGE')
   if ((startTime === null) !== (endTime === null)) throw new AppError('INVALID_TIME_RANGE', 400)
   if (startTime && startTime >= endTime) throw new AppError('INVALID_TIME_RANGE', 400)
+  if (type === 'parish' && startTime) throw new AppError('PARISH_BLOCK_WHOLE_DAY', 400)
 
   const dates = []
   for (let offset = 0; offset < spanInDays(fromDate, toDate); offset += 1) {

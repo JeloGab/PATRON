@@ -17,7 +17,6 @@ const COLUMNS = `a.application_id, a.parish_id, a.record_id, a.applicant_id,
                  closer.full_name as closed_by_name,
                  r.book_no, r.page_no, r.entry_no, r.record_date`
 
-
 const SOURCE = `from public.document_application a
                 join public.document_type t on t.type_id = a.document_type_id
                 left join public.parish_directory p on p.parish_id = a.parish_id
@@ -94,8 +93,6 @@ function mapCertificate(row) {
   }
 }
 
-/* ── document types: global, non-tenant, read-only ─────────────────────── */
-
 function mapType(row) {
   return {
     documentTypeId: row.type_id,
@@ -133,8 +130,6 @@ export async function findActiveParish(parishId) {
   )
   return rows.length === 0 ? null : { parishId: rows[0].parish_id, name: rows[0].name }
 }
-
-/* ── applications ──────────────────────────────────────────────────────── */
 
 export async function findApplication(actor, applicationId) {
   return withActor(actor, async (client) => {
@@ -279,7 +274,6 @@ export async function findCertificate(actor, applicationId) {
   })
 }
 
-
 export async function issueCertificate(actor, { applicationId, verificationCode, buildSnapshot }) {
   return withActor(actor, async (client) => {
     try {
@@ -365,15 +359,6 @@ export async function countRecordDocuments(actor, recordId) {
   })
 }
 
-// Deliberately NOT part of CERT_COLUMNS: that list is shared with
-// findEventCertificates, so a twelve-baptism ceremony would ship twelve signatures to
-// draw a list of download links. Only the PDF ever reads these bytes.
-//
-// The seal is joined from parish_seal_public rather than read from public.parish: a
-// parishioner downloading their own certificate belongs to no parish, so parish RLS
-// would hide the seal from exactly the person the certificate is for. The view is
-// security_invoker = off, so it runs as its owner and the join reaches the bytes for
-// staff and parishioner alike.
 export async function findCertificateMarks(actor, fileId) {
   return withActor(actor, async (client) => {
     const { rows } = await client.query(
@@ -423,7 +408,6 @@ export async function findEventCertificate(actor, { eventId, certificateId }) {
   })
 }
 
-
 export async function updateIdFile(actor, { applicationId, fileName, contentType, content }) {
   return withActor(actor, async (client) => {
     const { rowCount } = await client.query(
@@ -455,9 +439,6 @@ export async function findIdFile(actor, applicationId) {
   })
 }
 
-// Bare pool, not withActor: diocese is a non-tenant table and there is no actor to set.
-// Letterhead must never block issuance, so a failure here is logged and the certificate
-// renders without a logo rather than failing the download.
 export async function findDioceseLogo() {
   try {
     const { rows } = await pool.query(`select logo from public.diocese where id = 1`)

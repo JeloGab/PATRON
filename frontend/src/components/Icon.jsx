@@ -1,6 +1,4 @@
-// Line icons, drawn inline rather than from a sprite so nothing has to be mounted in
-// App for them to work. Stroke is currentColor, so an icon takes the colour of the text
-// it sits beside, and the size follows font-size.
+// Line icons drawn inline; stroke is currentColor and the size follows font-size.
 
 const PATHS = {
   shield: (

@@ -5,11 +5,12 @@ import { useConfirm } from '../../components/ConfirmProvider.jsx'
 import { useNavigate } from 'react-router-dom'
 import ChurchMedia from '../../components/ChurchMedia.jsx'
 import FacebookPageCard from '../../components/FacebookPageCard.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import PhotoDrop from '../../components/PhotoDrop.jsx'
 import StaffPhoto from '../../components/StaffPhoto.jsx'
 import { BASE, authed, isSessionError } from '../../lib/api.js'
 import { messageFor } from '../../lib/errors.js'
+import { CONTACT_ERROR, CONTACT_HINT, isContactNo } from '../../lib/phone.js'
 import { formatLongDate } from '../../lib/dates.js'
 import { LIMITS, YEAR_ESTABLISHED_MIN, accentFor, municipalityFromAddress } from '../../lib/parishes.js'
 import { clearSession, getSession } from '../../lib/session.js'
@@ -28,7 +29,6 @@ const EDITABLE = [
   'history',
 ]
 
-const PH_MOBILE = /^09\d{9}$/
 
 const MAX_GALLERY = 4
 const MAX_GALLERY_BYTES = 5 * 1024 * 1024
@@ -58,7 +58,6 @@ function toForm(parish) {
     massSchedule: parish.massSchedule ?? '',
     patronSaint: parish.patronSaint ?? '',
     feastDay: parish.feastDay ?? '',
-    // yearEstablished arrives as a number; the input and diff() both work in strings.
     yearEstablished: parish.yearEstablished == null ? '' : String(parish.yearEstablished),
     history: parish.history ?? '',
   }
@@ -331,10 +330,6 @@ export default function ParishProfile() {
     return (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
-  // Re-seeded on open, not only on cancel. `parish` is refreshed on its own by the photo,
-  // seal and Facebook-connect handlers, while `form` is a snapshot taken at load - and
-  // save() diffs the fresh parish against the stale form, so a field changed outside the
-  // editor reads as one the user just cleared and gets sent as empty.
   function openEditor() {
     setForm(toForm(parish))
     setEditing(true)
@@ -359,8 +354,8 @@ export default function ParishProfile() {
       return
     }
 
-    if (Object.hasOwn(patch, 'contactNo') && !PH_MOBILE.test(patch.contactNo.trim())) {
-      setError('Contact number must be a PH mobile number, e.g. 09171234567.')
+    if (Object.hasOwn(patch, 'contactNo') && !isContactNo(patch.contactNo)) {
+      setError(CONTACT_ERROR)
       return
     }
 
@@ -396,7 +391,7 @@ export default function ParishProfile() {
   if (!parish || !form) {
     return (
       <div className="page">
-        <Loading label="Loading your parish…" />
+        <Skeleton variant="detail" label="Loading your parish…" />
       </div>
     )
   }
@@ -449,8 +444,10 @@ export default function ParishProfile() {
                   <input
                     value={form.contactNo}
                     onChange={update('contactNo')}
-                    placeholder="09171234567"
+                    placeholder="09171234567 or (054) 472-1234"
+                    inputMode="tel"
                   />
+                  <small className="muted">{CONTACT_HINT}</small>
                 </label>
                 <label className="field">
                   <span>Email</span>

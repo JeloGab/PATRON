@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ApplicationModal from '../../components/ApplicationModal.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import Seg from '../../components/Seg.jsx'
 import { authed, call, isSessionError } from '../../lib/api.js'
 import {
@@ -301,7 +301,7 @@ export default function DocumentRequests() {
       </Seg>
 
       {requests === null ? (
-        <Loading label="Loading requests…" />
+        <Skeleton variant="rows" label="Loading requests…" />
       ) : requests.length === 0 ? (
         <p className="empty">
           {status === 'pending'

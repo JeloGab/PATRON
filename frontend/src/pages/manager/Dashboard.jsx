@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import EventTable from '../../components/EventTable.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatWeekRange, isoOffset, startOfWeek, toISODate, todayISO } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -168,7 +168,7 @@ export default function Dashboard() {
         </div>
 
         {events === null ? (
-          <Loading label="Loading the schedule…" />
+          <Skeleton variant="table" label="Loading the schedule…" />
         ) : (
           <EventTable events={upcoming} empty="No upcoming event on the schedule." />
         )}

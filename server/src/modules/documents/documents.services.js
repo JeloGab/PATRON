@@ -7,7 +7,6 @@ import { buildCertificatePdf } from './documents.pdf.js'
 import { updateIdFile, findIdFile } from './documents.queries.js'
 import { sniffContentType, sanitizeFileName, ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES } from '../../lib/fileType.js'
 
-
 const PAGE_SIZE = 50
 const STATUSES = ['pending', 'verified', 'approved', 'rejected', 'cancelled']
 const MAX_CODE_ATTEMPTS = 5
@@ -17,7 +16,6 @@ const VERIFY_PATH = '/#/verify'
 const clientOrigin = process.env.CLIENT_ORIGIN
 if (!clientOrigin) throw new Error('.env error')
 const VERIFY_BASE = `${clientOrigin.replace(/\/$/, '')}${VERIFY_PATH}`
-
 
 function requireId(value, code) {
   const id = clean(value).toLowerCase()
@@ -87,8 +85,6 @@ export async function listDocumentTypes() {
   return findDocumentTypes()
 }
 
-/* ── filing ────────────────────────────────────────────────────────────── */
-
 export async function fileRequest(actor, body) {
   const parishId = requireId(body.parishId, 'INVALID_PARISH_ID')
   if (!(await findActiveParish(parishId))) throw new AppError('PARISH_NOT_FOUND', 404)
@@ -123,8 +119,6 @@ export async function fileWalkIn(actor, body) {
   return findApplication(actor, applicationId)
 }
 
-/* ── the parishioner's own requests ────────────────────────────────────── */
-
 export async function listMyRequests(actor) {
   const { requests } = await findApplications(actor, { status: null, page: 1, pageSize: PAGE_SIZE })
   return requests
@@ -142,8 +136,6 @@ export async function cancelRequest(actor, applicationId, body) {
   if (changed === 0) throw new AppError('APPLICATION_NOT_PENDING', 409)
   return findApplication(actor, application.applicationId)
 }
-
-/* ── the parish queue ──────────────────────────────────────────────────── */
 
 export async function listApplications(actor, query) {
   const status = clean(query.status)
@@ -198,7 +190,6 @@ export async function approveApplication(actor, applicationId) {
   const application = await requireApplication(actor, applicationId)
   if (application.status !== 'verified') throw new AppError('APPLICATION_NOT_VERIFIED', 409)
 
-  // Before the retry loop, or a missing signature costs five transactions.
   if (!(await hasOwnSignature(actor))) throw new AppError('SIGNATURE_REQUIRED', 409)
 
   for (let attempt = 1; attempt <= MAX_CODE_ATTEMPTS; attempt += 1) {
@@ -251,7 +242,6 @@ export async function getCertificatePdf(actor, applicationId) {
   return renderCertificatePdf(certificate, marks)
 }
 
-
 export async function attachIdFile(actor, applicationId, { fileName, buffer, typeAccepted = true }) {
   if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)
@@ -277,9 +267,6 @@ export async function attachIdFile(actor, applicationId, { fileName, buffer, typ
   return findApplication(actor, application.applicationId)
 }
 
-/* ID_FILE_NOT_FOUND is the one new error code these changes introduce. After a release
-   it is the normal answer for every approved request, because the bytes are purged in
-   the same statement that approves it. */
 export async function getIdFile(actor, applicationId) {
   const file = await findIdFile(actor, requireId(applicationId, 'INVALID_APPLICATION_ID'))
   if (!file) throw new AppError('ID_FILE_NOT_FOUND', 404)

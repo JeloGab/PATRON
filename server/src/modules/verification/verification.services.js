@@ -1,7 +1,6 @@
 import { clean } from '../../lib/validators.js'
 import { findVerification } from './verification.queries.js'
 
-
 const CODE_PATTERN = /^[A-Z2-7]{12}$/
 
 export async function verifyCertificate(code) {

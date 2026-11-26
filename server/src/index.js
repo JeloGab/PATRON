@@ -47,7 +47,6 @@ app.use('/api/participants', participants)
 app.use('/api/announcements', announcements)
 app.use('/api/feed', feed)
 
-
 app.use(notFound)
 app.use(errorHandler)
 

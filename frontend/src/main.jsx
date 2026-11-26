@@ -1,5 +1,4 @@
-// Both of these run before HashRouter mounts — see lib/authFragment.js and
-// lib/oauthReturn.js. Supabase arrives in the fragment, Facebook in the query string.
+// App entry: claims Supabase's fragment and Facebook's ?code= before HashRouter mounts.
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

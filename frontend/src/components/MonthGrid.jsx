@@ -10,6 +10,7 @@ export default function MonthGrid({
   year,
   month,
   selectedDate,
+  selectedDates,
   onSelectDate,
   onOpenDay,
   onSelectEvent,
@@ -31,7 +32,12 @@ export default function MonthGrid({
           <span className="cal-legend__item cal-legend__item--sacramental">Sacramental</span>
           <span className="cal-legend__item cal-legend__item--general">General</span>
           <span className="cal-legend__item cal-legend__item--seminar">Seminar</span>
-          <span className="cal-legend__item cal-legend__item--blocked">Blocked</span>
+          <span className="cal-legend__item cal-legend__item--blocked">{blockLabel}</span>
+          {priestBlocksByDate && (
+            <span className="cal-legend__item cal-legend__item--unavailable">
+              Priest unavailable
+            </span>
+          )}
         </div>
       )}
 
@@ -58,8 +64,9 @@ export default function MonthGrid({
                 'cal__day',
                 inMonth ? '' : 'is-out',
                 iso === today ? 'is-today' : '',
-                iso === selectedDate ? 'is-selected' : '',
-                parishBlocks.length + priestBlocks.length > 0 ? 'is-blocked' : '',
+                iso === selectedDate || selectedDates?.has(iso) ? 'is-selected' : '',
+                parishBlocks.length > 0 ? 'is-blocked' : '',
+                parishBlocks.length === 0 && priestBlocks.length > 0 ? 'is-unavailable' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
@@ -89,9 +96,6 @@ export default function MonthGrid({
                 </button>
               ))}
 
-              {/* The parishioner calendar's only word for a sacramental day. No
-                  title, no rite, no time — the view it comes from selects none of
-                  them. Staff calendars never pass reservedDates. */}
               {reserved && <span className="cal__reserved">Reserved</span>}
 
               {parishBlocks.slice(0, 1).map((block) => (
@@ -100,7 +104,7 @@ export default function MonthGrid({
                 </span>
               ))}
               {priestBlocks.slice(0, 1).map((block) => (
-                <span key={block.blockedDateId} className="cal__block">
+                <span key={block.blockedDateId} className="cal__unavailable">
                   {block.reason || 'Unavailable'}
                 </span>
               ))}

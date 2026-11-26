@@ -1,6 +1,5 @@
 import { AppError } from './appError.js'
 
-
 export const LIMITS = {
   fullName: { min: 2, max: 50 },
   parishName: { min: 3, max: 50 },
@@ -33,7 +32,9 @@ const GENDERS = ['male', 'female']
 const PARISH_TIMEZONE = 'Asia/Manila'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_NOISE = /[\s()\-.]/g
-const PH_MOBILE = /^(?:\+?63|0)9(\d{9})$/
+const PH_MOBILE = /^09\d{9}$/
+const PH_LANDLINE = /^0[2-8]\d{7,8}$/
+const PH_INTERNATIONAL = /^\+?63(\d{9,10})$/
 const BLOCK_TYPES = ['parish', 'priest']
 const ISO_TIME = /^([01]\d|2[0-3]):([0-5]\d)$/
 const EVENT_TYPES = ['sacramental', 'general', 'seminar']
@@ -64,14 +65,16 @@ export function requireAddress(value) {
   return address
 }
 
-
-export function requireMobile(value) {
+export function requireContactNo(value) {
   const stripped = clean(value).replace(PHONE_NOISE, '')
-  const match = PH_MOBILE.exec(stripped)
-  if (!match) throw new AppError('INVALID_CONTACT', 400)
-  return `09${match[1]}`
-}
+  const international = PH_INTERNATIONAL.exec(stripped)
+  const national = international ? `0${international[1]}` : stripped
 
+  if (!PH_MOBILE.test(national) && !PH_LANDLINE.test(national)) {
+    throw new AppError('INVALID_CONTACT', 400)
+  }
+  return national
+}
 
 export function optionalEmail(value) {
   const email = clean(value).toLowerCase()
@@ -123,6 +126,12 @@ export function requireOfficiant(value) {
   if (name.length < LIMITS.officiant.min) throw new AppError('INVALID_OFFICIANT', 400)
   if (name.length > LIMITS.officiant.max) throw new AppError('INVALID_OFFICIANT', 400)
   return name
+}
+
+export function optionalOfficiant(value) {
+  const name = squeeze(value)
+  if (!name) return null
+  return requireOfficiant(name)
 }
 
 export function optionalPlaceOfBirth(value) {
@@ -265,7 +274,6 @@ export function optionalContact(value) {
   return contact
 }
 
-
 export function optionalInvoiceNo(value) {
   const invoice = squeeze(value)
   if (!invoice) return null
@@ -333,10 +341,6 @@ export function optionalHistory(value) {
   return optionalMultiline(value, 'INVALID_HISTORY', LIMITS.history.max)
 }
 
-// A page access token is opaque: Facebook documents no format and has changed its
-// prefix before, so anything validating its SHAPE will reject a valid token some day.
-// This checks only what cannot be wrong. Whether it WORKS is answered by Facebook, and
-// the answer is sync_status.
 export function requireFacebookToken(value) {
   const text = clean(value)
   if (!text) throw new AppError('INVALID_FACEBOOK_TOKEN', 400)
@@ -345,12 +349,6 @@ export function requireFacebookToken(value) {
   return text
 }
 
-// The person typing this has the page's URL in front of them and nothing else, so a
-// pasted URL is the normal input and the handle is what is stored.
-//
-//   https://facebook.com/StJosephLibmanan?ref=x  ->  StJosephLibmanan
-//   facebook.com/profile.php?id=10012345         ->  10012345
-//   10012345                                     ->  10012345
 export function optionalFacebookPage(value) {
   const text = clean(value)
   if (!text) return null

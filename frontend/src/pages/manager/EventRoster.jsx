@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import CompleteEventModal from '../../components/CompleteEventModal.jsx'
 import EventCertificates from '../../components/EventCertificates.jsx'
 import EventTable from '../../components/EventTable.jsx'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import RequirementChecklist from '../../components/RequirementChecklist.jsx'
 import { authed, isSessionError } from '../../lib/api.js'
 import { formatLongDate, isoOffset, todayISO } from '../../lib/dates.js'
@@ -15,11 +15,15 @@ import {
   GENDERS,
   PARTICIPANT_STATUS_HINT,
   PARTICIPANT_STATUS_LABEL,
+  activeParticipants,
   fieldRules,
   marriageWarning,
   participantPill,
   rosterAcceptsAdditions,
+  rosterIsFull,
   rosterIsOpen,
+  rosterLimit,
+  withdrawnParticipants,
 } from '../../lib/roster.js'
 import { STATUS_LABEL, eventTypeLabel, timeRange } from '../../lib/schedule.js'
 import { clearSession } from '../../lib/session.js'
@@ -32,6 +36,9 @@ const EMPTY = {
   participantDateOfBirth: '',
   participantContact: '',
   sponsorName: '',
+  fatherName: '',
+  motherName: '',
+  placeOfBirth: '',
 }
 
 export default function EventRoster() {
@@ -128,11 +135,15 @@ export default function EventRoster() {
   }, [loadRoster])
 
   const rules = fieldRules(event)
-  const canAdd = rosterAcceptsAdditions(event)
+  const roster = activeParticipants(participants)
+  const withdrawn = withdrawnParticipants(participants)
+  const limit = rosterLimit(event)
+  const full = rosterIsFull(event, participants)
+  const canAdd = rosterAcceptsAdditions(event, participants)
   const canEdit = rosterIsOpen(event)
   const warning = event && participants ? marriageWarning(event, participants) : null
   const canComplete = event?.status === 'approved' && event.eventDate <= todayISO()
-  const cleared = (participants ?? []).filter((person) => person.status === 'cleared').length
+  const cleared = roster.filter((person) => person.status === 'cleared').length
 
   function update(field) {
     return (changed) => setForm((current) => ({ ...current, [field]: changed.target.value }))
@@ -153,6 +164,9 @@ export default function EventRoster() {
       participantDateOfBirth: person.participantDateOfBirth ?? '',
       participantContact: person.participantContact ?? '',
       sponsorName: person.sponsorName ?? '',
+      fatherName: person.fatherName ?? '',
+      motherName: person.motherName ?? '',
+      placeOfBirth: person.placeOfBirth ?? '',
     })
     setEditingId(person.participantId)
     setAdding(false)
@@ -189,6 +203,11 @@ export default function EventRoster() {
     if (form.participantDateOfBirth) body.participantDateOfBirth = form.participantDateOfBirth
     if (form.participantContact.trim()) body.participantContact = form.participantContact.trim()
     if (rules.sponsor && form.sponsorName.trim()) body.sponsorName = form.sponsorName.trim()
+    if (rules.parents) {
+      if (editingId || form.fatherName.trim()) body.fatherName = form.fatherName.trim()
+      if (editingId || form.motherName.trim()) body.motherName = form.motherName.trim()
+      if (editingId || form.placeOfBirth.trim()) body.placeOfBirth = form.placeOfBirth.trim()
+    }
 
     setBusy('save')
     const r = editingId
@@ -257,7 +276,7 @@ export default function EventRoster() {
         </div>
         {event && (
           <p className="stat">
-            <strong>{participants ? `${cleared}/${participants.length}` : '—'}</strong>
+            <strong>{participants ? `${cleared}/${limit ?? roster.length}` : '—'}</strong>
             cleared
           </p>
         )}
@@ -283,7 +302,7 @@ export default function EventRoster() {
             </div>
           </div>
           {events === null ? (
-            <Loading label="Loading events…" />
+            <Skeleton variant="table" label="Loading events…" />
           ) : (
             <EventTable
               events={events}
@@ -326,7 +345,13 @@ export default function EventRoster() {
               </div>
             </div>
 
-            {!canAdd && rosterIsOpen(event) && (
+            {full && rosterIsOpen(event) && (
+              <p className="notice">
+                A {event.sacramentType} register entry is one record with {limit} subjects, so this
+                roster is complete. Withdraw someone first to put another name in their place.
+              </p>
+            )}
+            {!canAdd && !full && rosterIsOpen(event) && (
               <p className="notice">
                 This event is approved, so no new participant can be added. Corrections and
                 withdrawals are still open.
@@ -388,6 +413,39 @@ export default function EventRoster() {
                       />
                     </label>
                   )}
+                  {rules.parents && (
+                    <>
+                      <label className="field">
+                        <span>Father’s name</span>
+                        <input
+                          value={form.fatherName}
+                          onChange={update('fatherName')}
+                          placeholder="As written on the birth certificate"
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Mother’s name</span>
+                        <input
+                          value={form.motherName}
+                          onChange={update('motherName')}
+                          placeholder="Maiden name, as on the birth certificate"
+                        />
+                      </label>
+                      <label className="field field--full">
+                        <span>Place of birth</span>
+                        <input
+                          value={form.placeOfBirth}
+                          onChange={update('placeOfBirth')}
+                          placeholder="Optional"
+                        />
+                      </label>
+                      <p className="muted field--full">
+                        Optional here, and carried into the register when the event is completed.
+                        Typing them now saves repeating them for every participant on the day, and
+                        they can still be corrected in the completion dialog.
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="form-actions">
                   <p className="muted form-hint">
@@ -411,12 +469,12 @@ export default function EventRoster() {
             )}
 
             {participants === null ? (
-              <Loading label="Loading the roster…" />
-            ) : participants.length === 0 ? (
+              <Skeleton variant="rows" count={4} label="Loading the roster…" />
+            ) : roster.length === 0 ? (
               <p className="empty">No participant on this roster yet.</p>
             ) : (
               <ul className="priest-list">
-                {participants.map((person) => (
+                {roster.map((person) => (
                   <li key={person.participantId} className="priest-list__row">
                     <div>
                       <strong>{person.participantName}</strong>
@@ -440,7 +498,7 @@ export default function EventRoster() {
                       >
                         Checklist
                       </button>
-                      {canEdit && person.status !== 'withdrawn' && (
+                      {canEdit && (
                         <>
                           <button
                             type="button"
@@ -463,6 +521,38 @@ export default function EventRoster() {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {withdrawn.length > 0 && (
+              <details className="roster__withdrawn">
+                <summary>
+                  {withdrawn.length} withdrawn {withdrawn.length === 1 ? 'name' : 'names'}
+                </summary>
+                <ul className="priest-list">
+                  {withdrawn.map((person) => (
+                    <li key={person.participantId} className="priest-list__row">
+                      <div>
+                        <strong>{person.participantName}</strong>
+                        <p className="muted">
+                          <span className={participantPill(person.status)}>
+                            {PARTICIPANT_STATUS_LABEL[person.status]}
+                          </span>
+                          {' · kept for the record, never written into the register'}
+                        </p>
+                      </div>
+                      <div className="form-actions__buttons">
+                        <button
+                          type="button"
+                          className="btn btn--ghost"
+                          onClick={() => setChecklistFor(person)}
+                        >
+                          Checklist
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
           </section>
         </>

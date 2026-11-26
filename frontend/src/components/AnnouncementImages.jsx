@@ -5,7 +5,7 @@ import { useConfirm } from './ConfirmProvider.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { IMAGE_ACCEPT, MAX_IMAGES, MAX_IMAGE_BYTES } from '../lib/announcements.js'
 import { messageFor } from '../lib/errors.js'
-import Loading from './Loading.jsx'
+import Skeleton from './Skeleton.jsx'
 import PhotoDrop from './PhotoDrop.jsx'
 
 export default function AnnouncementImages({ announcement, canWrite, onChanged, onSessionEnd }) {
@@ -146,7 +146,7 @@ export default function AnnouncementImages({ announcement, canWrite, onChanged, 
       )}
 
       {images === null ? (
-        <Loading label="Loading images…" />
+        <Skeleton variant="media" count={3} label="Loading images…" />
       ) : images.length === 0 ? (
         <p className="empty">No image attached.</p>
       ) : (

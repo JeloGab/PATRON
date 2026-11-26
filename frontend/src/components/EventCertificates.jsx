@@ -1,7 +1,7 @@
 // Certificates issued by a completed event, read under the event.
 
 import { useCallback, useEffect, useState } from 'react'
-import Loading from './Loading.jsx'
+import Skeleton from './Skeleton.jsx'
 import { authed, isSessionError } from '../lib/api.js'
 import { formatStamp } from '../lib/documents.js'
 import { certificateFileName, downloadPdf } from '../lib/download.js'
@@ -55,7 +55,7 @@ export default function EventCertificates({ eventId, onSessionEnd }) {
       )}
 
       {certificates === null ? (
-        <Loading label="Loading certificates…" />
+        <Skeleton variant="lines" label="Loading certificates…" />
       ) : (
         <ul className="priest-list">
           {certificates.map((certificate) => (

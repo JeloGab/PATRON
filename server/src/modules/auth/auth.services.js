@@ -196,10 +196,6 @@ export async function deletePhoto(actor) {
   return { removed: true }
 }
 
-/* isUuid first, or a malformed path parameter raises 22P02 and the handler answers 500
-   for what is really a 404. IMAGE_NOT_FOUND covers three cases on purpose: no photo,
-   no such user, and a user this actor may not see — a distinct "forbidden" would
-   confirm that a user id exists in another parish. */
 export async function getPhoto(actor, userId) {
   if (!isUuid(String(userId ?? ''))) throw new AppError('IMAGE_NOT_FOUND', 404)
 

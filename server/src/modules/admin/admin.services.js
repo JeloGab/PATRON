@@ -1,20 +1,17 @@
 import { AppError } from '../../lib/appError.js'
 import { suggestUsername, isValidUsername, isUuid, createTempCredential, resolveUsername } from '../../lib/credentials.js'
-import { clean, requireFullName, requireParishName, requireAddress, requireMobile, optionalEmail } from '../../lib/validators.js'
+import { clean, requireFullName, requireParishName, requireAddress, requireContactNo, optionalEmail } from '../../lib/validators.js'
 import { insertParish, listParishes, findParishById, insertStaff, listStaffByRole, setUserStatus, setStaffPassword, updateParishStatus, setDioceseLogo, clearDioceseLogo, findDioceseLogo } from './admin.queries.js'
 import { sniffContentType } from '../../lib/fileType.js'
 
 export const LOGO_TYPES = ['image/png', 'image/jpeg']
 const MAX_LOGO_BYTES = 1 * 1024 * 1024
 
-
-
-
 export async function createParish({ name, address, contactNo, email, facebookPageId }) {
   return insertParish({
     name: requireParishName(name),
     address: requireAddress(address),
-    contactNo: requireMobile(contactNo),
+    contactNo: requireContactNo(contactNo),
     email: optionalEmail(email),
     facebookPageId: clean(facebookPageId) || null,
   })
@@ -23,7 +20,6 @@ export async function createParish({ name, address, contactNo, email, facebookPa
 export async function getParishes() {
   return listParishes()
 }
-
 
 export async function provisionPriest({ fullName, parishId, username }) {
   const name = requireFullName(fullName)

@@ -1,8 +1,4 @@
 // Cards fade and rise as they scroll into view. Public pages only.
-//
-// The hidden state lives behind .is-armed, which only this hook ever sets, so a browser
-// without IntersectionObserver, a reduced-motion preference, or a throw anywhere in here
-// leaves every card visible instead of blanking the page.
 
 import { useEffect, useRef } from 'react'
 
@@ -31,9 +27,6 @@ export default function useReveal(deps = []) {
       { rootMargin: '0px 0px -8% 0px', threshold: 0.04 },
     )
 
-    // Skip only what has already finished. A card that is armed but not yet revealed
-    // must be observed again, because the cleanup of the previous run disconnected it —
-    // otherwise a second data fetch leaves it at opacity 0 for good.
     const counts = new Map()
     for (const card of host.querySelectorAll(SELECTOR)) {
       if (card.classList.contains('is-in')) continue

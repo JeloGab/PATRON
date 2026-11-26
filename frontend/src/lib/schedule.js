@@ -25,6 +25,8 @@ export const STATUS_LABEL = {
 
 export const EDITABLE_STATUSES = ['pending', 'approved']
 
+export const OUTSIDE_OFFICIANT_TYPES = ['marriage', 'funeral']
+
 const PILL_BY_STATUS = {
   pending: 'status-pill--pending',
   approved: 'status-pill--approved',
@@ -95,4 +97,8 @@ export const CHECK_MESSAGES = {
     'The assigned priest is unavailable then. Choose another time, another priest, or clear his unavailability.',
   PRIEST_SCHEDULE_CONFLICT:
     'That priest already has an event overlapping this time. Touching times count as a conflict.',
+  PARISH_SLOT_TAKEN:
+    'Another event already occupies that time. With an outside officiant the parish calendar is what is checked, so the slot has to be free.',
+  OFFICIANT_NOT_ALLOWED:
+    'An outside officiant can only be named on a marriage or a funeral.',
 }

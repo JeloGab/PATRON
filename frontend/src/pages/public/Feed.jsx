@@ -1,7 +1,7 @@
 // The public announcement feed: GET /api/feed, approved announcements, every parish.
 
 import { useCallback, useEffect, useState } from 'react'
-import Loading from '../../components/Loading.jsx'
+import Skeleton from '../../components/Skeleton.jsx'
 import { BASE, call } from '../../lib/api.js'
 import { formatLongDate } from '../../lib/dates.js'
 import { messageFor } from '../../lib/errors.js'
@@ -51,7 +51,7 @@ export default function Feed() {
       )}
 
       {announcements === null ? (
-        <Loading label="Loading the feed…" />
+        <Skeleton variant="cards" label="Loading the feed…" />
       ) : announcements.length === 0 ? (
         <p className="empty">No announcement has been published yet.</p>
       ) : (

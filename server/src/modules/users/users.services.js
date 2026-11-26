@@ -7,7 +7,6 @@ export const SIGNATURE_TYPES = ['image/png']
 const MAX_SIGNATURE_BYTES = 1024 * 1024
 import { clean, requireFullName } from '../../lib/validators.js'
 
-
 export async function saveSignature(actor, { buffer, typeAccepted = true }) {
   if (!typeAccepted) throw new AppError('INVALID_FILE_TYPE', 400)
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) throw new AppError('MISSING_FILE', 400)

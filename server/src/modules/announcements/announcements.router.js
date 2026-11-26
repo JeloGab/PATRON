@@ -13,6 +13,7 @@ import {
   getImageFile,
   removeImage,
   syncAnnouncement,
+  checkFacebookPost,
   IMAGE_TYPES,
 } from './announcements.services.js'
 
@@ -55,11 +56,21 @@ router.post('/:announcementId/reject', priestOnly, async (req, res) => {
 })
 
 router.post('/:announcementId/archive', async (req, res) => {
-  res.json({ ok: true, announcement: await archiveAnnouncement(req.user, req.params.announcementId) })
+  res.json({
+    ok: true,
+    announcement: await archiveAnnouncement(req.user, req.params.announcementId, req.body ?? {}),
+  })
 })
 
 router.post('/:announcementId/sync', async (req, res) => {
   res.json({ ok: true, announcement: await syncAnnouncement(req.user, req.params.announcementId) })
+})
+
+router.post('/:announcementId/facebook-check', async (req, res) => {
+  res.json({
+    ok: true,
+    announcement: await checkFacebookPost(req.user, req.params.announcementId),
+  })
 })
 
 router.post('/:announcementId/images', upload, async (req, res) => {
